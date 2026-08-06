@@ -1,0 +1,72 @@
+# Danh sách deliverables — Mock Project (MP)
+
+## D01. Project Proposal
+
+> Nộp trong Sprint 1. Nội dung proposal được giới hạn tối đa 2 trang A4.
+
+- Problem Statement.
+- Phân tích sản phẩm hiện có và gap cần giải quyết.
+- Proposed Solution.
+- Đối tượng người dùng mục tiêu.
+- Product category, vertical và business pattern.
+- Phân loại module core và module support.
+- Technical hard core và hướng giải quyết dự kiến.
+- Scope of Work, gồm in scope, out of scope và assumptions.
+- Hình thức nộp: file PDF hoặc Markdown. Tham khảo
+  [`1_proposal-guides.md`](./1_proposal-guides.md).
+
+## D02. Product Backlog & Work Breakdown Structure
+
+> Cập nhật và nộp ở mỗi sprint.
+
+- **Product Backlog:** được cập nhật theo kết quả của sprint trước và các thay
+  đổi đã được thống nhất; đánh dấu rõ các backlog item được nhóm lựa chọn để
+  thực hiện trong sprint hiện tại.
+- **Work Breakdown Structure (WBS):** phân rã các backlog item đã chọn thành
+  task cụ thể; thể hiện người phụ trách, kế hoạch, trạng thái, kết quả thực tế và
+  đóng góp của từng thành viên.
+- Hình thức nộp: link GitHub Projects hoặc Google Sheets có quyền xem.
+
+## D03. Requirement & Design Documents
+
+> Cập nhật và nộp ở mỗi sprint đối với những yêu cầu hoặc thiết kế được bổ sung,
+> thay đổi hay triển khai trong sprint đó.
+
+- **Software Requirements Specification (SRS):** mô tả yêu cầu chức năng, yêu
+  cầu phi chức năng và các business rule liên quan.
+- **Database Design:** ERD, database schema và mô tả các entity/relationship
+  chính.
+- **High-Level Design (HLD):** kiến trúc tổng thể, các component/module chính và
+  cách chúng tương tác.
+- **Low-Level Design (LLD):** thiết kế chi tiết cho một số luồng trọng điểm,
+  phức tạp hoặc có rủi ro kỹ thuật cao, đặc biệt là các luồng có tích hợp hệ
+  thống bên thứ ba hoặc AI.
+- Tất cả tài liệu và diagram phải được lưu trong thư mục `docs/` thuộc public
+  GitHub repository của dự án.
+- Diagram phải sử dụng định dạng có source chỉnh sửa được, theo hướng
+  code-first hoặc diagram-as-code, ví dụ: Draw.io (`.drawio`), Mermaid,
+  dbdiagram.io hoặc PlantUML.
+- Tuyệt đối không nộp diagram dưới dạng ảnh PNG, JPEG/JPG hoặc các định dạng ảnh
+  tương tự.
+- Hình thức nộp: link đến thư mục `docs/` trong public GitHub repository của dự
+  án.
+
+## D04. Source Code
+
+> Cập nhật liên tục và nộp phiên bản source code tương ứng ở mỗi sprint.
+
+- Link đến public GitHub repository chứa toàn bộ source code của dự án.
+
+## D05. Final Presentation & Demo
+
+> Nộp và trình bày khi kết thúc dự án.
+
+- Vấn đề và đối tượng người dùng mục tiêu.
+- Gap của các giải pháp hiện có.
+- Giải pháp được đề xuất.
+- Phạm vi và kết quả đã hoàn thành.
+- Kiến trúc hệ thống và technical hard core.
+- Hạn chế và hướng phát triển.
+- Demo trực tiếp các luồng nghiệp vụ chính trên sản phẩm thật.
+- Hình thức nộp: file PDF, PPTX hoặc link slide có quyền xem; demo trực tiếp
+  trong buổi bảo vệ.
