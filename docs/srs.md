@@ -106,7 +106,7 @@ quy mô lớn.
 |----|-------------|---------------------|-----|--------|----|
 | FR-AUTH-01 | Đăng ký tài khoản bằng email + mật khẩu | Email trùng bị từ chối | Must | 1 | BR-01 |
 | FR-AUTH-02 | Đăng nhập và duy trì phiên | Phiên hết hạn sau thời gian cấu hình | Must | 1 | |
-| FR-AUTH-03 | Người dùng chọn vai trò Learner hoặc Instructor | Một tài khoản có thể có cả hai vai trò | Should | 1 | |
+| FR-AUTH-03 | Người dùng chọn vai trò Learner hoặc Instructor | Một tài khoản chỉ có thể có 1 vai trò | Should | 1 | |
 
 ### 3.2 Content Authoring (core)
 
