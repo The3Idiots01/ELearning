@@ -8,6 +8,7 @@ public class ELearningBeApplication {
 
 	public static void main(String[] args) {
 		SpringApplication.run(ELearningBeApplication.class, args);
+		
 	}
 
 }
