@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="vi" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Kích hoạt tài khoản E-Learning</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            background-color: #f4f7fa;
+            font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            color: #333333;
+            -webkit-font-smoothing: antialiased;
+        }
+        .email-container {
+            max-width: 600px;
+            margin: 40px auto;
+            background: #ffffff;
+            border-radius: 16px;
+            overflow: hidden;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.05);
+            border: 1px solid #eef2f6;
+        }
+        .header {
+            background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);
+            padding: 35px 30px;
+            text-align: center;
+        }
+        .header h1 {
+            margin: 0;
+            color: #ffffff;
+            font-size: 26px;
+            font-weight: 700;
+            letter-spacing: -0.5px;
+        }
+        .header p {
+            margin: 8px 0 0 0;
+            color: #e0e7ff;
+            font-size: 14px;
+        }
+        .content {
+            padding: 35px 30px;
+            line-height: 1.65;
+        }
+        .greeting {
+            font-size: 18px;
+            font-weight: 600;
+            color: #1e293b;
+            margin-bottom: 16px;
+        }
+        .button-container {
+            text-align: center;
+            margin: 35px 0;
+        }
+        .btn-confirm {
+            display: inline-block;
+            background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);
+            color: #ffffff !important;
+            text-decoration: none;
+            padding: 14px 36px;
+            font-size: 16px;
+            font-weight: 600;
+            border-radius: 10px;
+            box-shadow: 0 4px 14px rgba(79, 70, 229, 0.4);
+            letter-spacing: 0.2px;
+        }
+        .notice-box {
+            background-color: #fffbeb;
+            border-left: 4px solid #f59e0b;
+            padding: 14px 18px;
+            border-radius: 6px;
+            margin: 25px 0 10px 0;
+            font-size: 13.5px;
+            color: #92400e;
+        }
+        .fallback-link {
+            font-size: 12px;
+            color: #64748b;
+            word-break: break-all;
+            margin-top: 25px;
+            padding-top: 20px;
+            border-top: 1px dashed #e2e8f0;
+        }
+        .footer {
+            background-color: #f8fafc;
+            padding: 22px 30px;
+            text-align: center;
+            font-size: 12.5px;
+            color: #94a3b8;
+            border-top: 1px solid #f1f5f9;
+        }
+    </style>
+</head>
+<body>
+    <div class="email-container">
+        <div class="header">
+            <h1>🎓 E-Learning Platform</h1>
+            <p>Nền tảng học tập & phát triển kỹ năng trực tuyến</p>
+        </div>
+        <div class="content">
+            <div class="greeting">Xin chào <span th:text="${fullName}">Học viên</span>,</div>
+            <p>Cảm ơn bạn đã đăng ký tài khoản với email <strong th:text="${email}">user@example.com</strong> tại <strong>E-Learning Platform</strong>. Để hoàn tất quá trình đăng ký và kích hoạt tài khoản của bạn, vui lòng nhấn vào nút bên dưới:</p>
+            
+            <div class="button-container">
+                <a th:href="${confirmationLink}" target="_blank" class="btn-confirm">Kích Hoạt Tài Khoản Ngay</a>
+            </div>
+
+            <div class="notice-box">
+                ⏱️ <strong>Lưu ý:</strong> Liên kết kích hoạt này chỉ có hiệu lực trong vòng <strong>15 phút</strong>. Nếu quá thời gian trên, bạn cần thực hiện đăng ký lại để nhận liên kết mới.
+            </div>
+
+            <div class="fallback-link">
+                Nếu nút phía trên không hoạt động, bạn có thể sao chép và dán liên kết sau vào trình duyệt:<br>
+                <a th:href="${confirmationLink}" th:text="${confirmationLink}" style="color: #4f46e5;"></a>
+            </div>
+        </div>
+        <div class="footer">
+            Nếu bạn không yêu cầu đăng ký tài khoản này, vui lòng bỏ qua email này an toàn.<br>
+            &copy; 2026 E-Learning Platform. All rights reserved.
+        </div>
+    </div>
+</body>
+</html>
