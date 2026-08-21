@@ -5,24 +5,18 @@
  
 ## Done
  
-None. No user story reached `done` this sprint.
+- **US-01 Register*
  
 ## Not done, and why
- 
-- **US-01 Register** — in progress, not completed within the sprint. Sprint 1
-  targeted registration only; the flow was started but not finished.
-  first sprint went largely into repo/CI setup,
-  schema and auth scaffolding, leaving the register flow unfinished.
-  → Picked up in **Sprint 2**.
+None.
 ## Scope change
  
 None.
  
 ## Per-member contribution
-
+- DuongNT182 — T-011, T-012, T-013 register api and screen
 ## Commitment for next sprint
  
-- US-01 (carry-over — must finish)
 - US-02 
 - US-03 
 - US-04 
