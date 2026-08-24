@@ -10,7 +10,7 @@
 		<relativePath/> <!-- lookup parent from repository -->
 	</parent>
 
-	<groupId>com.example</groupId>
+	<groupId>com.learnova</groupId>
 	<artifactId>ELearningBE</artifactId>
 	<version>0.0.1-SNAPSHOT</version>
 	<name>ELearningBE</name>
@@ -22,6 +22,7 @@
 		<sendgrid.version>4.10.3</sendgrid.version>
 		<loki-logback.version>2.1.0</loki-logback.version>
 		<spring-dotenv-bom.version>5.1.0</spring-dotenv-bom.version>
+		<springdoc.version>3.1.0</springdoc.version>
 	</properties>
 
 	<dependencies>
@@ -39,6 +40,13 @@
 		<dependency>
 			<groupId>org.springframework.boot</groupId>
 			<artifactId>spring-boot-starter-thymeleaf</artifactId>
+		</dependency>
+
+		<!-- OpenAPI / Swagger UI (springdoc) -->
+		<dependency>
+			<groupId>org.springdoc</groupId>
+			<artifactId>springdoc-openapi-starter-webmvc-ui</artifactId>
+			<version>${springdoc.version}</version>
 		</dependency>
 
 		<!-- ======================================================= -->
@@ -82,6 +90,20 @@
 			<groupId>org.postgresql</groupId>
 			<artifactId>postgresql</artifactId>
 			<scope>runtime</scope>
+		</dependency>
+
+		<!-- Flyway Database Migration -->
+		<dependency>
+			<groupId>org.flywaydb</groupId>
+			<artifactId>flyway-core</artifactId>
+		</dependency>
+		<dependency>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-flyway</artifactId>
+		</dependency>
+		<dependency>
+			<groupId>org.flywaydb</groupId>
+			<artifactId>flyway-database-postgresql</artifactId>
 		</dependency>
 		<dependency>
 			<groupId>org.springframework.boot</groupId>
