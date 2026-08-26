@@ -1,0 +1,300 @@
+###############################################################################
+# Learnova — Course Authoring test flow (.http)
+#
+# Dùng với extension "REST Client" của VS Code (humao.rest-client).
+# Cách chạy: bấm "Send Request" phía trên từng block, LẦN LƯỢT TỪ TRÊN XUỐNG.
+# Các request có "# @name xxx" lưu lại response để request sau tự lấy id/token.
+#
+# Chuẩn bị trước:
+#   1. App đang chạy (./mvnw spring-boot:run), STORAGE_PROVIDER=local
+#   2. Đã có tài khoản và ĐÃ nâng quyền LECTURER:
+#        UPDATE users SET role='LECTURER' WHERE email='...';
+#   3. Sửa @email/@password bên dưới cho khớp tài khoản của bạn
+###############################################################################
+
+@baseUrl = http://localhost:8080
+@email = quangtienhoihop@gmail.com
+@password = 123456
+
+### (Tùy chọn) Đăng ký tài khoản mới — sau đó mở link kích hoạt in ở CONSOLE app,
+### rồi chạy SQL nâng quyền LECTURER như ghi chú ở trên.
+# @name register
+POST {{baseUrl}}/api/v1/auth/register
+Content-Type: application/json
+
+{
+  "fullName": "Giang Vien Test",
+  "email": "{{email}}",
+  "password": "{{password}}"
+}
+
+###############################################################################
+# 1. LOGIN — lấy access token (các request sau tự tham chiếu tới response này)
+###############################################################################
+# @name login
+POST {{baseUrl}}/api/v1/auth/login
+Content-Type: application/json
+
+{
+  "email": "{{email}}",
+  "password": "{{password}}"
+}
+
+###############################################################################
+# 2. Danh mục (public) — lấy categoryId để gán cho course
+###############################################################################
+GET {{baseUrl}}/api/v1/categories
+
+###############################################################################
+# 3. Tạo course (DRAFT) — lưu {{createCourse.response.body.$.result.id}}
+###############################################################################
+# @name createCourse
+POST {{baseUrl}}/api/v1/lecturer/courses
+Content-Type: application/json
+Authorization: Bearer {{login.response.body.$.result.accessToken}}
+
+{
+  "title": "Lập trình Backend với Spring Boot",
+  "categoryId": 1
+}
+
+###############################################################################
+# 4. Sửa landing page (title/subtitle/description/level/category)
+#    description phải >= 200 ký tự để qua publish-check
+###############################################################################
+PATCH {{baseUrl}}/api/v1/lecturer/courses/{{createCourse.response.body.$.result.id}}
+Content-Type: application/json
+Authorization: Bearer {{login.response.body.$.result.accessToken}}
+
+{
+  "subtitle": "Xây dựng REST API thực chiến từ số 0",
+  "description": "Khóa học đưa bạn đi từ những khái niệm nền tảng của Spring Boot đến khi triển khai được một REST API hoàn chỉnh: cấu trúc dự án theo module, kết nối PostgreSQL bằng JPA và Flyway, bảo mật với JWT và Spring Security, xử lý lỗi tập trung, viết test và cuối cùng là đưa ứng dụng lên môi trường production. Phù hợp cho người muốn đi làm backend.",
+  "level": "BEGINNER",
+  "language": "vi"
+}
+
+###############################################################################
+# 5. Đặt giá (BR-04: 0 - 10.000.000)
+###############################################################################
+PUT {{baseUrl}}/api/v1/lecturer/courses/{{createCourse.response.body.$.result.id}}/price
+Content-Type: application/json
+Authorization: Bearer {{login.response.body.$.result.accessToken}}
+
+{
+  "price": 499000
+}
+
+###############################################################################
+# 6. Ba khối mô tả (>=4 objectives, >=1 requirement, >=1 audience)
+###############################################################################
+PUT {{baseUrl}}/api/v1/lecturer/courses/{{createCourse.response.body.$.result.id}}/bullets
+Content-Type: application/json
+Authorization: Bearer {{login.response.body.$.result.accessToken}}
+
+{
+  "learningObjectives": [
+    "Xây dựng REST API hoàn chỉnh với Spring Boot",
+    "Thiết kế database quan hệ và viết migration bằng Flyway",
+    "Bảo mật API bằng JWT và Spring Security",
+    "Triển khai ứng dụng lên môi trường production"
+  ],
+  "requirements": [
+    "Biết Java cơ bản (OOP, collections)",
+    "Máy tính cài được JDK 21 trở lên"
+  ],
+  "targetAudiences": [
+    "Sinh viên CNTT muốn đi làm backend",
+    "Lập trình viên frontend muốn học thêm backend"
+  ]
+}
+
+###############################################################################
+# 7. THUMBNAIL — 3 bước: presign -> PUT file -> gắn key
+#    Cần 1 file ảnh cạnh file .http này, đặt tên thumb.png (hoặc sửa @thumbFile)
+###############################################################################
+@thumbFile = ./thumb.png
+
+# 7a. Xin URL upload thumbnail
+# @name presignThumb
+POST {{baseUrl}}/api/v1/lecturer/uploads/presign
+Content-Type: application/json
+Authorization: Bearer {{login.response.body.$.result.accessToken}}
+
+{
+  "purpose": "COURSE_THUMBNAIL",
+  "courseId": {{createCourse.response.body.$.result.id}},
+  "fileName": "thumb.png",
+  "contentType": "image/png",
+  "sizeBytes": 12345
+}
+
+### 7b. PUT ảnh lên uploadUrl vừa nhận (REST Client tự thay URL từ response 7a)
+###     LƯU Ý: sizeBytes ở 7a chỉ để validate loại/giới hạn; bước gắn key (7c)
+###     mới HEAD lại size thật, nên không cần khớp tuyệt đối ở 7a.
+PUT {{presignThumb.response.body.$.result.uploadUrl}}
+Content-Type: image/png
+
+< {{thumbFile}}
+
+### 7c. Gắn thumbnail key vào course
+PUT {{baseUrl}}/api/v1/lecturer/courses/{{createCourse.response.body.$.result.id}}/thumbnail
+Content-Type: application/json
+Authorization: Bearer {{login.response.body.$.result.accessToken}}
+
+{
+  "storageKey": "{{presignThumb.response.body.$.result.storageKey}}"
+}
+
+###############################################################################
+# 8. Curriculum — tạo section
+###############################################################################
+# @name createSection
+POST {{baseUrl}}/api/v1/lecturer/courses/{{createCourse.response.body.$.result.id}}/sections
+Content-Type: application/json
+Authorization: Bearer {{login.response.body.$.result.accessToken}}
+
+{
+  "title": "Chương 1 - Giới thiệu",
+  "description": "Tổng quan khóa học và cài đặt môi trường"
+}
+
+###############################################################################
+# 9. Tạo lesson ARTICLE (hoàn chỉnh chỉ bằng text — không cần upload)
+###############################################################################
+# @name createArticle
+POST {{baseUrl}}/api/v1/lecturer/courses/{{createCourse.response.body.$.result.id}}/sections/{{createSection.response.body.$.result.id}}/lessons
+Content-Type: application/json
+Authorization: Bearer {{login.response.body.$.result.accessToken}}
+
+{
+  "title": "Khóa học này dành cho ai",
+  "contentType": "ARTICLE"
+}
+
+### 9b. Điền nội dung text cho lesson ARTICLE
+PATCH {{baseUrl}}/api/v1/lecturer/courses/{{createCourse.response.body.$.result.id}}/lessons/{{createArticle.response.body.$.result.id}}
+Content-Type: application/json
+Authorization: Bearer {{login.response.body.$.result.accessToken}}
+
+{
+  "contentText": "Khóa học phù hợp cho sinh viên và lập trình viên muốn học backend từ đầu.",
+  "isPreview": true
+}
+
+###############################################################################
+# 10. (Tùy chọn) Lesson VIDEO — tạo -> presign -> PUT file -> gắn content
+#     Cần 1 file video cạnh file .http này: sample.mp4 (hoặc sửa @videoFile)
+###############################################################################
+@videoFile = ./sample.mp4
+
+# 10a. Tạo lesson VIDEO
+# @name createVideo
+POST {{baseUrl}}/api/v1/lecturer/courses/{{createCourse.response.body.$.result.id}}/sections/{{createSection.response.body.$.result.id}}/lessons
+Content-Type: application/json
+Authorization: Bearer {{login.response.body.$.result.accessToken}}
+
+{
+  "title": "Cài đặt môi trường",
+  "contentType": "VIDEO"
+}
+
+### 10b. Xin URL upload video (sizeBytes = size thật của sample.mp4)
+# @name presignVideo
+POST {{baseUrl}}/api/v1/lecturer/uploads/presign
+Content-Type: application/json
+Authorization: Bearer {{login.response.body.$.result.accessToken}}
+
+{
+  "purpose": "LESSON_VIDEO",
+  "courseId": {{createCourse.response.body.$.result.id}},
+  "lessonId": {{createVideo.response.body.$.result.id}},
+  "fileName": "sample.mp4",
+  "contentType": "video/mp4",
+  "sizeBytes": 1048576
+}
+
+### 10c. PUT video lên uploadUrl
+PUT {{presignVideo.response.body.$.result.uploadUrl}}
+Content-Type: video/mp4
+
+< {{videoFile}}
+
+### 10d. Gắn content vào lesson (BE HEAD lại object -> READY)
+###      fileSizeBytes PHẢI khớp size thật của file, nếu không -> UPLOAD_METADATA_MISMATCH
+PUT {{baseUrl}}/api/v1/lecturer/courses/{{createCourse.response.body.$.result.id}}/lessons/{{createVideo.response.body.$.result.id}}/content
+Content-Type: application/json
+Authorization: Bearer {{login.response.body.$.result.accessToken}}
+
+{
+  "storageKey": "{{presignVideo.response.body.$.result.storageKey}}",
+  "originalFileName": "sample.mp4",
+  "fileSizeBytes": 1048576,
+  "mimeType": "video/mp4",
+  "durationSeconds": 300
+}
+
+###############################################################################
+# 11. Xem cây curriculum
+###############################################################################
+GET {{baseUrl}}/api/v1/lecturer/courses/{{createCourse.response.body.$.result.id}}/curriculum
+Authorization: Bearer {{login.response.body.$.result.accessToken}}
+
+###############################################################################
+# 12. Reorder lesson trong section (đảo thứ tự 2 lesson vừa tạo)
+###############################################################################
+PUT {{baseUrl}}/api/v1/lecturer/courses/{{createCourse.response.body.$.result.id}}/sections/{{createSection.response.body.$.result.id}}/lessons/order
+Content-Type: application/json
+Authorization: Bearer {{login.response.body.$.result.accessToken}}
+
+{
+  "lessonIds": [
+    {{createVideo.response.body.$.result.id}},
+    {{createArticle.response.body.$.result.id}}
+  ]
+}
+
+###############################################################################
+# 13. PUBLISH-CHECK — xem còn thiếu điều kiện gì (canPublish + issues)
+###############################################################################
+GET {{baseUrl}}/api/v1/lecturer/courses/{{createCourse.response.body.$.result.id}}/publish-check
+Authorization: Bearer {{login.response.body.$.result.accessToken}}
+
+###############################################################################
+# 14. PUBLISH — nếu publish-check còn issues sẽ trả 422 kèm danh sách issues
+###############################################################################
+POST {{baseUrl}}/api/v1/lecturer/courses/{{createCourse.response.body.$.result.id}}/publish
+Authorization: Bearer {{login.response.body.$.result.accessToken}}
+
+###############################################################################
+# 15. Danh sách course của tôi (phân trang, lọc theo status)
+###############################################################################
+GET {{baseUrl}}/api/v1/lecturer/courses?status=PUBLISHED&page=0&size=20
+Authorization: Bearer {{login.response.body.$.result.accessToken}}
+
+###############################################################################
+# 16. UNPUBLISH — gỡ khỏi catalog (kèm lý do)
+###############################################################################
+POST {{baseUrl}}/api/v1/lecturer/courses/{{createCourse.response.body.$.result.id}}/unpublish
+Content-Type: application/json
+Authorization: Bearer {{login.response.body.$.result.accessToken}}
+
+{
+  "reason": "Cập nhật lại nội dung chương 1"
+}
+
+###############################################################################
+# 17. Lịch sử đổi trạng thái
+###############################################################################
+GET {{baseUrl}}/api/v1/lecturer/courses/{{createCourse.response.body.$.result.id}}/status-logs
+Authorization: Bearer {{login.response.body.$.result.accessToken}}
+
+###############################################################################
+# 18. (Kiểm thử lỗi) Đặt giá vượt trần -> 400 COURSE_PRICE_OUT_OF_RANGE
+###############################################################################
+PUT {{baseUrl}}/api/v1/lecturer/courses/{{createCourse.response.body.$.result.id}}/price
+Content-Type: application/json
+Authorization: Bearer {{login.response.body.$.result.accessToken}}
+
+{
+  "price": 99999999
+}

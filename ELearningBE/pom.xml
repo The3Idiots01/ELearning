@@ -23,6 +23,7 @@
 		<loki-logback.version>2.1.0</loki-logback.version>
 		<spring-dotenv-bom.version>5.1.0</spring-dotenv-bom.version>
 		<springdoc.version>3.1.0</springdoc.version>
+		<awssdk.version>2.31.0</awssdk.version>
 	</properties>
 
 	<dependencies>
@@ -119,6 +120,11 @@
 			<artifactId>sendgrid-java</artifactId>
 			<version>${sendgrid.version}</version>
 		</dependency>
+		<!-- AWS SDK v2 S3 (S3-compatible: Cloudflare R2) -->
+		<dependency>
+			<groupId>software.amazon.awssdk</groupId>
+			<artifactId>s3</artifactId>
+		</dependency>
 		<!-- Dotenv Environment Variable Management -->
 		<dependency>
 			<groupId>me.paulschwarz</groupId>
@@ -185,6 +191,14 @@
 				<groupId>me.paulschwarz</groupId>
 				<artifactId>spring-dotenv-bom</artifactId>
 				<version>${spring-dotenv-bom.version}</version>
+				<type>pom</type>
+				<scope>import</scope>
+			</dependency>
+			<!-- AWS SDK v2 BOM -->
+			<dependency>
+				<groupId>software.amazon.awssdk</groupId>
+				<artifactId>bom</artifactId>
+				<version>${awssdk.version}</version>
 				<type>pom</type>
 				<scope>import</scope>
 			</dependency>

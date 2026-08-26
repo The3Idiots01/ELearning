@@ -36,3 +36,11 @@ build/
 .env
 .env.local
 *.env
+
+### Local object storage (file upload khi dev) ###
+storage-data/
+
+### File nhi phan dung de test API (khong commit) ###
+http/*.mp4
+http/*.png
+http/*.jpg
