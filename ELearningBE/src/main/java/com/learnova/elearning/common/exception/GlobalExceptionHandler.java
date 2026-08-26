@@ -1,5 +1,6 @@
 package com.learnova.elearning.common.exception;
 
+import com.learnova.elearning.module.course.exception.CourseNotReadyException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.ConstraintViolation;
 import jakarta.validation.ConstraintViolationException;
@@ -9,6 +10,7 @@ import org.springframework.http.HttpStatusCode;
 import org.springframework.http.ProblemDetail;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
+import org.springframework.orm.ObjectOptimisticLockingFailureException;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.core.AuthenticationException;
 import org.springframework.validation.FieldError;
@@ -26,6 +28,25 @@ import java.util.Map;
 @RestControllerAdvice
 @Slf4j
 public class GlobalExceptionHandler {
+
+    @ExceptionHandler(CourseNotReadyException.class)
+    public ResponseEntity<ProblemDetail> handleCourseNotReady(
+            CourseNotReadyException ex, HttpServletRequest request) {
+        ErrorCode errorCode = ex.getErrorCode();
+        log.warn("Publish blocked [code={}] with {} issue(s)", errorCode.getCode(),
+                ex.getIssues() != null ? ex.getIssues().size() : 0);
+
+        ProblemDetail problemDetail = createProblemDetail(
+                errorCode.getHttpStatusCode(),
+                errorCode.name(),
+                errorCode.getMessage(),
+                errorCode.getCode(),
+                request
+        );
+        problemDetail.setProperty("issues", ex.getIssues());
+
+        return ResponseEntity.status(errorCode.getHttpStatusCode()).body(problemDetail);
+    }
 
     @ExceptionHandler(AppException.class)
     public ResponseEntity<ProblemDetail> handleAppException(AppException ex, HttpServletRequest request) {
@@ -164,6 +185,23 @@ public class GlobalExceptionHandler {
                 errorCode.getHttpStatusCode(),
                 errorCode.name(),
                 "Malformed JSON request or invalid request body format",
+                errorCode.getCode(),
+                request
+        );
+
+        return ResponseEntity.status(errorCode.getHttpStatusCode()).body(problemDetail);
+    }
+
+    @ExceptionHandler(ObjectOptimisticLockingFailureException.class)
+    public ResponseEntity<ProblemDetail> handleOptimisticLock(
+            ObjectOptimisticLockingFailureException ex, HttpServletRequest request) {
+        log.warn("Optimistic lock conflict on {}: {}", request.getRequestURI(), ex.getMessage());
+
+        ErrorCode errorCode = ErrorCode.COURSE_MODIFIED_CONCURRENTLY;
+        ProblemDetail problemDetail = createProblemDetail(
+                errorCode.getHttpStatusCode(),
+                errorCode.name(),
+                errorCode.getMessage(),
                 errorCode.getCode(),
                 request
         );

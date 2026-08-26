@@ -35,7 +35,35 @@ public enum ErrorCode {
     VALIDATION_ERROR(2001, "Validation failed", HttpStatus.BAD_REQUEST),
     INVALID_EMAIL_FORMAT(2002, "Invalid email format", HttpStatus.BAD_REQUEST),
     PASSWORD_TOO_WEAK(2003, "Password does not meet complexity requirements", HttpStatus.BAD_REQUEST),
-    FIELD_REQUIRED(2004, "Required field is missing", HttpStatus.BAD_REQUEST);
+    FIELD_REQUIRED(2004, "Required field is missing", HttpStatus.BAD_REQUEST),
+
+    // Course Domain (1201 - 1210)
+    COURSE_NOT_FOUND(1201, "Course not found", HttpStatus.NOT_FOUND),
+    COURSE_ACCESS_DENIED(1202, "You are not the owner of this course", HttpStatus.FORBIDDEN),
+    COURSE_INVALID_STATUS_TRANSITION(1203, "Invalid course status transition", HttpStatus.CONFLICT),
+    COURSE_NOT_READY_TO_PUBLISH(1204, "Course does not meet publishing requirements", HttpStatus.UNPROCESSABLE_ENTITY),
+    COURSE_PRICE_OUT_OF_RANGE(1205, "Price must be between 0 and 10,000,000 VND", HttpStatus.BAD_REQUEST),
+    COURSE_SLUG_ALREADY_EXISTS(1206, "Course slug already exists", HttpStatus.CONFLICT),
+    COURSE_HAS_ENROLLMENTS(1207, "Course already has learners, use unpublish instead", HttpStatus.CONFLICT),
+    COURSE_MODIFIED_CONCURRENTLY(1208, "Course was modified elsewhere, please reload", HttpStatus.CONFLICT),
+    COURSE_LOCKED_BY_ADMIN(1209, "Course is suspended and cannot be edited", HttpStatus.FORBIDDEN),
+    CATEGORY_NOT_FOUND(1210, "Category not found", HttpStatus.NOT_FOUND),
+
+    // Curriculum (1221 - 1235)
+    SECTION_NOT_FOUND(1221, "Section not found", HttpStatus.NOT_FOUND),
+    SECTION_NOT_IN_COURSE(1222, "Section does not belong to this course", HttpStatus.BAD_REQUEST),
+    LESSON_NOT_FOUND(1231, "Lesson not found", HttpStatus.NOT_FOUND),
+    LESSON_NOT_IN_COURSE(1232, "Lesson does not belong to this course", HttpStatus.BAD_REQUEST),
+    LESSON_CONTENT_TYPE_MISMATCH(1233, "Operation not allowed for this lesson content type", HttpStatus.BAD_REQUEST),
+    ORDER_PAYLOAD_MISMATCH(1234, "Reorder payload does not match current items", HttpStatus.BAD_REQUEST),
+    LESSON_RESOURCE_NOT_FOUND(1235, "Lesson resource not found", HttpStatus.NOT_FOUND),
+
+    // Storage & Upload (1241 - 1245)
+    UPLOAD_FILE_TOO_LARGE(1241, "File exceeds the maximum allowed size", HttpStatus.PAYLOAD_TOO_LARGE),
+    UPLOAD_UNSUPPORTED_MEDIA_TYPE(1242, "Unsupported file type", HttpStatus.UNSUPPORTED_MEDIA_TYPE),
+    UPLOAD_OBJECT_NOT_FOUND(1243, "Uploaded object not found in storage", HttpStatus.BAD_REQUEST),
+    UPLOAD_METADATA_MISMATCH(1244, "Uploaded file does not match declared metadata", HttpStatus.BAD_REQUEST),
+    STORAGE_UNAVAILABLE(1245, "Storage service is unavailable", HttpStatus.SERVICE_UNAVAILABLE);
 
     private final int code;
     private final String message;
