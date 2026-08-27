@@ -1,6 +1,7 @@
 package com.learnova.elearning.module.course.repository;
 
 import com.learnova.elearning.module.course.entity.Course;
+import com.learnova.elearning.module.course.entity.enums.CourseLevel;
 import com.learnova.elearning.module.course.entity.enums.CourseStatus;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -55,4 +56,32 @@ public interface CourseRepository extends JpaRepository<Course, Long> {
      */
     @Query(value = "SELECT EXISTS(SELECT 1 FROM courses WHERE slug = :slug)", nativeQuery = true)
     boolean existsBySlugRaw(@Param("slug") String slug);
+
+    @Query(value = """
+            SELECT c FROM Course c
+            LEFT JOIN FETCH c.category
+            WHERE c.status = 'PUBLISHED'
+              AND (:categoryId IS NULL OR c.category.id = :categoryId)
+              AND (:level IS NULL OR c.level = :level)
+              AND (CAST(:keyword AS String) IS NULL
+                   OR LOWER(c.title) LIKE LOWER(CONCAT('%', CAST(:keyword AS String), '%'))
+                   OR LOWER(c.subtitle) LIKE LOWER(CONCAT('%', CAST(:keyword AS String), '%')))
+            """,
+            countQuery = """
+            SELECT COUNT(c) FROM Course c
+            WHERE c.status = 'PUBLISHED'
+              AND (:categoryId IS NULL OR c.category.id = :categoryId)
+              AND (:level IS NULL OR c.level = :level)
+              AND (CAST(:keyword AS String) IS NULL
+                   OR LOWER(c.title) LIKE LOWER(CONCAT('%', CAST(:keyword AS String), '%'))
+                   OR LOWER(c.subtitle) LIKE LOWER(CONCAT('%', CAST(:keyword AS String), '%')))
+            """)
+    Page<Course> searchPublic(@Param("categoryId") Long categoryId,
+                             @Param("level") CourseLevel level,
+                             @Param("keyword") String keyword,
+                             Pageable pageable);
+
+    Optional<Course> findByIdAndStatus(Long id, CourseStatus status);
+
+    Optional<Course> findBySlugAndStatus(String slug, CourseStatus status);
 }

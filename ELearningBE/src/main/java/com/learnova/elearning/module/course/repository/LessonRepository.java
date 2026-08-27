@@ -28,6 +28,8 @@ public interface LessonRepository extends JpaRepository<Lesson, Long> {
 
     long countBySection_Id(Long sectionId);
 
+    long countBySection_Course_Id(Long courseId);
+
     boolean existsBySection_Course_IdAndContentTypeAndUploadStatus(
             Long courseId, LessonContentType contentType, LessonUploadStatus uploadStatus);
 

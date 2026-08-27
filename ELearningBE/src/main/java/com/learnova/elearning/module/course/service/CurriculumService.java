@@ -2,6 +2,7 @@ package com.learnova.elearning.module.course.service;
 
 import com.learnova.elearning.common.exception.AppException;
 import com.learnova.elearning.common.exception.ErrorCode;
+import com.learnova.elearning.integration.storage.StorageProperties;
 import com.learnova.elearning.integration.storage.StorageService;
 import com.learnova.elearning.module.course.dto.request.CreateLessonRequest;
 import com.learnova.elearning.module.course.dto.request.CreateSectionRequest;
@@ -17,13 +18,21 @@ import com.learnova.elearning.module.course.entity.Lesson;
 import com.learnova.elearning.module.course.entity.LessonResource;
 import com.learnova.elearning.module.course.entity.enums.LessonContentType;
 import com.learnova.elearning.module.course.entity.enums.LessonUploadStatus;
+import com.learnova.elearning.module.course.entity.enums.CourseStatus;
 import com.learnova.elearning.module.course.mapper.CurriculumMapper;
+import com.learnova.elearning.module.course.repository.CourseRepository;
 import com.learnova.elearning.module.course.repository.CourseSectionRepository;
 import com.learnova.elearning.module.course.repository.LessonRepository;
 import com.learnova.elearning.module.course.repository.LessonResourceRepository;
+import com.learnova.elearning.module.enrollment.entity.Enrollment;
+import com.learnova.elearning.module.enrollment.repository.EnrollmentRepository;
+import com.learnova.elearning.module.enrollment.repository.LessonProgressRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+
+import java.util.Optional;
+import java.util.Set;
 
 import java.time.Instant;
 import java.util.ArrayList;
@@ -46,7 +55,11 @@ public class CurriculumService {
     private final LessonRepository lessonRepository;
     private final LessonResourceRepository resourceRepository;
     private final StorageService storageService;
+    private final StorageProperties storageProperties;
     private final LessonResponseAssembler lessonAssembler;
+    private final CourseRepository courseRepository;
+    private final EnrollmentRepository enrollmentRepository;
+    private final LessonProgressRepository progressRepository;
 
     // ---- Read -------------------------------------------------------------
 
@@ -54,6 +67,86 @@ public class CurriculumService {
     public CurriculumResponse getCurriculum(Long courseId, Long userId) {
         ownershipGuard.requireOwnedCourse(courseId, userId);
         return buildCurriculum(courseId);
+    }
+
+    @Transactional(readOnly = true)
+    public CurriculumResponse getPublicCurriculum(Long courseId, Long studentId) {
+        Course course = courseRepository.findById(courseId)
+                .orElseThrow(() -> new AppException(ErrorCode.COURSE_NOT_FOUND));
+        if (course.getStatus() != CourseStatus.PUBLISHED) {
+            throw new AppException(ErrorCode.COURSE_NOT_PUBLISHED);
+        }
+
+        boolean enrolled = false;
+        Set<Long> completedLessonIds = Set.of();
+        if (studentId != null) {
+            Optional<Enrollment> enrollment = enrollmentRepository.findByStudent_IdAndCourse_Id(studentId, courseId);
+            if (enrollment.isPresent()) {
+                enrolled = true;
+                completedLessonIds = progressRepository.findByEnrollment_Id(enrollment.get().getId())
+                        .stream()
+                        .map(lp -> lp.getLesson().getId())
+                        .collect(Collectors.toSet());
+            }
+        }
+
+        return buildPublicCurriculum(courseId, enrolled, completedLessonIds);
+    }
+
+    private CurriculumResponse buildPublicCurriculum(Long courseId, boolean enrolled, Set<Long> completedLessonIds) {
+        List<CourseSection> sections = sectionRepository.findByCourse_IdOrderByPositionAsc(courseId);
+        List<Long> sectionIds = sections.stream().map(CourseSection::getId).toList();
+
+        List<Lesson> lessons = sectionIds.isEmpty()
+                ? List.of()
+                : lessonRepository.findBySection_IdInOrderByPositionAsc(sectionIds);
+        List<Long> lessonIds = lessons.stream().map(Lesson::getId).toList();
+
+        List<LessonResource> resources = lessonIds.isEmpty()
+                ? List.of()
+                : resourceRepository.findByLesson_IdInOrderByPositionAsc(lessonIds);
+
+        Map<Long, List<Lesson>> lessonsBySection = lessons.stream()
+                .collect(Collectors.groupingBy(l -> l.getSection().getId()));
+        
+        boolean isEnrolled = enrolled;
+        Map<Long, List<LessonResourceResponse>> resourcesByLesson = resources.stream()
+                .collect(Collectors.groupingBy(
+                        r -> r.getLesson().getId(),
+                        Collectors.mapping(r -> {
+                            if (isEnrolled) {
+                                return lessonAssembler.toResource(r);
+                            } else {
+                                return CurriculumMapper.toResource(r, null);
+                            }
+                        }, Collectors.toList())));
+
+        Set<Long> finalCompleted = completedLessonIds;
+        List<SectionResponse> sectionResponses = sections.stream()
+                .map(section -> {
+                    List<LessonResponse> lessonResponses = lessonsBySection
+                            .getOrDefault(section.getId(), List.of()).stream()
+                            .map(l -> {
+                                String contentUrl = null;
+                                if (l.getStorageKey() != null && (isEnrolled || Boolean.TRUE.equals(l.getIsPreview()))) {
+                                    contentUrl = storageService.presignDownload(l.getStorageKey(), storageProperties.getDownloadTtl());
+                                }
+                                LessonResponse resp = CurriculumMapper.toLesson(l, contentUrl,
+                                        resourcesByLesson.getOrDefault(l.getId(), List.of()));
+                                if (!finalCompleted.isEmpty()) {
+                                    resp.setCompleted(finalCompleted.contains(l.getId()));
+                                }
+                                return resp;
+                            })
+                            .toList();
+                    return CurriculumMapper.toSection(section, lessonResponses);
+                })
+                .toList();
+
+        return CurriculumResponse.builder()
+                .courseId(courseId)
+                .sections(sectionResponses)
+                .build();
     }
 
     private CurriculumResponse buildCurriculum(Long courseId) {
@@ -81,8 +174,14 @@ public class CurriculumService {
                 .map(section -> {
                     List<LessonResponse> lessonResponses = lessonsBySection
                             .getOrDefault(section.getId(), List.of()).stream()
-                            .map(l -> CurriculumMapper.toLesson(l,
-                                    resourcesByLesson.getOrDefault(l.getId(), List.of())))
+                            .map(l -> {
+                                String contentUrl = null;
+                                if (l.getStorageKey() != null) {
+                                    contentUrl = storageService.presignDownload(l.getStorageKey(), storageProperties.getDownloadTtl());
+                                }
+                                return CurriculumMapper.toLesson(l, contentUrl,
+                                        resourcesByLesson.getOrDefault(l.getId(), List.of()));
+                            })
                             .toList();
                     return CurriculumMapper.toSection(section, lessonResponses);
                 })

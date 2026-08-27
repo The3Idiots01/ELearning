@@ -13,6 +13,7 @@ import com.learnova.elearning.module.course.entity.Course;
 import com.learnova.elearning.module.course.entity.enums.CourseStatus;
 import com.learnova.elearning.module.course.repository.CourseBulletRepository;
 import com.learnova.elearning.module.course.repository.CourseRepository;
+import com.learnova.elearning.module.enrollment.repository.EnrollmentRepository;
 import com.learnova.elearning.module.user.entity.User;
 import com.learnova.elearning.module.user.repository.UserRepository;
 import org.junit.jupiter.api.DisplayName;
@@ -44,6 +45,7 @@ class CourseServiceTest {
     @Mock private StorageService storageService;
     @Mock private StorageKeyFactory keyFactory;
     @Mock private StorageProperties storageProperties;
+    @Mock private EnrollmentRepository enrollmentRepository;
 
     @InjectMocks
     private CourseService courseService;
@@ -122,6 +124,7 @@ class CourseServiceTest {
         Course published = Course.builder().id(1L).status(CourseStatus.PUBLISHED)
                 .publishedAt(Instant.now()).build();
         when(ownershipGuard.requireOwnedCourse(1L, 10L)).thenReturn(published);
+        when(enrollmentRepository.existsByCourse_Id(1L)).thenReturn(true);
 
         assertThatThrownBy(() -> courseService.delete(1L, 10L))
                 .isInstanceOf(AppException.class)
@@ -129,5 +132,28 @@ class CourseServiceTest {
 
         verify(courseRepository, never()).save(any());
         verify(storageService, never()).deleteByPrefix(anyString());
+    }
+
+    @Test
+    @DisplayName("getPublicDetail: course chưa publish -> COURSE_NOT_FOUND")
+    void getPublicDetail_unpublished() {
+        when(courseRepository.findByIdAndStatus(1L, CourseStatus.PUBLISHED)).thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> courseService.getPublicDetail(1L))
+                .isInstanceOf(AppException.class)
+                .extracting("errorCode").isEqualTo(ErrorCode.COURSE_NOT_FOUND);
+    }
+
+    @Test
+    @DisplayName("getPublicDetail: course đã publish -> trả về detail")
+    void getPublicDetail_published() {
+        Course published = Course.builder().id(1L).status(CourseStatus.PUBLISHED).title("Java")
+                .publishedAt(Instant.now()).build();
+        when(courseRepository.findByIdAndStatus(1L, CourseStatus.PUBLISHED)).thenReturn(Optional.of(published));
+        when(bulletRepository.findByCourse_IdOrderByBulletTypeAscPositionAsc(any())).thenReturn(List.of());
+
+        var res = courseService.getPublicDetail(1L);
+        assertThat(res.getTitle()).isEqualTo("Java");
+        assertThat(res.getStatus()).isEqualTo(CourseStatus.PUBLISHED);
     }
 }

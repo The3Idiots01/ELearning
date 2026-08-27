@@ -1,13 +1,59 @@
 <!doctype html>
-<html lang="en">
+<html lang="vi" class="h-full bg-background antialiased">
   <head>
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>elearningfe</title>
+    <title>Learnova — Nền tảng Học trực tuyến & Studio Giảng viên</title>
+    <!-- Tailwind CSS CDN with forms and container queries -->
+    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+    <!-- Google Fonts & Material Icons -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Hanken+Grotesk:wght@500;600;700;800&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet" />
+    <script>
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            colors: {
+              "primary": "#003c90",
+              "primary-container": "#0f52ba",
+              "on-primary": "#ffffff",
+              "on-primary-container": "#bcceff",
+              "secondary": "#0060ac",
+              "secondary-container": "#64a8fe",
+              "on-secondary": "#ffffff",
+              "surface": "#f8f9ff",
+              "surface-container-lowest": "#ffffff",
+              "surface-container-low": "#eff4ff",
+              "surface-container": "#e6eeff",
+              "surface-container-high": "#dee9fc",
+              "surface-container-highest": "#d9e3f6",
+              "surface-variant": "#d9e3f6",
+              "background": "#f8f9ff",
+              "on-surface": "#121c2a",
+              "on-surface-variant": "#434653",
+              "on-background": "#121c2a",
+              "outline": "#737784",
+              "outline-variant": "#c3c6d5",
+              "error": "#ba1a1a",
+              "error-container": "#ffdad6",
+              "tertiary": "#732900",
+              "tertiary-container": "#993900"
+            },
+            fontFamily: {
+              sans: ["Inter", "sans-serif"],
+              display: ["Hanken Grotesk", "sans-serif"]
+            }
+          }
+        }
+      }
+    </script>
   </head>
-  <body>
-    <div id="root"></div>
+  <body class="bg-background text-on-background min-h-full font-sans antialiased">
+    <div id="root" class="min-h-screen flex flex-col"></div>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>

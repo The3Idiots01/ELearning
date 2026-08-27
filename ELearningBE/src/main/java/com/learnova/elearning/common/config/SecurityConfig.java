@@ -61,6 +61,7 @@ public class SecurityConfig {
                                 "/api/v1/dev/storage/**"
                         ).permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/v1/categories/**").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/v1/courses/**").permitAll()
                         .requestMatchers("/api/v1/admin/**").hasRole("ADMIN")
                         .requestMatchers("/api/v1/lecturer/**").hasAnyRole("ADMIN", "LECTURER")
                         .anyRequest().authenticated()
