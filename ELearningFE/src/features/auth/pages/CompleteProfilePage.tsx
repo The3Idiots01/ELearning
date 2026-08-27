@@ -21,6 +21,15 @@ const PRESET_INTERESTS = [
   '🗣️ Ngoại ngữ & Kỹ năng mềm'
 ];
 
+const EXPERTISE_SUGGESTIONS = [
+  'Sinh viên CNTT',
+  'Lập trình viên Frontend React',
+  'Lập trình viên Java / Spring Boot',
+  'Kỹ sư Fullstack Web',
+  'Thiết kế viên UI/UX',
+  'Chuyên viên Dữ liệu & AI'
+];
+
 export const CompleteProfilePage: React.FC<CompleteProfilePageProps> = ({
   onCompleteSuccess,
   onSkip
@@ -53,6 +62,10 @@ export const CompleteProfilePage: React.FC<CompleteProfilePageProps> = ({
     setSelectedInterests((prev) =>
       prev.includes(tag) ? prev.filter((i) => i !== tag) : [...prev, tag]
     );
+  };
+
+  const removeInterest = (tagToRemove: string) => {
+    setSelectedInterests((prev) => prev.filter((i) => i !== tagToRemove));
   };
 
   const handleAddCustomInterest = (e: React.KeyboardEvent | React.MouseEvent) => {
@@ -101,35 +114,41 @@ export const CompleteProfilePage: React.FC<CompleteProfilePageProps> = ({
   };
 
   return (
-    <div className="min-h-screen bg-slate-50 flex items-center justify-center py-10 px-4 sm:px-6 lg:px-8">
-      <div className="max-w-2xl w-full bg-white rounded-3xl shadow-xl shadow-slate-200/60 border border-slate-100 overflow-hidden">
+    <div className="min-h-screen bg-background flex items-center justify-center py-10 px-4 sm:px-6 lg:px-8">
+      <div className="max-w-3xl w-full bg-surface-container-lowest rounded-3xl shadow-xl border border-outline-variant/70 overflow-hidden">
         {/* Top Gradient Banner Header */}
-        <div className="bg-gradient-to-r from-primary via-indigo-600 to-secondary p-8 text-white relative">
-          <div className="flex items-center gap-3">
-            <span className="w-10 h-10 rounded-2xl bg-white/20 backdrop-blur-sm flex items-center justify-center font-bold text-white shadow-xs">
-              <span className="material-symbols-outlined text-[24px]">person_check</span>
+        <div className="bg-gradient-to-r from-primary via-indigo-600 to-secondary p-6 sm:p-8 text-white relative">
+          <div className="flex items-center gap-3.5">
+            <span className="w-11 h-11 rounded-2xl bg-white/20 backdrop-blur-sm flex items-center justify-center font-bold text-white shadow-xs shrink-0">
+              <span className="material-symbols-outlined text-[26px]">person_check</span>
             </span>
             <div>
-              <span className="text-[11px] font-extrabold uppercase tracking-widest text-white/80">
-                Bước hoàn thiện hồ sơ
+              <span className="text-[11px] font-extrabold uppercase tracking-widest text-white/80 block">
+                Khởi tạo trải nghiệm học tập
               </span>
-              <h1 className="text-xl sm:text-2xl font-black text-white m-0">
-                Chào mừng bạn đến với Learnova!
+              <h1 className="text-xl sm:text-2xl font-black text-white m-0 font-display">
+                Hoàn thiện hồ sơ cá nhân
               </h1>
             </div>
           </div>
-          <p className="text-xs text-white/90 mt-2 max-w-xl leading-relaxed">
-            Hãy dành vài giây hoàn thiện các thông tin còn trống để cá nhân hóa lộ trình học tập và kết nối với cộng đồng.
+          <p className="text-xs text-white/90 mt-2.5 max-w-2xl leading-relaxed m-0">
+            Dành 1 phút điền thông tin để hệ thống Learnova cá nhân hóa lộ trình, đề xuất các khóa học phù hợp và cấp chứng chỉ chuẩn xác cho bạn.
           </p>
         </div>
 
-        {/* Form Body */}
-        <form onSubmit={handleSubmit} className="p-6 sm:p-8 space-y-6">
-          {/* Section 1: Avatar Upload */}
-          <div className="border-b border-slate-100 pb-6">
-            <label className="block text-xs font-extrabold uppercase tracking-wider text-slate-500 mb-3">
-              1. Ảnh đại diện của bạn
-            </label>
+        {/* Form Body with Clear Numbered Steps */}
+        <form onSubmit={handleSubmit} className="p-6 sm:p-8 space-y-8">
+          {/* Section 1: Avatar */}
+          <div className="space-y-4 border-b border-slate-100 pb-8">
+            <div className="flex items-center gap-2">
+              <span className="w-6 h-6 rounded-full bg-primary/10 text-primary text-xs font-black flex items-center justify-center font-display">
+                1
+              </span>
+              <h3 className="text-sm font-extrabold uppercase tracking-wider text-slate-900 m-0 font-display">
+                Ảnh đại diện cá nhân
+              </h3>
+            </div>
+
             <AvatarUploader
               currentAvatarUrl={avatarPreview}
               fullName={fullName || currentUser?.fullName}
@@ -138,62 +157,109 @@ export const CompleteProfilePage: React.FC<CompleteProfilePageProps> = ({
             />
           </div>
 
-          {/* Section 2: Personal Information */}
-          <div className="space-y-4 border-b border-slate-100 pb-6">
-            <label className="block text-xs font-extrabold uppercase tracking-wider text-slate-500">
-              2. Thông tin cơ bản
-            </label>
+          {/* Section 2: Personal Information & Expertise */}
+          <div className="space-y-5 border-b border-slate-100 pb-8">
+            <div className="flex items-center gap-2">
+              <span className="w-6 h-6 rounded-full bg-primary/10 text-primary text-xs font-black flex items-center justify-center font-display">
+                2
+              </span>
+              <h3 className="text-sm font-extrabold uppercase tracking-wider text-slate-900 m-0 font-display">
+                Thông tin cơ bản & Chuyên môn
+              </h3>
+            </div>
 
-            <div>
-              <label className="block text-xs font-bold text-slate-700 mb-1">
-                Họ và tên <span className="text-rose-500">*</span>
+            <div className="space-y-1.5">
+              <label className="block text-xs font-bold text-slate-800 uppercase tracking-wider">
+                Họ và tên hiển thị <span className="text-rose-500">*</span>
               </label>
               <input
                 type="text"
                 value={fullName}
                 onChange={(e) => setFullName(e.target.value)}
-                placeholder="Ví dụ: Nguyễn Văn A"
-                className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-900 focus:bg-white focus:border-primary focus:outline-none transition-all"
+                placeholder="Ví dụ: Nguyễn Văn An"
+                className="w-full px-4 py-3 bg-surface-container-low border border-outline-variant/70 rounded-2xl text-xs text-on-surface focus:bg-white focus:border-primary focus:outline-none transition-all font-semibold"
                 required
               />
             </div>
 
-            <div>
-              <label className="block text-xs font-bold text-slate-700 mb-1">
+            <div className="space-y-2">
+              <label className="block text-xs font-bold text-slate-800 uppercase tracking-wider">
                 Lĩnh vực chuyên môn / Nghề nghiệp hiện tại
               </label>
               <input
                 type="text"
                 value={expertise}
                 onChange={(e) => setExpertise(e.target.value)}
-                placeholder="Ví dụ: Sinh viên CNTT, Lập trình viên React, Chuyên viên Marketing..."
-                className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-900 focus:bg-white focus:border-primary focus:outline-none transition-all"
+                placeholder="Ví dụ: Sinh viên CNTT, Kỹ sư Frontend React, Marketing Specialist..."
+                className="w-full px-4 py-3 bg-surface-container-low border border-outline-variant/70 rounded-2xl text-xs text-on-surface focus:bg-white focus:border-primary focus:outline-none transition-all font-semibold"
               />
+
+              {/* Quick suggestion chips */}
+              <div className="flex flex-wrap gap-1.5 pt-1">
+                {EXPERTISE_SUGGESTIONS.map((item) => (
+                  <button
+                    type="button"
+                    key={item}
+                    onClick={() => setExpertise(item)}
+                    className="text-[11px] font-semibold bg-surface-container-low hover:bg-primary/10 text-on-surface hover:text-primary px-2.5 py-1 rounded-lg border border-outline-variant/50 transition-colors cursor-pointer"
+                  >
+                    + {item}
+                  </button>
+                ))}
+              </div>
             </div>
 
-            <div>
-              <label className="block text-xs font-bold text-slate-700 mb-1">
+            <div className="space-y-1.5">
+              <label className="block text-xs font-bold text-slate-800 uppercase tracking-wider">
                 Tiểu sử ngắn (Bio)
               </label>
               <textarea
                 rows={3}
                 value={bio}
                 onChange={(e) => setBio(e.target.value)}
-                placeholder="Chia sẻ một chút về mục tiêu học tập hoặc sở thích của bạn..."
-                className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-900 focus:bg-white focus:border-primary focus:outline-none transition-all resize-none"
+                placeholder="Chia sẻ đôi nét về mục tiêu học tập, sở thích hoặc định hướng nghề nghiệp..."
+                className="w-full px-4 py-3 bg-surface-container-low border border-outline-variant/70 rounded-2xl text-xs text-on-surface focus:bg-white focus:border-primary focus:outline-none transition-all resize-none leading-relaxed"
               />
             </div>
           </div>
 
           {/* Section 3: Interests */}
-          <div className="space-y-3">
-            <label className="block text-xs font-extrabold uppercase tracking-wider text-slate-500">
-              3. Chủ đề quan tâm yêu thích (Interests)
-            </label>
+          <div className="space-y-4">
+            <div className="flex items-center gap-2">
+              <span className="w-6 h-6 rounded-full bg-primary/10 text-primary text-xs font-black flex items-center justify-center font-display">
+                3
+              </span>
+              <h3 className="text-sm font-extrabold uppercase tracking-wider text-slate-900 m-0 font-display">
+                Chủ đề quan tâm yêu thích (Interests)
+              </h3>
+            </div>
+
             <p className="text-xs text-slate-500 m-0">
-              Chọn các chủ đề bạn muốn ưu tiên khám phá:
+              Chọn các chủ đề bạn muốn ưu tiên xuất hiện trên bảng tin khám phá khóa học:
             </p>
 
+            {/* Selected tags */}
+            {selectedInterests.length > 0 && (
+              <div className="flex flex-wrap gap-2 pt-1">
+                {selectedInterests.map((tag) => (
+                  <span
+                    key={tag}
+                    className="bg-primary text-white text-xs font-bold px-3 py-1.5 rounded-xl shadow-xs flex items-center gap-1.5"
+                  >
+                    <span>{tag}</span>
+                    <button
+                      type="button"
+                      onClick={() => removeInterest(tag)}
+                      className="hover:bg-white/20 rounded-full w-4 h-4 flex items-center justify-center cursor-pointer transition-colors"
+                    >
+                      <span className="material-symbols-outlined text-[12px]">close</span>
+                    </button>
+                  </span>
+                ))}
+              </div>
+            )}
+
+            {/* Preset interest pills */}
             <div className="flex flex-wrap gap-2 pt-1">
               {PRESET_INTERESTS.map((tag) => {
                 const isSelected = selectedInterests.includes(tag);
@@ -202,10 +268,10 @@ export const CompleteProfilePage: React.FC<CompleteProfilePageProps> = ({
                     type="button"
                     key={tag}
                     onClick={() => toggleInterest(tag)}
-                    className={`text-xs font-bold px-3 py-1.5 rounded-xl border transition-all cursor-pointer flex items-center gap-1 ${
+                    className={`text-xs font-bold px-3 py-1.5 rounded-xl border transition-all cursor-pointer flex items-center gap-1.5 ${
                       isSelected
                         ? 'bg-primary text-white border-primary shadow-xs'
-                        : 'bg-slate-50 hover:bg-slate-100 text-slate-700 border-slate-200'
+                        : 'bg-surface-container-low hover:bg-surface-container text-on-surface border-outline-variant/60'
                     }`}
                   >
                     <span>{tag}</span>
@@ -218,31 +284,31 @@ export const CompleteProfilePage: React.FC<CompleteProfilePageProps> = ({
             </div>
 
             {/* Custom Tag Input */}
-            <div className="flex items-center gap-2 pt-2">
+            <div className="flex items-center gap-2 pt-2 border-t border-slate-100">
               <input
                 type="text"
                 value={customInterestInput}
                 onChange={(e) => setCustomInterestInput(e.target.value)}
                 onKeyDown={handleAddCustomInterest}
                 placeholder="Thêm chủ đề khác (ấn Enter)..."
-                className="flex-1 px-3.5 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-900 focus:bg-white focus:border-primary focus:outline-none"
+                className="flex-1 px-4 py-2.5 bg-surface-container-low border border-outline-variant/70 rounded-xl text-xs text-on-surface focus:bg-white focus:border-primary focus:outline-none"
               />
               <button
                 type="button"
                 onClick={handleAddCustomInterest}
-                className="bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs px-3.5 py-2 rounded-xl transition-all cursor-pointer"
+                className="bg-primary/10 hover:bg-primary text-primary hover:text-white font-bold text-xs px-4 py-2.5 rounded-xl transition-all cursor-pointer shrink-0"
               >
                 Thêm
               </button>
             </div>
           </div>
 
-          {/* Action Buttons */}
-          <div className="pt-4 flex flex-col sm:flex-row items-center justify-between gap-3 border-t border-slate-100">
+          {/* Action Buttons Footer */}
+          <div className="pt-6 flex flex-col sm:flex-row items-center justify-between gap-3 border-t border-slate-100">
             <button
               type="button"
               onClick={onSkip}
-              className="text-xs font-bold text-slate-500 hover:text-slate-800 transition-colors order-2 sm:order-1 cursor-pointer py-2"
+              className="text-xs font-bold text-slate-500 hover:text-slate-800 transition-colors order-2 sm:order-1 cursor-pointer py-2 px-3 rounded-xl hover:bg-slate-100"
             >
               Để sau, chuyển đến Trang chủ
             </button>
@@ -250,16 +316,16 @@ export const CompleteProfilePage: React.FC<CompleteProfilePageProps> = ({
             <button
               type="submit"
               disabled={isSubmitting}
-              className="w-full sm:w-auto bg-primary hover:bg-primary-container text-white font-extrabold text-xs px-6 py-3 rounded-2xl transition-all shadow-md flex items-center justify-center gap-2 order-1 sm:order-2 cursor-pointer disabled:opacity-50"
+              className="w-full sm:w-auto bg-primary hover:bg-primary/90 text-white font-extrabold text-xs px-7 py-3 rounded-2xl transition-all shadow-lg shadow-primary/30 flex items-center justify-center gap-2 order-1 sm:order-2 cursor-pointer active:scale-95 disabled:opacity-50"
             >
               {isSubmitting ? (
                 <>
                   <span className="animate-spin w-4 h-4 border-2 border-white border-t-transparent rounded-full" />
-                  <span>Đang lưu...</span>
+                  <span>Đang hoàn tất...</span>
                 </>
               ) : (
                 <>
-                  <span>Hoàn tất & Bắt đầu trải nghiệm</span>
+                  <span>HOÀN TẤT & BẮT ĐẦU TRẢI NGHIỆM</span>
                   <span className="material-symbols-outlined text-[18px]">arrow_forward</span>
                 </>
               )}
@@ -270,3 +336,4 @@ export const CompleteProfilePage: React.FC<CompleteProfilePageProps> = ({
     </div>
   );
 };
+

@@ -101,15 +101,30 @@ export const StudentNavbar: React.FC<StudentNavbarProps> = ({
 
             {/* Profile Avatar / User info */}
             <div className="flex items-center gap-2 pl-2 border-l border-outline-variant/60">
-              <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-primary to-secondary text-white font-bold text-xs flex items-center justify-center shadow-sm">
-                {currentUser?.fullName ? currentUser.fullName.substring(0, 2).toUpperCase() : 'HV'}
-              </div>
-              <div className="hidden xl:block text-left">
-                <p className="text-xs font-bold text-on-surface truncate max-w-[120px] m-0">
-                  {currentUser?.fullName || 'Học viên'}
-                </p>
-                <p className="text-[10px] text-on-surface-variant m-0">Học viên</p>
-              </div>
+              <button
+                type="button"
+                onClick={() => {
+                  window.location.hash = '#profile';
+                  window.dispatchEvent(new Event('hashchange'));
+                }}
+                className="flex items-center gap-2 text-left hover:opacity-80 transition-opacity cursor-pointer group"
+                title="Xem và chỉnh sửa hồ sơ cá nhân"
+              >
+                <div className="w-8 h-8 rounded-xl bg-gradient-to-tr from-primary to-secondary text-white font-bold text-xs flex items-center justify-center shadow-sm overflow-hidden shrink-0">
+                  {currentUser?.avatarUrl ? (
+                    <img src={currentUser.avatarUrl} alt={currentUser.fullName} className="w-full h-full object-cover" />
+                  ) : (
+                    currentUser?.fullName ? currentUser.fullName.substring(0, 2).toUpperCase() : 'HV'
+                  )}
+                </div>
+                <div className="hidden xl:block text-left">
+                  <p className="text-xs font-bold text-on-surface truncate max-w-[120px] m-0 group-hover:text-primary transition-colors">
+                    {currentUser?.fullName || 'Học viên'}
+                  </p>
+                  <p className="text-[10px] text-on-surface-variant m-0">Hồ sơ cá nhân</p>
+                </div>
+              </button>
+
               {currentUser && (
                 <button
                   onClick={logout}

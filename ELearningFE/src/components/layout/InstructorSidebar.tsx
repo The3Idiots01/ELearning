@@ -90,22 +90,34 @@ export const InstructorSidebar: React.FC<InstructorSidebarProps> = ({
         </button>
 
         <div className="flex items-center justify-between pt-2">
-          <div className="flex items-center gap-2.5 overflow-hidden">
-            <div className="w-8 h-8 rounded-full bg-primary/10 text-primary flex items-center justify-center font-bold text-xs uppercase shrink-0">
-              {currentUser ? currentUser.fullName.substring(0, 2) : 'GV'}
+          <button
+            type="button"
+            onClick={() => {
+              window.location.hash = '#profile';
+              window.dispatchEvent(new Event('hashchange'));
+            }}
+            className="flex items-center gap-2.5 overflow-hidden text-left hover:opacity-80 transition-opacity cursor-pointer group flex-1 min-w-0"
+            title="Xem và chỉnh sửa hồ sơ cá nhân"
+          >
+            <div className="w-8 h-8 rounded-xl bg-primary/10 text-primary flex items-center justify-center font-bold text-xs uppercase shrink-0 overflow-hidden shadow-xs">
+              {currentUser?.avatarUrl ? (
+                <img src={currentUser.avatarUrl} alt={currentUser.fullName} className="w-full h-full object-cover" />
+              ) : (
+                currentUser ? currentUser.fullName.substring(0, 2) : 'GV'
+              )}
             </div>
             <div className="overflow-hidden">
-              <p className="font-bold text-xs text-on-surface truncate m-0">
+              <p className="font-bold text-xs text-on-surface truncate m-0 group-hover:text-primary transition-colors">
                 {currentUser ? currentUser.fullName : 'Giảng viên'}
               </p>
-              <p className="text-[10px] text-on-surface-variant m-0">Giảng viên Studio</p>
+              <p className="text-[10px] text-on-surface-variant m-0">Hồ sơ cá nhân</p>
             </div>
-          </div>
+          </button>
 
           <button
             onClick={logout}
             title="Đăng xuất"
-            className="p-1.5 text-outline hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors cursor-pointer"
+            className="p-1.5 text-outline hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors cursor-pointer shrink-0"
           >
             <span className="material-symbols-outlined text-[18px]">logout</span>
           </button>
