@@ -19,8 +19,10 @@ public class LessonResponse {
     private Integer durationSeconds;
     private Boolean isPreview;
     private Integer position;
+    private Boolean completed;
 
     private String contentText;
+    private String contentUrl;
     private String originalFileName;
     private Long fileSizeBytes;
     private String mimeType;

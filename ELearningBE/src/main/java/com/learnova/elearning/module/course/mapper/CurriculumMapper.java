@@ -31,7 +31,7 @@ public final class CurriculumMapper {
                 .build();
     }
 
-    public static LessonResponse toLesson(Lesson lesson, List<LessonResourceResponse> resources) {
+    public static LessonResponse toLesson(Lesson lesson, String contentUrl, List<LessonResourceResponse> resources) {
         return LessonResponse.builder()
                 .id(lesson.getId())
                 .title(lesson.getTitle())
@@ -41,6 +41,7 @@ public final class CurriculumMapper {
                 .isPreview(lesson.getIsPreview())
                 .position(lesson.getPosition())
                 .contentText(lesson.getContentText())
+                .contentUrl(contentUrl)
                 .originalFileName(lesson.getOriginalFileName())
                 .fileSizeBytes(lesson.getFileSizeBytes())
                 .mimeType(lesson.getMimeType())

@@ -31,7 +31,12 @@ public class LessonResponseAssembler {
                 .findByLesson_IdOrderByPositionAsc(lesson.getId()).stream()
                 .map(this::toResource)
                 .toList();
-        return CurriculumMapper.toLesson(lesson, resources);
+        String contentUrl = null;
+        if (lesson.getStorageKey() != null) {
+            contentUrl = storageService.presignDownload(
+                    lesson.getStorageKey(), storageProperties.getDownloadTtl());
+        }
+        return CurriculumMapper.toLesson(lesson, contentUrl, resources);
     }
 
     public LessonResourceResponse toResource(LessonResource resource) {
