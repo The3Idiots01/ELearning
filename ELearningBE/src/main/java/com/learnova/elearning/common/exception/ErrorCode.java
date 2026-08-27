@@ -48,6 +48,10 @@ public enum ErrorCode {
     COURSE_MODIFIED_CONCURRENTLY(1208, "Course was modified elsewhere, please reload", HttpStatus.CONFLICT),
     COURSE_LOCKED_BY_ADMIN(1209, "Course is suspended and cannot be edited", HttpStatus.FORBIDDEN),
     CATEGORY_NOT_FOUND(1210, "Category not found", HttpStatus.NOT_FOUND),
+    COURSE_NOT_PUBLISHED(1211, "Course is not published", HttpStatus.BAD_REQUEST),
+    LECTURER_CANNOT_ENROLL_OWN_COURSE(1212, "Lecturer cannot enroll in their own course", HttpStatus.BAD_REQUEST),
+    ALREADY_ENROLLED(1213, "Already enrolled in this course", HttpStatus.CONFLICT),
+    ENROLLMENT_NOT_FOUND(1214, "Enrollment not found", HttpStatus.NOT_FOUND),
 
     // Curriculum (1221 - 1235)
     SECTION_NOT_FOUND(1221, "Section not found", HttpStatus.NOT_FOUND),

@@ -19,10 +19,12 @@ import com.learnova.elearning.module.course.dto.response.CourseSummaryResponse;
 import com.learnova.elearning.module.course.entity.Course;
 import com.learnova.elearning.module.course.entity.CourseBullet;
 import com.learnova.elearning.module.course.entity.enums.BulletType;
+import com.learnova.elearning.module.course.entity.enums.CourseLevel;
 import com.learnova.elearning.module.course.entity.enums.CourseStatus;
 import com.learnova.elearning.module.course.mapper.CourseMapper;
 import com.learnova.elearning.module.course.repository.CourseBulletRepository;
 import com.learnova.elearning.module.course.repository.CourseRepository;
+import com.learnova.elearning.module.enrollment.repository.EnrollmentRepository;
 import com.learnova.elearning.module.user.entity.User;
 import com.learnova.elearning.module.user.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
@@ -62,6 +64,7 @@ public class CourseService {
     private final UserRepository userRepository;
     private final StorageService storageService;
     private final StorageKeyFactory keyFactory;
+    private final EnrollmentRepository enrollmentRepository;
     private final StorageProperties storageProperties;
 
     // ---- Create -----------------------------------------------------------
@@ -242,9 +245,8 @@ public class CourseService {
         if (course.getStatus() == CourseStatus.SUSPENDED) {
             throw new AppException(ErrorCode.COURSE_LOCKED_BY_ADMIN);
         }
-        // Chỉ xóa được course chưa từng công khai. Khi có module enrollment sẽ thay
-        // bằng kiểm tra số enrollment thực tế (BR-22: không xóa nếu đã có người mua).
-        if (course.getPublishedAt() != null) {
+        // BR-22: không xóa nếu đã có học viên đăng ký học
+        if (enrollmentRepository.existsByCourse_Id(courseId)) {
             throw new AppException(ErrorCode.COURSE_HAS_ENROLLMENTS);
         }
 
@@ -298,5 +300,28 @@ public class CourseService {
             candidate = base + "-" + suffix++;
         }
         return candidate;
+    }
+
+    @Transactional(readOnly = true)
+    public PageResponse<CourseSummaryResponse> searchPublic(Long categoryId, CourseLevel level,
+                                                            String keyword, Pageable pageable) {
+        String kw = (keyword != null && !keyword.isBlank()) ? keyword.trim() : null;
+        return PageResponse.from(
+                courseRepository.searchPublic(categoryId, level, kw, pageable),
+                course -> CourseMapper.toSummary(course, signThumbnail(course)));
+    }
+
+    @Transactional(readOnly = true)
+    public CourseResponse getPublicDetail(Long courseId) {
+        Course course = courseRepository.findByIdAndStatus(courseId, CourseStatus.PUBLISHED)
+                .orElseThrow(() -> new AppException(ErrorCode.COURSE_NOT_FOUND));
+        return toDetail(course);
+    }
+
+    @Transactional(readOnly = true)
+    public CourseResponse getPublicDetailBySlug(String slug) {
+        Course course = courseRepository.findBySlugAndStatus(slug, CourseStatus.PUBLISHED)
+                .orElseThrow(() -> new AppException(ErrorCode.COURSE_NOT_FOUND));
+        return toDetail(course);
     }
 }
