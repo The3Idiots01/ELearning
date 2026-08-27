@@ -11,6 +11,12 @@ import { DemoRoleBanner } from './components/layout/DemoRoleBanner';
 import { StudentNavbar } from './components/layout/StudentNavbar';
 import { InstructorSidebar } from './components/layout/InstructorSidebar';
 
+// Auth & Profile Pages
+import { LoginPage } from './features/auth/pages/LoginPage';
+import { RegisterPage } from './features/auth/pages/RegisterPage';
+import { ProfilePage } from './features/auth/pages/ProfilePage';
+import { CompleteProfilePage } from './features/auth/pages/CompleteProfilePage';
+
 // Student Pages
 import { StudentCatalogPage } from './features/course/pages/student/StudentCatalogPage';
 import { CourseDetailPage } from './features/course/pages/student/CourseDetailPage';
@@ -22,12 +28,42 @@ import { InstructorCoursesPage } from './features/course/pages/instructor/Instru
 import { CourseSettingsPage } from './features/course/pages/instructor/CourseSettingsPage';
 import { CurriculumEditorPage } from './features/course/pages/instructor/CurriculumEditorPage';
 
+function getInitialAuthRoute(): 'none' | 'login' | 'register' | 'profile' | 'complete-profile' {
+  const path = window.location.pathname.toLowerCase();
+  const search = new URLSearchParams(window.location.search);
+  const pageParam = search.get('page')?.toLowerCase() || search.get('view')?.toLowerCase();
+  const hash = window.location.hash.toLowerCase();
+
+  if (path.includes('/login') || pageParam === 'login' || hash === '#login' || hash === '#/login') return 'login';
+  if (path.includes('/register') || pageParam === 'register' || hash === '#register' || hash === '#/register') return 'register';
+  if (path.includes('/complete-profile') || pageParam === 'complete-profile' || hash === '#complete-profile' || hash === '#/complete-profile') return 'complete-profile';
+  if (path.includes('/profile') || pageParam === 'profile' || hash === '#profile' || hash === '#/profile') return 'profile';
+  return 'none';
+}
+
+
 export function App() {
   const { appMode } = useAuth();
   const { showSuccess, showError } = useToast();
 
+  // Auth routing state for independent testing
+  const [authRoute, setAuthRoute] = useState<'none' | 'login' | 'register' | 'profile' | 'complete-profile'>(getInitialAuthRoute());
+
+  useEffect(() => {
+    const handleUrlChange = () => {
+      setAuthRoute(getInitialAuthRoute());
+    };
+    window.addEventListener('popstate', handleUrlChange);
+    window.addEventListener('hashchange', handleUrlChange);
+    return () => {
+      window.removeEventListener('popstate', handleUrlChange);
+      window.removeEventListener('hashchange', handleUrlChange);
+    };
+  }, []);
+
   // Shared Categories
   const [categories, setCategories] = useState<Category[]>([]);
+
 
   // ---------------------------------------------------------------------------
   // STUDENT STATE
@@ -185,10 +221,52 @@ export function App() {
     setInstructorView('curriculum');
   };
 
+  // ---------------------------------------------------------------------------
+  // CONDITIONAL AUTH & PROFILE FLOW RENDERING (TESTABLE VIA URL)
+  // ---------------------------------------------------------------------------
+  if (authRoute === 'login') {
+    return (
+      <LoginPage
+        onNavigateToRegister={() => setAuthRoute('register')}
+        onNavigateToHome={() => setAuthRoute('none')}
+        onLoginSuccess={() => setAuthRoute('profile')}
+      />
+    );
+  }
+
+  if (authRoute === 'register') {
+    return (
+      <RegisterPage
+        onNavigateToLogin={() => setAuthRoute('login')}
+        onNavigateToHome={() => setAuthRoute('none')}
+      />
+    );
+  }
+
+  if (authRoute === 'complete-profile') {
+    return (
+      <CompleteProfilePage
+        onCompleteSuccess={() => setAuthRoute('profile')}
+        onSkip={() => setAuthRoute('none')}
+      />
+    );
+  }
+
+  if (authRoute === 'profile') {
+    return (
+      <ProfilePage
+        onNavigateHome={() => setAuthRoute('none')}
+        onNavigateToLogin={() => setAuthRoute('login')}
+        onNavigateToCompleteProfile={() => setAuthRoute('complete-profile')}
+      />
+    );
+  }
+
   return (
     <div className="min-h-screen bg-background text-on-background flex flex-col font-sans">
       {/* Top Demo Banner for switching Roles */}
       <DemoRoleBanner />
+
 
       {/* ------------------------------------------------------------------- */}
       {/* 1. STUDENT PORTAL MODE                                              */}

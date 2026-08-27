@@ -45,6 +45,16 @@ public class StorageKeyFactory {
         return coursePrefix(courseId) + "lessons/" + lessonId + "/";
     }
 
+    public String userAvatarKey(Long userId, String originalFileName) {
+        String uuid = UUID.randomUUID().toString();
+        String ext = extractExtension(originalFileName);
+        return "users/" + userId + "/avatar/" + uuid + ext;
+    }
+
+    public String userAvatarPrefix(Long userId) {
+        return "users/" + userId + "/avatar/";
+    }
+
     private String extractExtension(String fileName) {
         if (fileName == null) {
             return "";

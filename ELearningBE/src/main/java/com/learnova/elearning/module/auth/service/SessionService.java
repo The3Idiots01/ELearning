@@ -7,6 +7,7 @@ import com.learnova.elearning.module.auth.dto.request.LoginRequest;
 import com.learnova.elearning.module.auth.dto.response.AuthResponse;
 import com.learnova.elearning.module.user.dto.UserResponse;
 import com.learnova.elearning.module.user.entity.User;
+import com.learnova.elearning.module.user.mapper.UserMapper;
 import com.learnova.elearning.module.user.repository.UserRepository;
 import com.learnova.elearning.security.CustomUserDetails;
 import com.learnova.elearning.security.JwtTokenProvider;
@@ -36,6 +37,7 @@ public class SessionService {
     private final PasswordEncoder passwordEncoder;
     private final JwtTokenProvider jwtTokenProvider;
     private final RedisTemplate<String, Object> redisTemplate;
+    private final UserMapper userMapper;
 
     public AuthResponse login(LoginRequest request, HttpServletResponse response) {
         User user = userRepository.findByEmail(request.getEmail().trim().toLowerCase())
@@ -61,7 +63,7 @@ public class SessionService {
 
         return AuthResponse.builder()
                 .accessToken(accessToken)
-                .user(UserResponse.fromEntity(user))
+                .user(userMapper.toResponse(user))
                 .build();
     }
 
@@ -102,7 +104,7 @@ public class SessionService {
 
         return AuthResponse.builder()
                 .accessToken(newAccessToken)
-                .user(UserResponse.fromEntity(user))
+                .user(userMapper.toResponse(user))
                 .build();
     }
 
@@ -126,7 +128,7 @@ public class SessionService {
         }
         User user = userRepository.findById(userDetails.getId())
                 .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_FOUND));
-        return UserResponse.fromEntity(user);
+        return userMapper.toResponse(user);
     }
 
     private void saveRefreshTokenToRedis(Long userId, String refreshToken) {
