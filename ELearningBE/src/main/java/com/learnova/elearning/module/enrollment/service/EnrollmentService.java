@@ -17,6 +17,8 @@ import com.learnova.elearning.module.enrollment.entity.LessonProgress;
 import com.learnova.elearning.module.enrollment.entity.enums.EnrollmentStatus;
 import com.learnova.elearning.module.enrollment.repository.EnrollmentRepository;
 import com.learnova.elearning.module.enrollment.repository.LessonProgressRepository;
+import com.learnova.elearning.module.payment.entity.enums.PaymentStatus;
+import com.learnova.elearning.module.payment.repository.PaymentOrderRepository;
 import com.learnova.elearning.module.user.entity.User;
 import com.learnova.elearning.module.user.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
@@ -37,6 +39,7 @@ public class EnrollmentService {
     private final CourseRepository courseRepository;
     private final LessonRepository lessonRepository;
     private final UserRepository userRepository;
+    private final PaymentOrderRepository paymentOrderRepository;
     private final StorageService storageService;
     private final StorageProperties storageProperties;
 
@@ -61,6 +64,14 @@ public class EnrollmentService {
         // BR-EN-03: Cannot enroll duplicate active/completed enrollments
         if (enrollmentRepository.existsByStudent_IdAndCourse_Id(studentId, courseId)) {
             throw new AppException(ErrorCode.ALREADY_ENROLLED);
+        }
+
+        // BR-EN-05: If course is paid (> 0), check for paid payment order
+        if (course.getPrice() != null && course.getPrice().compareTo(BigDecimal.ZERO) > 0) {
+            boolean isPaid = paymentOrderRepository.existsByStudent_IdAndCourse_IdAndStatus(studentId, courseId, PaymentStatus.PAID);
+            if (!isPaid) {
+                throw new AppException(ErrorCode.PAYMENT_REQUIRED);
+            }
         }
 
         Enrollment enrollment = Enrollment.builder()
