@@ -23,6 +23,10 @@ import { CourseDetailPage } from './features/course/pages/student/CourseDetailPa
 import { MyCoursesPage } from './features/course/pages/student/MyCoursesPage';
 import { LearningWorkspacePage } from './features/course/pages/student/LearningWorkspacePage';
 
+// Payment Pages & Services
+import { paymentApi } from './features/payment/api/paymentApi';
+import { PaymentResultPage } from './features/payment/pages/PaymentResultPage';
+
 // Instructor Pages (US-05 & US-06)
 import { InstructorCoursesPage } from './features/course/pages/instructor/InstructorCoursesPage';
 import { CourseSettingsPage } from './features/course/pages/instructor/CourseSettingsPage';
@@ -41,6 +45,56 @@ function getInitialAuthRoute(): 'none' | 'login' | 'register' | 'profile' | 'com
   return 'none';
 }
 
+function getInitialPaymentParams(): { orderCode: number | null; status: string | null; courseId: number | null } {
+  const path = window.location.pathname.toLowerCase();
+  const search = new URLSearchParams(window.location.search);
+  const orderCodeStr = search.get('orderCode');
+  const status = search.get('status');
+  const courseIdStr = search.get('courseId');
+
+  if (path.includes('/payment-result') || orderCodeStr) {
+    return {
+      orderCode: orderCodeStr ? parseInt(orderCodeStr, 10) : null,
+      status: status,
+      courseId: courseIdStr ? parseInt(courseIdStr, 10) : null
+    };
+  }
+  return { orderCode: null, status: null, courseId: null };
+}
+
+function getInitialLearningCourseId(): number | null {
+  const path = window.location.pathname.toLowerCase();
+  const search = new URLSearchParams(window.location.search);
+  const hash = window.location.hash.toLowerCase();
+
+  const courseIdParam = search.get('courseId');
+  if (courseIdParam && (path.includes('/learning') || search.get('tab') === 'learning')) {
+    const parsed = parseInt(courseIdParam, 10);
+    if (!isNaN(parsed) && parsed > 0) return parsed;
+  }
+
+  const learningMatch = path.match(/\/learning\/(\d+)/);
+  if (learningMatch) {
+    const parsed = parseInt(learningMatch[1], 10);
+    if (!isNaN(parsed) && parsed > 0) return parsed;
+  }
+
+  if (hash.includes('learning')) {
+    const hashSearchMatch = hash.match(/courseid=(\d+)/);
+    if (hashSearchMatch) {
+      const parsed = parseInt(hashSearchMatch[1], 10);
+      if (!isNaN(parsed) && parsed > 0) return parsed;
+    }
+    const hashIdMatch = hash.match(/learning\/(\d+)/);
+    if (hashIdMatch) {
+      const parsed = parseInt(hashIdMatch[1], 10);
+      if (!isNaN(parsed) && parsed > 0) return parsed;
+    }
+  }
+
+  return null;
+}
+
 
 export function App() {
   const { appMode } = useAuth();
@@ -49,33 +103,27 @@ export function App() {
   // Auth routing state for independent testing
   const [authRoute, setAuthRoute] = useState<'none' | 'login' | 'register' | 'profile' | 'complete-profile'>(getInitialAuthRoute());
 
-  useEffect(() => {
-    const handleUrlChange = () => {
-      setAuthRoute(getInitialAuthRoute());
-    };
-    window.addEventListener('popstate', handleUrlChange);
-    window.addEventListener('hashchange', handleUrlChange);
-    return () => {
-      window.removeEventListener('popstate', handleUrlChange);
-      window.removeEventListener('hashchange', handleUrlChange);
-    };
-  }, []);
-
   // Shared Categories
   const [categories, setCategories] = useState<Category[]>([]);
-
 
   // ---------------------------------------------------------------------------
   // STUDENT STATE
   // ---------------------------------------------------------------------------
-  const [studentTab, setStudentTab] = useState<'catalog' | 'detail' | 'my-courses' | 'learning'>('catalog');
+  const initialPayment = getInitialPaymentParams();
+  const initialLearningCourseId = getInitialLearningCourseId();
+  const [studentTab, setStudentTab] = useState<'catalog' | 'detail' | 'my-courses' | 'learning' | 'payment-result'>(
+    initialPayment.orderCode ? 'payment-result' : initialLearningCourseId ? 'learning' : 'catalog'
+  );
+  const [paymentOrderCode] = useState<number | null>(initialPayment.orderCode);
+  const [paymentStatus] = useState<string | null>(initialPayment.status);
+  const [paymentCourseId] = useState<number | null>(initialPayment.courseId);
   const [publicCourses, setPublicCourses] = useState<CourseSummary[]>([]);
   const [enrolledCourses, setEnrolledCourses] = useState<EnrolledCourse[]>([]);
   const [selectedStudentCategoryId, setSelectedStudentCategoryId] = useState<number | null>(null);
   const [selectedStudentLevel, setSelectedStudentLevel] = useState<string>('ALL');
   const [studentSearchQuery, setStudentSearchQuery] = useState<string>('');
 
-  const [selectedStudentCourseId, setSelectedStudentCourseId] = useState<number | null>(null);
+  const [selectedStudentCourseId, setSelectedStudentCourseId] = useState<number | null>(initialLearningCourseId);
   const [studentCourseDetail, setStudentCourseDetail] = useState<CourseDetail | null>(null);
   const [studentCurriculum, setStudentCurriculum] = useState<Curriculum | null>(null);
   const [isStudentLoading, setIsStudentLoading] = useState<boolean>(false);
@@ -88,13 +136,38 @@ export function App() {
   const [selectedInstructorCourseId, setSelectedInstructorCourseId] = useState<number | null>(null);
   const [selectedInstructorCourseTitle, setSelectedInstructorCourseTitle] = useState<string>('');
 
-  // Initial Data Load
+  // Initial Data Load & URL Sync
   useEffect(() => {
     categoryApi.getAll().then((cats) => {
       setCategories(cats);
     });
     fetchPublicCourses();
     fetchEnrolledCourses();
+
+    if (initialLearningCourseId && !initialPayment.orderCode) {
+      handleGoToLearning(initialLearningCourseId, true);
+    }
+  }, []);
+
+  useEffect(() => {
+    const handleUrlChange = () => {
+      setAuthRoute(getInitialAuthRoute());
+      const learningId = getInitialLearningCourseId();
+      if (learningId) {
+        handleGoToLearning(learningId, true);
+      } else if (window.location.pathname === '/' || window.location.pathname === '') {
+        const curPayment = getInitialPaymentParams();
+        if (!curPayment.orderCode) {
+          setStudentTab((prev) => (prev === 'learning' || prev === 'payment-result' ? 'catalog' : prev));
+        }
+      }
+    };
+    window.addEventListener('popstate', handleUrlChange);
+    window.addEventListener('hashchange', handleUrlChange);
+    return () => {
+      window.removeEventListener('popstate', handleUrlChange);
+      window.removeEventListener('hashchange', handleUrlChange);
+    };
   }, []);
 
   // ---------------------------------------------------------------------------
@@ -153,21 +226,34 @@ export function App() {
   const handleEnrollCourse = async (courseId: number) => {
     setIsEnrolling(true);
     try {
-      await studentCourseApi.enrollCourse(courseId);
-      showSuccess('🎉 Chúc mừng bạn đã đăng ký khóa học thành công!');
-      await fetchEnrolledCourses();
-      handleGoToLearning(courseId);
+      const res = await paymentApi.createCheckout(courseId);
+      if (res.isEnrolled) {
+        showSuccess('🎉 Chúc mừng bạn đã đăng ký khóa học thành công!');
+        await fetchEnrolledCourses();
+        handleGoToLearning(courseId);
+      } else if (res.checkoutUrl) {
+        // Redirect student to PayOS payment gateway checkout page
+        window.location.href = res.checkoutUrl;
+      }
     } catch (err: any) {
-      showError(err.message || 'Lỗi khi đăng ký khóa học.');
+      showError(err.message || 'Lỗi khi khởi tạo thanh toán.');
     } finally {
       setIsEnrolling(false);
     }
   };
 
-  const handleGoToLearning = async (courseId: number) => {
+  const handleGoToLearning = async (courseId: number, replaceUrl: boolean = false) => {
     setSelectedStudentCourseId(courseId);
     setStudentTab('learning');
     setIsStudentLoading(true);
+
+    // Synchronize browser URL to learning workspace
+    const targetUrl = `/learning?courseId=${courseId}`;
+    if (replaceUrl || window.location.pathname.includes('/payment-result')) {
+      window.history.replaceState({ tab: 'learning', courseId }, '', targetUrl);
+    } else if (window.location.pathname + window.location.search !== targetUrl) {
+      window.history.pushState({ tab: 'learning', courseId }, '', targetUrl);
+    }
 
     try {
       const [detail, curr] = await Promise.all([
@@ -273,10 +359,13 @@ export function App() {
       {/* ------------------------------------------------------------------- */}
       {appMode === 'STUDENT' ? (
         <div className="flex-1 flex flex-col min-h-0">
-          {studentTab !== 'learning' && (
+          {studentTab !== 'learning' && studentTab !== 'payment-result' && (
             <StudentNavbar
               activeTab={studentTab}
               onNavigateTab={(tab) => {
+                if (window.location.pathname !== '/' || window.location.search) {
+                  window.history.pushState({}, '', '/');
+                }
                 setStudentTab(tab);
                 if (tab === 'catalog') fetchPublicCourses();
                 if (tab === 'my-courses') fetchEnrolledCourses();
@@ -285,6 +374,9 @@ export function App() {
               onSearchChange={setStudentSearchQuery}
               onSearchSubmit={(e) => {
                 e.preventDefault();
+                if (window.location.pathname !== '/' || window.location.search) {
+                  window.history.pushState({}, '', '/');
+                }
                 setStudentTab('catalog');
                 fetchPublicCourses();
               }}
@@ -320,7 +412,12 @@ export function App() {
               isEnrolling={isEnrolling}
               onEnroll={handleEnrollCourse}
               onGoToLearning={handleGoToLearning}
-              onBack={() => setStudentTab('catalog')}
+              onBack={() => {
+                if (window.location.pathname !== '/' || window.location.search) {
+                  window.history.pushState({}, '', '/');
+                }
+                setStudentTab('catalog');
+              }}
             />
           )}
 
@@ -340,7 +437,27 @@ export function App() {
               curriculum={studentCurriculum}
               isLoading={isStudentLoading}
               onCompleteLesson={handleCompleteLesson}
-              onBack={() => setStudentTab('my-courses')}
+              onBack={() => {
+                window.history.pushState({}, '', '/');
+                setStudentTab('my-courses');
+              }}
+            />
+          )}
+
+          {studentTab === 'payment-result' && (
+            <PaymentResultPage
+              orderCode={paymentOrderCode}
+              initialStatus={paymentStatus}
+              initialCourseId={paymentCourseId}
+              onGoToLearning={(cId) => {
+                fetchEnrolledCourses();
+                handleGoToLearning(cId, true);
+              }}
+              onBackToCatalog={() => {
+                window.history.replaceState({}, '', '/');
+                fetchEnrolledCourses();
+                setStudentTab('catalog');
+              }}
             />
           )}
         </div>

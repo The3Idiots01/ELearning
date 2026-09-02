@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import type { CourseDetail, Curriculum, Lesson } from '../../../../types/course';
 import { formatDuration } from '../../../../lib/formatters';
+import { DocumentViewer } from '../../components/DocumentViewer';
 
 interface LearningWorkspacePageProps {
   courseId: number;
@@ -139,15 +140,17 @@ export const LearningWorkspacePage: React.FC<LearningWorkspacePageProps> = ({
         {/* Left Primary Player / Content Area */}
         <main className="flex-1 flex flex-col bg-slate-950 overflow-y-auto min-h-0">
           
-          {/* Media Player Box */}
-          <div className="w-full bg-black aspect-video max-h-[60vh] flex items-center justify-center relative border-b border-slate-800 shrink-0">
-            {!activeLesson ? (
+          {/* Media / Document Player Box */}
+          {!activeLesson ? (
+            <div className="w-full bg-black aspect-video max-h-[60vh] flex items-center justify-center relative border-b border-slate-800 shrink-0">
               <div className="text-center p-8 text-slate-400">
                 <span className="material-symbols-outlined text-[48px] mb-2">touch_app</span>
                 <p className="text-xs font-bold m-0">Vui lòng chọn bài học từ danh sách bên phải.</p>
               </div>
-            ) : activeLesson.contentType === 'VIDEO' ? (
-              activeLesson.contentUrl ? (
+            </div>
+          ) : activeLesson.contentType === 'VIDEO' ? (
+            <div className="w-full bg-black aspect-video max-h-[60vh] flex items-center justify-center relative border-b border-slate-800 shrink-0">
+              {activeLesson.contentUrl ? (
                 <video
                   key={activeLesson.contentUrl}
                   src={activeLesson.contentUrl}
@@ -167,44 +170,33 @@ export const LearningWorkspacePage: React.FC<LearningWorkspacePageProps> = ({
                     Video bài học đã sẵn sàng. Bạn có thể bấm nút &quot;Đánh dấu hoàn thành&quot; phía dưới để tiếp tục tiến trình.
                   </p>
                 </div>
-              )
-            ) : activeLesson.contentType === 'ARTICLE' ? (
-              /* ARTICLE Content Type */
-              <div className="p-8 text-left text-slate-200 space-y-4 max-w-3xl w-full overflow-y-auto max-h-[60vh]">
+              )}
+            </div>
+          ) : activeLesson.contentType === 'ARTICLE' ? (
+            /* ARTICLE Content Type */
+            <div className="w-full bg-slate-950 p-6 sm:p-8 border-b border-slate-800 shrink-0">
+              <div className="max-w-4xl mx-auto space-y-4">
                 <div className="flex items-center gap-2 text-primary-container text-xs font-bold uppercase tracking-wider">
                   <span className="material-symbols-outlined text-[18px]">article</span>
                   <span>Bài viết lý thuyết</span>
                 </div>
-                <h2 className="text-xl font-bold text-white m-0 font-display">{activeLesson.title}</h2>
-                <div className="text-xs sm:text-sm text-slate-300 leading-relaxed whitespace-pre-line bg-slate-900/60 p-6 rounded-2xl border border-slate-800">
+                <h2 className="text-xl sm:text-2xl font-bold text-white m-0 font-display">{activeLesson.title}</h2>
+                <div className="text-xs sm:text-sm text-slate-300 leading-relaxed whitespace-pre-line bg-slate-900/60 p-6 sm:p-8 rounded-2xl border border-slate-800 shadow-inner">
                   {activeLesson.contentText || 'Bài học này bao gồm tài liệu nghiên cứu chi tiết.'}
                 </div>
               </div>
-            ) : (
-              /* FILE Content Type */
-              <div className="text-center p-8 text-slate-300 space-y-4 max-w-md">
-                <span className="material-symbols-outlined text-[54px] text-emerald-400">
-                  description
-                </span>
-                <h3 className="text-base font-bold text-white m-0 font-display">{activeLesson.title}</h3>
-                <p className="text-xs text-slate-400 m-0">
-                  Tệp tài liệu: <strong className="text-slate-200">{activeLesson.originalFileName || 'tailieu.pdf'}</strong>
-                </p>
-
-                {activeLesson.contentUrl && (
-                  <a
-                    href={activeLesson.contentUrl}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="inline-flex items-center gap-2 bg-primary hover:bg-primary-container text-white font-bold text-xs px-5 py-2.5 rounded-full transition-all shadow-md"
-                  >
-                    <span className="material-symbols-outlined text-[18px]">download</span>
-                    <span>Tải về tệp tài liệu</span>
-                  </a>
-                )}
-              </div>
-            )}
-          </div>
+            </div>
+          ) : (
+            /* FILE Content Type */
+            <div className="w-full min-h-[1400px] sm:min-h-[1600px] p-3 sm:p-5 border-b border-slate-800 flex flex-col shrink-0">
+              <DocumentViewer
+                url={activeLesson.contentUrl}
+                fileName={activeLesson.originalFileName}
+                mimeType={activeLesson.mimeType}
+                title={activeLesson.title}
+              />
+            </div>
+          )}
 
           {/* Lesson Details & Actions Bar */}
           {activeLesson && (

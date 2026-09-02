@@ -2,7 +2,7 @@ import React from 'react';
 import { useAuth } from '../../app/context/AuthContext';
 
 interface StudentNavbarProps {
-  activeTab: 'catalog' | 'my-courses' | 'detail' | 'learning';
+  activeTab: 'catalog' | 'my-courses' | 'detail' | 'learning' | 'payment-result';
   onNavigateTab: (tab: 'catalog' | 'my-courses') => void;
   searchQuery: string;
   onSearchChange: (query: string) => void;
