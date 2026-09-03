@@ -67,7 +67,17 @@ public enum ErrorCode {
     UPLOAD_UNSUPPORTED_MEDIA_TYPE(1242, "Unsupported file type", HttpStatus.UNSUPPORTED_MEDIA_TYPE),
     UPLOAD_OBJECT_NOT_FOUND(1243, "Uploaded object not found in storage", HttpStatus.BAD_REQUEST),
     UPLOAD_METADATA_MISMATCH(1244, "Uploaded file does not match declared metadata", HttpStatus.BAD_REQUEST),
-    STORAGE_UNAVAILABLE(1245, "Storage service is unavailable", HttpStatus.SERVICE_UNAVAILABLE);
+    STORAGE_UNAVAILABLE(1245, "Storage service is unavailable", HttpStatus.SERVICE_UNAVAILABLE),
+
+    // Quiz Domain (1301 - 1310)
+    QUIZ_NOT_FOUND(1301, "Quiz not found", HttpStatus.NOT_FOUND),
+    QUIZ_QUESTION_NOT_FOUND(1302, "Quiz question not found", HttpStatus.NOT_FOUND),
+    QUIZ_MAX_ATTEMPTS_REACHED(1303, "Maximum quiz attempts reached", HttpStatus.BAD_REQUEST),
+    QUESTION_NOT_IN_QUIZ(1304, "Question does not belong to this quiz", HttpStatus.BAD_REQUEST),
+    QUIZ_ALREADY_EXISTS(1305, "Quiz already exists for this lesson", HttpStatus.CONFLICT),
+    LESSON_NOT_A_QUIZ(1306, "Lesson is not configured as a quiz", HttpStatus.BAD_REQUEST),
+    QUIZ_QUESTION_INVALID_OPTIONS(1307, "Question must have at least one correct option", HttpStatus.BAD_REQUEST),
+    QUIZ_SINGLE_CHOICE_MULTIPLE_CORRECT(1308, "Single choice question cannot have more than one correct option", HttpStatus.BAD_REQUEST);
 
     private final int code;
     private final String message;
