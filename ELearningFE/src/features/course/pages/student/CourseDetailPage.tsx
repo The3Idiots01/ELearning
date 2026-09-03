@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
-import type { CourseDetail, Curriculum } from '../../../../types/course';
+import type { CourseDetail, Curriculum, Lesson } from '../../../../types/course';
 import { LevelBadge } from '../../../../components/common/Badge';
 import { formatCurrencyVND } from '../../../../lib/formatters';
+import { DocumentViewer } from '../../components/DocumentViewer';
 
 interface CourseDetailPageProps {
   course: CourseDetail | null;
@@ -25,6 +26,8 @@ export const CourseDetailPage: React.FC<CourseDetailPageProps> = ({
   onBack
 }) => {
   const [showEnrollConfirm, setShowEnrollConfirm] = useState(false);
+  const [previewLesson, setPreviewLesson] = useState<{ lesson: Lesson; sectionTitle: string } | null>(null);
+  const [lockedLesson, setLockedLesson] = useState<Lesson | null>(null);
 
   if (isLoading || !course) {
     return (
@@ -41,6 +44,20 @@ export const CourseDetailPage: React.FC<CourseDetailPageProps> = ({
 
   const defaultThumbnail =
     'https://images.unsplash.com/photo-1516321318423-f06f85e504b3?w=600&auto=format&fit=crop&q=60';
+
+  const handleLessonClick = (les: Lesson, sectionTitle: string) => {
+    if (isEnrolled) {
+      onGoToLearning(course.id);
+      return;
+    }
+
+    const canPreview = les.isPreview || !!les.contentUrl;
+    if (canPreview) {
+      setPreviewLesson({ lesson: les, sectionTitle });
+    } else {
+      setLockedLesson(les);
+    }
+  };
 
   return (
     <div className="min-h-screen bg-background pb-20 flex-1">
@@ -251,35 +268,53 @@ export const CourseDetailPage: React.FC<CourseDetailPageProps> = ({
                       </div>
 
                       <div className="divide-y divide-slate-100">
-                        {sec.lessons.map((les, lIdx) => (
-                          <div
-                            key={les.id}
-                            className="px-5 py-3 flex items-center justify-between text-xs hover:bg-slate-50/70"
-                          >
-                            <div className="flex items-center gap-3">
-                              <span className="material-symbols-outlined text-slate-400 text-[18px]">
-                                {les.contentType === 'VIDEO'
-                                  ? 'play_circle'
-                                  : les.contentType === 'ARTICLE'
-                                  ? 'article'
-                                  : 'description'}
-                              </span>
-                              <span className="font-medium text-slate-800">
-                                Bài {lIdx + 1}: {les.title}
-                              </span>
-                            </div>
-                            <div className="flex items-center gap-2">
-                              {les.isPreview && (
-                                <span className="bg-primary/10 text-primary font-bold text-[10px] px-2 py-0.5 rounded border border-primary/20">
-                                  Học thử
+                        {sec.lessons.map((les, lIdx) => {
+                          const canPreview = les.isPreview || !!les.contentUrl;
+                          return (
+                            <button
+                              key={les.id}
+                              type="button"
+                              onClick={() => handleLessonClick(les, sec.title)}
+                              className={`w-full px-5 py-3.5 flex items-center justify-between text-xs transition-colors text-left cursor-pointer group ${
+                                canPreview || isEnrolled
+                                  ? 'hover:bg-primary/5'
+                                  : 'hover:bg-amber-500/5'
+                              }`}
+                            >
+                              <div className="flex items-center gap-3">
+                                <span className={`material-symbols-outlined text-[18px] transition-colors ${
+                                  canPreview || isEnrolled ? 'text-primary group-hover:scale-110' : 'text-slate-400'
+                                }`}>
+                                  {les.contentType === 'VIDEO'
+                                    ? 'play_circle'
+                                    : les.contentType === 'ARTICLE'
+                                    ? 'article'
+                                    : 'description'}
                                 </span>
-                              )}
-                              <span className="text-slate-400 text-[10px]">
-                                {les.contentType === 'VIDEO' ? 'Video' : 'Tài liệu'}
-                              </span>
-                            </div>
-                          </div>
-                        ))}
+                                <span className="font-medium text-slate-800 group-hover:text-primary transition-colors">
+                                  Bài {lIdx + 1}: {les.title}
+                                </span>
+                              </div>
+                              <div className="flex items-center gap-2">
+                                {canPreview && !isEnrolled && (
+                                  <span className="bg-primary/10 text-primary font-extrabold text-[10px] px-2.5 py-0.5 rounded-full border border-primary/20 flex items-center gap-1 group-hover:bg-primary group-hover:text-white transition-all">
+                                    <span className="material-symbols-outlined text-[12px]">visibility</span>
+                                    <span>Học thử</span>
+                                  </span>
+                                )}
+                                {!canPreview && !isEnrolled && (
+                                  <span className="text-slate-400 text-[11px] flex items-center gap-1">
+                                    <span className="material-symbols-outlined text-[14px]">lock</span>
+                                    <span>Khóa</span>
+                                  </span>
+                                )}
+                                <span className="text-slate-400 text-[10px]">
+                                  {les.contentType === 'VIDEO' ? 'Video' : 'Tài liệu'}
+                                </span>
+                              </div>
+                            </button>
+                          );
+                        })}
                       </div>
                     </div>
                   ))}
@@ -291,6 +326,137 @@ export const CourseDetailPage: React.FC<CourseDetailPageProps> = ({
 
         </div>
       </div>
+
+      {/* ------------------------------------------------------------------- */}
+      {/* 1. PREVIEW LESSON MODAL (HỌC THỬ MIỄN PHÍ)                        */}
+      {/* ------------------------------------------------------------------- */}
+      {previewLesson && (
+        <div className="fixed inset-0 bg-slate-950/85 backdrop-blur-md flex items-center justify-center p-2 sm:p-4 z-50 animate-in fade-in">
+          <div className="bg-slate-900 text-white rounded-3xl w-full max-w-[96vw] h-[94vh] p-4 sm:p-6 shadow-2xl border border-slate-800 space-y-4 flex flex-col overflow-hidden">
+            
+            {/* Modal Header */}
+            <div className="flex items-center justify-between pb-3 border-b border-slate-800 shrink-0">
+              <div className="space-y-1">
+                <div className="flex items-center gap-2">
+                  <span className="bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 text-[10px] font-extrabold px-2.5 py-0.5 rounded-full uppercase flex items-center gap-1">
+                    <span className="material-symbols-outlined text-[12px]">visibility</span>
+                    <span>Bài học xem thử miễn phí</span>
+                  </span>
+                  <span className="text-[11px] text-slate-400 truncate max-w-xs">{previewLesson.sectionTitle}</span>
+                </div>
+                <h3 className="text-base sm:text-lg font-black text-white m-0 font-display">
+                  {previewLesson.lesson.title}
+                </h3>
+              </div>
+              <button
+                type="button"
+                onClick={() => setPreviewLesson(null)}
+                className="p-2 text-slate-400 hover:text-white hover:bg-slate-800 rounded-full transition-colors cursor-pointer"
+              >
+                <span className="material-symbols-outlined text-[20px]">close</span>
+              </button>
+            </div>
+
+            {/* Modal Player Content */}
+            <div className="flex-1 overflow-y-auto min-h-0 flex flex-col">
+              {previewLesson.lesson.contentType === 'VIDEO' ? (
+                previewLesson.lesson.contentUrl ? (
+                  <div className="bg-black rounded-2xl overflow-hidden w-full h-full flex items-center justify-center border border-slate-800 shadow-inner">
+                    <video
+                      key={previewLesson.lesson.contentUrl}
+                      src={previewLesson.lesson.contentUrl}
+                      controls
+                      autoPlay
+                      className="w-full h-full max-h-[78vh] object-contain"
+                    />
+                  </div>
+                ) : (
+                  <div className="bg-slate-950 p-8 rounded-2xl text-center space-y-3 border border-slate-800 flex-1 flex flex-col items-center justify-center">
+                    <span className="material-symbols-outlined text-[54px] text-primary">play_circle</span>
+                    <p className="text-sm text-slate-300 font-bold">Video xem thử đã sẵn sàng.</p>
+                  </div>
+                )
+              ) : previewLesson.lesson.contentType === 'ARTICLE' ? (
+                <div className="bg-slate-950 p-6 sm:p-8 rounded-2xl border border-slate-800 space-y-4 h-full overflow-y-auto">
+                  <h4 className="text-xs font-bold text-primary uppercase tracking-wider">Nội dung bài học</h4>
+                  <div className="text-sm sm:text-base text-slate-200 leading-relaxed whitespace-pre-line">
+                    {previewLesson.lesson.contentText || 'Bài học này bao gồm tài liệu kiến thức tổng hợp.'}
+                  </div>
+                </div>
+              ) : (
+                <div className="w-full min-h-[850px] flex-1 flex flex-col">
+                  <DocumentViewer
+                    url={previewLesson.lesson.contentUrl}
+                    fileName={previewLesson.lesson.originalFileName}
+                    mimeType={previewLesson.lesson.mimeType}
+                    title={previewLesson.lesson.title}
+                  />
+                </div>
+              )}
+            </div>
+
+            {/* Modal Bottom CTA */}
+            <div className="bg-slate-950/90 p-4 rounded-2xl border border-slate-800 flex flex-col sm:flex-row items-center justify-between gap-4 shrink-0">
+              <div className="text-xs text-slate-300 text-center sm:text-left">
+                <strong className="text-white block font-bold">Thích bài học thử này?</strong>
+                Đăng ký ngay để mở khóa toàn bộ bài học và nhận chứng nhận!
+              </div>
+              <button
+                type="button"
+                onClick={() => {
+                  setPreviewLesson(null);
+                  setShowEnrollConfirm(true);
+                }}
+                className="w-full sm:w-auto bg-primary hover:bg-primary/90 text-white font-extrabold text-xs px-6 py-3 rounded-xl shadow-lg shadow-primary/20 transition-all whitespace-nowrap cursor-pointer"
+              >
+                ĐĂNG KÝ HỌC NGAY
+              </button>
+            </div>
+
+          </div>
+        </div>
+      )}
+
+      {/* ------------------------------------------------------------------- */}
+      {/* 2. LOCKED LESSON PROMPT MODAL (BÀI HỌC BỊ KHÓA)                     */}
+      {/* ------------------------------------------------------------------- */}
+      {lockedLesson && (
+        <div className="fixed inset-0 bg-slate-950/70 backdrop-blur-sm flex items-center justify-center p-4 z-50 animate-in fade-in">
+          <div className="bg-white text-slate-900 rounded-3xl max-w-md w-full p-6 shadow-2xl space-y-5 border border-slate-200 text-center">
+            <div className="w-14 h-14 bg-amber-100 text-amber-600 rounded-2xl flex items-center justify-center mx-auto shadow-inner">
+              <span className="material-symbols-outlined text-[32px]">lock</span>
+            </div>
+            <div className="space-y-1.5">
+              <h3 className="text-lg font-black text-slate-900 m-0 font-display">
+                Bài học này bị khóa
+              </h3>
+              <p className="text-xs text-slate-500 m-0 leading-relaxed">
+                Bài học <strong className="text-slate-900">&quot;{lockedLesson.title}&quot;</strong> thuộc nội dung chính thức của khóa học. Bạn cần ghi danh để bắt đầu học bài này.
+              </p>
+            </div>
+
+            <div className="flex gap-3 pt-2">
+              <button
+                type="button"
+                onClick={() => setLockedLesson(null)}
+                className="flex-1 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold py-3 rounded-xl text-xs transition-colors cursor-pointer"
+              >
+                Đóng
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setLockedLesson(null);
+                  setShowEnrollConfirm(true);
+                }}
+                className="flex-1 bg-primary hover:bg-primary/90 text-white font-extrabold py-3 rounded-xl text-xs transition-all shadow-md shadow-primary/20 cursor-pointer"
+              >
+                Đăng ký học ngay
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Confirmation Dialog */}
       {showEnrollConfirm && (
@@ -347,3 +513,4 @@ export const CourseDetailPage: React.FC<CourseDetailPageProps> = ({
     </div>
   );
 };
+
