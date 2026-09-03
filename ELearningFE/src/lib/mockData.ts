@@ -111,7 +111,7 @@ Khóa học tập trung vào tư duy component tái sử dụng, quản lý stat
     subtitle: 'Triển khai hạ tầng đám mây với EC2, S3, RDS, Docker, Kubernetes và tự động hóa với GitHub Actions.',
     description: `Khóa học đưa bạn vào vai trò DevOps Engineer thực tế: cấu hình VPC, bảo mật hạ tầng, containerize ứng dụng với Docker, thiết lập cụm Kubernetes và xây dựng pipeline CI/CD tự động.`,
     thumbnailUrl: 'https://images.unsplash.com/photo-1451187580459-43490279c0fa?w=800&auto=format&fit=crop&q=60',
-    level: 'EXPERT',
+    level: 'ADVANCED',
     price: 699000,
     status: 'PUBLISHED',
     ratingAvg: 4.95,

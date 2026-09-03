@@ -67,12 +67,6 @@ export const LoginPage: React.FC<LoginPageProps> = ({
     }
   };
 
-  const handleQuickFill = (demoEmail: string, demoPass: string) => {
-    setEmail(demoEmail);
-    setPassword(demoPass);
-    setErrorMessage(null);
-  };
-
   return (
     <AuthLayout
       title="Đăng nhập tài khoản"
@@ -180,22 +174,6 @@ export const LoginPage: React.FC<LoginPageProps> = ({
               Đăng ký ngay
             </button>
           </p>
-        </div>
-
-        {/* Demo Fast Login Pills */}
-        <div className="mt-4 pt-3 border-t border-dashed border-slate-200">
-          <p className="text-[10px] uppercase font-extrabold tracking-wider text-slate-400 mb-2">
-            Tài khoản demo nhanh:
-          </p>
-          <div className="flex flex-wrap gap-2">
-            <button
-              type="button"
-              onClick={() => handleQuickFill('quangtienhoihop@gmail.com', '123456')}
-              className="bg-slate-100 hover:bg-slate-200 text-slate-700 text-[11px] font-semibold px-2.5 py-1 rounded-lg transition-colors cursor-pointer"
-            >
-              👨‍🏫 Giảng viên Demo
-            </button>
-          </div>
         </div>
       </form>
     </AuthLayout>

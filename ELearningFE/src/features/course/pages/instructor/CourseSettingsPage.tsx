@@ -33,7 +33,7 @@ export const CourseSettingsPage: React.FC<CourseSettingsPageProps> = ({
   const [subtitle, setSubtitle] = useState('');
   const [description, setDescription] = useState('');
   const [categoryId, setCategoryId] = useState<number>(1);
-  const [level, setLevel] = useState<CourseLevel>('ALL');
+  const [level, setLevel] = useState<CourseLevel>('BEGINNER');
   const [language, setLanguage] = useState('vi');
 
   // Form State: Pricing (BR-04: 0 - 10,000,000 VND)
@@ -58,7 +58,7 @@ export const CourseSettingsPage: React.FC<CourseSettingsPageProps> = ({
       setSubtitle(data.subtitle || '');
       setDescription(data.description || '');
       setCategoryId(data.categoryId || categories[0]?.id || 1);
-      setLevel(data.level || 'ALL');
+      setLevel(data.level || 'BEGINNER');
       setLanguage(data.language || 'vi');
 
       setPrice(data.price || 0);
@@ -263,10 +263,9 @@ export const CourseSettingsPage: React.FC<CourseSettingsPageProps> = ({
                   onChange={(e) => setLevel(e.target.value as CourseLevel)}
                   className="w-full px-4 py-3 bg-surface-container-low border border-outline-variant/70 rounded-2xl text-xs text-on-surface font-bold focus:bg-white focus:border-primary focus:outline-none"
                 >
-                  <option value="ALL">Mọi cấp độ</option>
                   <option value="BEGINNER">Cơ bản (Beginner)</option>
                   <option value="INTERMEDIATE">Trung cấp (Intermediate)</option>
-                  <option value="EXPERT">Nâng cao (Expert)</option>
+                  <option value="ADVANCED">Nâng cao (Expert)</option>
                 </select>
               </div>
 

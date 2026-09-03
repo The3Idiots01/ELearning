@@ -1,32 +1,34 @@
 import React from 'react';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../app/context/AuthContext';
 
 interface StudentNavbarProps {
-  activeTab: 'catalog' | 'my-courses' | 'detail' | 'learning' | 'payment-result';
-  onNavigateTab: (tab: 'catalog' | 'my-courses') => void;
   searchQuery: string;
   onSearchChange: (query: string) => void;
   onSearchSubmit: (e: React.FormEvent) => void;
 }
 
 export const StudentNavbar: React.FC<StudentNavbarProps> = ({
-  activeTab,
-  onNavigateTab,
   searchQuery,
   onSearchChange,
   onSearchSubmit
 }) => {
-  const { currentUser, toggleAppMode, logout } = useAuth();
+  const { currentUser, isAuthenticated, toggleAppMode, logout } = useAuth();
+  const navigate = useNavigate();
+  const location = useLocation();
+
+  const isCatalogActive = location.pathname.startsWith('/courses');
+  const isMyCoursesActive = location.pathname.startsWith('/my-courses') || location.pathname.startsWith('/learning');
 
   return (
     <header className="sticky top-0 z-40 bg-surface-container-lowest/95 backdrop-blur-md border-b border-outline-variant/70 shadow-sm">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-16 gap-4">
-          
+
           {/* Logo & Navigation */}
           <div className="flex items-center gap-8">
             <button
-              onClick={() => onNavigateTab('catalog')}
+              onClick={() => navigate('/courses')}
               className="flex items-center gap-2.5 text-left focus:outline-none cursor-pointer group"
             >
               <div className="bg-gradient-to-tr from-primary to-primary-container text-white w-9 h-9 rounded-xl flex items-center justify-center font-display font-black text-xl shadow-md shadow-primary/20 group-hover:scale-105 transition-transform">
@@ -44,9 +46,9 @@ export const StudentNavbar: React.FC<StudentNavbarProps> = ({
 
             <nav className="hidden md:flex items-center gap-1">
               <button
-                onClick={() => onNavigateTab('catalog')}
+                onClick={() => navigate('/courses')}
                 className={`px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 cursor-pointer ${
-                  activeTab === 'catalog' || activeTab === 'detail'
+                  isCatalogActive
                     ? 'bg-primary-container/10 text-primary'
                     : 'text-on-surface-variant hover:text-on-surface hover:bg-surface-container-low'
                 }`}
@@ -56,9 +58,9 @@ export const StudentNavbar: React.FC<StudentNavbarProps> = ({
               </button>
 
               <button
-                onClick={() => onNavigateTab('my-courses')}
+                onClick={() => navigate('/my-courses')}
                 className={`px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 cursor-pointer ${
-                  activeTab === 'my-courses' || activeTab === 'learning'
+                  isMyCoursesActive
                     ? 'bg-primary-container/10 text-primary'
                     : 'text-on-surface-variant hover:text-on-surface hover:bg-surface-container-low'
                 }`}
@@ -87,10 +89,13 @@ export const StudentNavbar: React.FC<StudentNavbarProps> = ({
 
           {/* Right Actions & Profile */}
           <div className="flex items-center gap-3">
-            
+
             {/* Role switch action */}
             <button
-              onClick={toggleAppMode}
+              onClick={() => {
+                toggleAppMode();
+                navigate('/instructor/courses');
+              }}
               title="Chuyển sang Studio Giảng viên"
               className="bg-primary/10 hover:bg-primary/15 text-primary text-xs font-bold px-3 py-1.5 rounded-full transition-all flex items-center gap-1.5 cursor-pointer"
             >
@@ -99,33 +104,30 @@ export const StudentNavbar: React.FC<StudentNavbarProps> = ({
               <span className="lg:hidden">Studio</span>
             </button>
 
-            {/* Profile Avatar / User info */}
-            <div className="flex items-center gap-2 pl-2 border-l border-outline-variant/60">
-              <button
-                type="button"
-                onClick={() => {
-                  window.location.hash = '#profile';
-                  window.dispatchEvent(new Event('hashchange'));
-                }}
-                className="flex items-center gap-2 text-left hover:opacity-80 transition-opacity cursor-pointer group"
-                title="Xem và chỉnh sửa hồ sơ cá nhân"
-              >
-                <div className="w-8 h-8 rounded-xl bg-gradient-to-tr from-primary to-secondary text-white font-bold text-xs flex items-center justify-center shadow-sm overflow-hidden shrink-0">
-                  {currentUser?.avatarUrl ? (
-                    <img src={currentUser.avatarUrl} alt={currentUser.fullName} className="w-full h-full object-cover" />
-                  ) : (
-                    currentUser?.fullName ? currentUser.fullName.substring(0, 2).toUpperCase() : 'HV'
-                  )}
-                </div>
-                <div className="hidden xl:block text-left">
-                  <p className="text-xs font-bold text-on-surface truncate max-w-[120px] m-0 group-hover:text-primary transition-colors">
-                    {currentUser?.fullName || 'Học viên'}
-                  </p>
-                  <p className="text-[10px] text-on-surface-variant m-0">Hồ sơ cá nhân</p>
-                </div>
-              </button>
+            {/* Profile Avatar / User info, or Login/Register when signed out */}
+            {isAuthenticated ? (
+              <div className="flex items-center gap-2 pl-2 border-l border-outline-variant/60">
+                <button
+                  type="button"
+                  onClick={() => navigate('/profile')}
+                  className="flex items-center gap-2 text-left hover:opacity-80 transition-opacity cursor-pointer group"
+                  title="Xem và chỉnh sửa hồ sơ cá nhân"
+                >
+                  <div className="w-8 h-8 rounded-xl bg-gradient-to-tr from-primary to-secondary text-white font-bold text-xs flex items-center justify-center shadow-sm overflow-hidden shrink-0">
+                    {currentUser?.avatarUrl ? (
+                      <img src={currentUser.avatarUrl} alt={currentUser.fullName} className="w-full h-full object-cover" />
+                    ) : (
+                      currentUser?.fullName ? currentUser.fullName.substring(0, 2).toUpperCase() : 'HV'
+                    )}
+                  </div>
+                  <div className="hidden xl:block text-left">
+                    <p className="text-xs font-bold text-on-surface truncate max-w-[120px] m-0 group-hover:text-primary transition-colors">
+                      {currentUser?.fullName || 'Học viên'}
+                    </p>
+                    <p className="text-[10px] text-on-surface-variant m-0">Hồ sơ cá nhân</p>
+                  </div>
+                </button>
 
-              {currentUser && (
                 <button
                   onClick={logout}
                   title="Đăng xuất"
@@ -133,8 +135,25 @@ export const StudentNavbar: React.FC<StudentNavbarProps> = ({
                 >
                   <span className="material-symbols-outlined text-[18px]">logout</span>
                 </button>
-              )}
-            </div>
+              </div>
+            ) : (
+              <div className="flex items-center gap-2 pl-2 border-l border-outline-variant/60">
+                <button
+                  type="button"
+                  onClick={() => navigate('/login')}
+                  className="text-primary hover:bg-primary/10 font-bold text-xs px-3.5 py-1.5 rounded-full transition-colors cursor-pointer"
+                >
+                  Đăng nhập
+                </button>
+                <button
+                  type="button"
+                  onClick={() => navigate('/register')}
+                  className="bg-primary hover:bg-primary-container text-white font-bold text-xs px-3.5 py-1.5 rounded-full transition-colors cursor-pointer"
+                >
+                  Đăng ký
+                </button>
+              </div>
+            )}
 
           </div>
 

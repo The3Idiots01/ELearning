@@ -98,7 +98,7 @@ export const StudentCatalogPage: React.FC<StudentCatalogPageProps> = ({
               <option value="ALL">Mọi cấp độ</option>
               <option value="BEGINNER">Cơ bản (Beginner)</option>
               <option value="INTERMEDIATE">Trung cấp (Intermediate)</option>
-              <option value="EXPERT">Nâng cao (Expert)</option>
+              <option value="ADVANCED">Nâng cao (Expert)</option>
             </select>
           </div>
 
