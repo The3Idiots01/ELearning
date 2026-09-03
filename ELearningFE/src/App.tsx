@@ -16,6 +16,7 @@ import { StudentCatalogRoute } from './app/routes/StudentCatalogRoute';
 import { CourseDetailRoute } from './app/routes/CourseDetailRoute';
 import { MyCoursesRoute } from './app/routes/MyCoursesRoute';
 import { LearningWorkspaceRoute } from './app/routes/LearningWorkspaceRoute';
+import { PaymentResultRoute } from './app/routes/PaymentResultRoute';
 
 // Instructor Routes (US-05 & US-06)
 import { InstructorLayout } from './app/routes/InstructorLayout';
@@ -69,6 +70,7 @@ export function App() {
           <Route path="/courses" element={<StudentCatalogRoute />} />
           <Route path="/courses/:courseId" element={<CourseDetailRoute />} />
           <Route path="/my-courses" element={<MyCoursesRoute />} />
+          <Route path="/payment-result" element={<PaymentResultRoute />} />
         </Route>
         <Route path="/learning/:courseId" element={<LearningWorkspaceRoute />} />
 

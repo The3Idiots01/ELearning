@@ -1,4 +1,5 @@
 import { apiClient } from '../../../lib/apiClient';
+import { storage } from '../../../lib/storage';
 import type { CourseSummary, CourseDetail, Curriculum, EnrolledCourse } from '../../../types/course';
 import { MOCK_COURSES, MOCK_CURRICULUM, MOCK_ENROLLED_COURSES } from '../../../lib/mockData';
 
@@ -91,8 +92,10 @@ export const studentCourseApi = {
   enrollCourse: async (courseId: number): Promise<any> => {
     try {
       return await apiClient.post(`/api/v1/courses/${courseId}/enroll`);
-    } catch {
-      // If BE endpoint not implemented yet, return successful simulated mock enrollment
+    } catch (err) {
+      if (storage.getToken()) {
+        throw err;
+      }
       return { success: true, courseId, message: 'Đăng ký thành công (Mock)' };
     }
   },
@@ -106,10 +109,13 @@ export const studentCourseApi = {
       if (Array.isArray(data)) {
         return data;
       }
-    } catch {
-      // Fallback
+    } catch (err) {
+      if (storage.getToken()) {
+        console.warn('Lỗi khi tải danh sách khóa học đã ghi danh:', err);
+        return [];
+      }
     }
-    return MOCK_ENROLLED_COURSES;
+    return storage.getToken() ? [] : MOCK_ENROLLED_COURSES;
   },
 
   /**
