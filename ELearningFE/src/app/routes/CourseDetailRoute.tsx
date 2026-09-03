@@ -3,6 +3,7 @@ import { useNavigate, useOutletContext, useParams } from 'react-router-dom';
 import { useToast } from '../context/ToastContext';
 import { CourseDetailPage } from '../../features/course/pages/student/CourseDetailPage';
 import { studentCourseApi } from '../../features/course/api/studentCourseApi';
+import { paymentApi } from '../../features/payment/api/paymentApi';
 import type { CourseDetail, Curriculum } from '../../types/course';
 import type { StudentOutletContext } from './StudentLayout';
 
@@ -47,12 +48,27 @@ export function CourseDetailRoute() {
   const handleEnroll = async (id: number) => {
     setIsEnrolling(true);
     try {
-      await studentCourseApi.enrollCourse(id);
-      showSuccess('🎉 Chúc mừng bạn đã đăng ký khóa học thành công!');
-      await fetchEnrolledCourses();
-      navigate(`/learning/${id}`);
+      const res = await paymentApi.createCheckout(id);
+      if (res.isEnrolled) {
+        showSuccess('🎉 Chúc mừng bạn đã đăng ký khóa học thành công!');
+        await fetchEnrolledCourses();
+        navigate(`/learning/${id}`);
+      } else if (res.checkoutUrl) {
+        window.location.href = res.checkoutUrl;
+      }
     } catch (err: any) {
-      showError(err.message || 'Lỗi khi đăng ký khóa học.');
+      if (
+        err?.status === 409 ||
+        err?.code === 1213 ||
+        err?.message?.toLowerCase()?.includes('already enrolled') ||
+        err?.message?.toLowerCase()?.includes('duplicate')
+      ) {
+        showSuccess('🎉 Bạn đã sở hữu khóa học này rồi! Đang chuyển vào phòng học...');
+        await fetchEnrolledCourses();
+        navigate(`/learning/${id}`);
+      } else {
+        showError(err.message || 'Lỗi khi khởi tạo thanh toán.');
+      }
     } finally {
       setIsEnrolling(false);
     }

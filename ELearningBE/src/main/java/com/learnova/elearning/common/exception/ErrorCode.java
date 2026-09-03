@@ -52,6 +52,9 @@ public enum ErrorCode {
     LECTURER_CANNOT_ENROLL_OWN_COURSE(1212, "Lecturer cannot enroll in their own course", HttpStatus.BAD_REQUEST),
     ALREADY_ENROLLED(1213, "Already enrolled in this course", HttpStatus.CONFLICT),
     ENROLLMENT_NOT_FOUND(1214, "Enrollment not found", HttpStatus.NOT_FOUND),
+    PAYMENT_REQUIRED(1215, "Payment is required for this course before enrollment", HttpStatus.PAYMENT_REQUIRED),
+    PAYMENT_GATEWAY_ERROR(1216, "Error connecting to payment gateway", HttpStatus.BAD_GATEWAY),
+    INVALID_PAYMENT_SIGNATURE(1217, "Invalid payment webhook signature", HttpStatus.BAD_REQUEST),
 
     // Curriculum (1221 - 1235)
     SECTION_NOT_FOUND(1221, "Section not found", HttpStatus.NOT_FOUND),

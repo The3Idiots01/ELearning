@@ -67,6 +67,9 @@ async function request<T>(endpoint: string, options: RequestOptions = {}): Promi
     const data = isJson ? await response.json() : null;
 
     if (!response.ok) {
+      if (response.status === 401) {
+        storage.removeToken();
+      }
       const errorMessage =
         data?.message ||
         data?.error ||
