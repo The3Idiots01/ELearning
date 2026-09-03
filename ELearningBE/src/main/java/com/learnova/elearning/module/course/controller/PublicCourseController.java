@@ -30,9 +30,11 @@ public class PublicCourseController {
             @RequestParam(required = false) Long categoryId,
             @RequestParam(required = false) CourseLevel level,
             @RequestParam(required = false) String keyword,
-            @PageableDefault(size = 20, sort = "publishedAt", direction = Sort.Direction.DESC) Pageable pageable
+            @PageableDefault(size = 20, sort = "publishedAt", direction = Sort.Direction.DESC) Pageable pageable,
+            @AuthenticationPrincipal CustomUserDetails user
     ) {
-        PageResponse<CourseSummaryResponse> response = courseService.searchPublic(categoryId, level, keyword, pageable);
+        Long viewerId = user != null ? user.getId() : null;
+        PageResponse<CourseSummaryResponse> response = courseService.searchPublic(categoryId, level, keyword, viewerId, pageable);
         return ResponseEntity.ok(ApiResponse.success(response));
     }
 

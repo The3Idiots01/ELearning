@@ -1,8 +1,10 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Modal } from '../../../components/common/Modal';
 import { instructorCourseApi } from '../api/instructorCourseApi';
 import type { PublishCheckResponse, PublishIssue } from '../../../types/course';
 import { useToast } from '../../../app/context/ToastContext';
+import { useAuth } from '../../../app/context/AuthContext';
 
 interface PublishCheckModalProps {
   isOpen: boolean;
@@ -18,6 +20,10 @@ export const PublishCheckModal: React.FC<PublishCheckModalProps> = ({
   onPublishSuccess
 }) => {
   const { showSuccess, showError } = useToast();
+  const { currentUser } = useAuth();
+  const navigate = useNavigate();
+
+  const isProfileIncomplete = !currentUser?.isProfileCompleted;
 
   const [checkResult, setCheckResult] = useState<PublishCheckResponse | null>(null);
   const [isLoading, setIsLoading] = useState(false);
@@ -36,10 +42,15 @@ export const PublishCheckModal: React.FC<PublishCheckModalProps> = ({
   };
 
   useEffect(() => {
-    if (isOpen) {
+    if (isOpen && !isProfileIncomplete) {
       fetchCheck();
     }
-  }, [isOpen, courseId]);
+  }, [isOpen, courseId, isProfileIncomplete]);
+
+  const handleGoToProfile = () => {
+    onClose();
+    navigate('/profile');
+  };
 
   const handlePublish = async () => {
     if (!checkResult?.canPublish) return;
@@ -74,7 +85,42 @@ export const PublishCheckModal: React.FC<PublishCheckModalProps> = ({
       icon="fact_check"
     >
       <div className="space-y-6">
-        {isLoading ? (
+        {isProfileIncomplete ? (
+          <div className="space-y-5">
+            <div className="bg-amber-50 border border-amber-200 rounded-2xl p-4 flex items-start gap-3">
+              <span className="material-symbols-outlined text-amber-600 text-[24px] shrink-0 mt-0.5">
+                person_alert
+              </span>
+              <div>
+                <h4 className="text-xs font-black text-amber-900 uppercase tracking-wider m-0">
+                  Cần hoàn thiện hồ sơ cá nhân
+                </h4>
+                <p className="text-xs text-amber-700 m-0 mt-0.5">
+                  Bạn cần hoàn thiện hồ sơ giảng viên (họ tên và ít nhất một trong: giới thiệu bản thân, chuyên
+                  môn, sở thích hoặc ảnh đại diện) trước khi có thể xuất bản khóa học.
+                </p>
+              </div>
+            </div>
+
+            <div className="flex items-center justify-end gap-3 pt-4 border-t border-slate-100">
+              <button
+                type="button"
+                onClick={onClose}
+                className="px-4 py-2 rounded-xl text-xs font-bold text-slate-600 bg-slate-100 hover:bg-slate-200 transition-colors cursor-pointer"
+              >
+                Đóng
+              </button>
+              <button
+                type="button"
+                onClick={handleGoToProfile}
+                className="px-5 py-2 rounded-xl text-xs font-black uppercase tracking-wider text-white bg-primary hover:bg-primary-container transition-all shadow-md flex items-center gap-1.5 cursor-pointer active:scale-95"
+              >
+                <span className="material-symbols-outlined text-[18px]">person</span>
+                <span>Hoàn thiện hồ sơ ngay</span>
+              </button>
+            </div>
+          </div>
+        ) : isLoading ? (
           <div className="text-center py-10">
             <span className="inline-block animate-spin w-8 h-8 border-3 border-primary border-t-transparent rounded-full" />
             <p className="text-xs text-slate-500 font-bold mt-3">Đang phân tích dữ liệu khóa học...</p>

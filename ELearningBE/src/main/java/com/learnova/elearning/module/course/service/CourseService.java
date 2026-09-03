@@ -304,10 +304,10 @@ public class CourseService {
 
     @Transactional(readOnly = true)
     public PageResponse<CourseSummaryResponse> searchPublic(Long categoryId, CourseLevel level,
-                                                            String keyword, Pageable pageable) {
+                                                            String keyword, Long excludeLecturerId, Pageable pageable) {
         String kw = (keyword != null && !keyword.isBlank()) ? keyword.trim() : null;
         return PageResponse.from(
-                courseRepository.searchPublic(categoryId, level, kw, pageable),
+                courseRepository.searchPublic(categoryId, level, kw, excludeLecturerId, pageable),
                 course -> CourseMapper.toSummary(course, signThumbnail(course)));
     }
 

@@ -18,8 +18,7 @@ export const studentCourseApi = {
       if (params?.keyword) queryParams.keyword = params.keyword;
 
       const data = await apiClient.get<any>('/api/v1/courses', {
-        params: queryParams,
-        skipAuth: true
+        params: queryParams
       });
 
       const courses = data?.content || data?.elements || data;

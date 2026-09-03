@@ -62,7 +62,7 @@ export const LevelBadge: React.FC<LevelBadgeProps> = ({ level }) => {
           Trung cấp
         </span>
       );
-    case 'EXPERT':
+    case 'ADVANCED':
       return (
         <span className="bg-purple-50 text-purple-700 border border-purple-200 text-[10px] font-bold px-2 py-0.5 rounded-md uppercase">
           Nâng cao

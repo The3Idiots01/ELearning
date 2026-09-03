@@ -1,6 +1,6 @@
 import type { Category } from './category';
 
-export type CourseLevel = 'ALL' | 'BEGINNER' | 'INTERMEDIATE' | 'EXPERT';
+export type CourseLevel = 'ALL' | 'BEGINNER' | 'INTERMEDIATE' | 'ADVANCED';
 export type CourseStatus = 'DRAFT' | 'PUBLISHED' | 'UNPUBLISHED' | 'SUSPENDED';
 export type LessonContentType = 'VIDEO' | 'ARTICLE' | 'FILE' | 'QUIZ';
 export type LessonUploadStatus = 'PENDING' | 'READY' | 'FAILED';

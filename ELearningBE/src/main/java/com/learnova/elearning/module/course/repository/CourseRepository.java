@@ -63,6 +63,7 @@ public interface CourseRepository extends JpaRepository<Course, Long> {
             WHERE c.status = 'PUBLISHED'
               AND (:categoryId IS NULL OR c.category.id = :categoryId)
               AND (:level IS NULL OR c.level = :level)
+              AND (:excludeLecturerId IS NULL OR c.lecturer.id <> :excludeLecturerId)
               AND (CAST(:keyword AS String) IS NULL
                    OR LOWER(c.title) LIKE LOWER(CONCAT('%', CAST(:keyword AS String), '%'))
                    OR LOWER(c.subtitle) LIKE LOWER(CONCAT('%', CAST(:keyword AS String), '%')))
@@ -72,6 +73,7 @@ public interface CourseRepository extends JpaRepository<Course, Long> {
             WHERE c.status = 'PUBLISHED'
               AND (:categoryId IS NULL OR c.category.id = :categoryId)
               AND (:level IS NULL OR c.level = :level)
+              AND (:excludeLecturerId IS NULL OR c.lecturer.id <> :excludeLecturerId)
               AND (CAST(:keyword AS String) IS NULL
                    OR LOWER(c.title) LIKE LOWER(CONCAT('%', CAST(:keyword AS String), '%'))
                    OR LOWER(c.subtitle) LIKE LOWER(CONCAT('%', CAST(:keyword AS String), '%')))
@@ -79,6 +81,7 @@ public interface CourseRepository extends JpaRepository<Course, Long> {
     Page<Course> searchPublic(@Param("categoryId") Long categoryId,
                              @Param("level") CourseLevel level,
                              @Param("keyword") String keyword,
+                             @Param("excludeLecturerId") Long excludeLecturerId,
                              Pageable pageable);
 
     Optional<Course> findByIdAndStatus(Long id, CourseStatus status);
