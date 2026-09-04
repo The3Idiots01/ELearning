@@ -207,20 +207,37 @@ export const LessonContentModal: React.FC<LessonContentModalProps> = ({
     }
   };
 
+  if (lesson.contentType === 'QUIZ') {
+    return (
+      <Modal
+        isOpen={isOpen}
+        onClose={onClose}
+        title={`Soạn bài trắc nghiệm: ${lesson.title}`}
+        subtitle="Cấu hình bài thi và quản lý ngân hàng câu hỏi trắc nghiệm"
+        maxWidth="4xl"
+        icon="quiz"
+      >
+        <QuizAuthoringView
+          courseId={courseId}
+          lesson={lesson}
+          onContentUpdated={onContentUpdated}
+        />
+      </Modal>
+    );
+  }
+
   return (
     <Modal
       isOpen={isOpen}
       onClose={onClose}
       title={`Soạn nội dung: ${lesson.title}`}
       subtitle={`Định dạng bài học: ${lesson.contentType} • Trạng thái: ${lesson.uploadStatus || 'READY'}`}
-      maxWidth={lesson.contentType === 'QUIZ' ? '4xl' : '2xl'}
+      maxWidth="2xl"
       icon={
         lesson.contentType === 'VIDEO'
           ? 'play_circle'
           : lesson.contentType === 'ARTICLE'
           ? 'article'
-          : lesson.contentType === 'QUIZ'
-          ? 'quiz'
           : 'description'
       }
     >
@@ -444,15 +461,6 @@ export const LessonContentModal: React.FC<LessonContentModalProps> = ({
                   <span>Tải lên tệp PDF / DOCX / ZIP (&lt;= 200MB)</span>
                 </button>
               </div>
-            )}
-
-            {/* FORMAT: QUIZ (ASSESSMENT) */}
-            {lesson.contentType === 'QUIZ' && (
-              <QuizAuthoringView
-                courseId={courseId}
-                lesson={lesson}
-                onContentUpdated={onContentUpdated}
-              />
             )}
           </div>
         )}

@@ -73,12 +73,13 @@ export const QuizAuthoringView: React.FC<QuizAuthoringViewProps> = ({
         setMaxAttempts(data.maxAttempts);
       }
     } catch (err: any) {
-      // If 404 (Quiz not yet created), initialize default state
       if (err.status === 404) {
         setQuizTitle(lesson.title);
         setPassingScore(80);
         setMaxAttempts(3);
         setUnlimitedAttempts(false);
+      } else if (err.status === 401) {
+        showError('Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.');
       } else {
         showError(err.message || 'Lỗi khi tải thông tin bài kiểm tra.');
       }
@@ -181,7 +182,6 @@ export const QuizAuthoringView: React.FC<QuizAuthoringViewProps> = ({
       return;
     }
 
-    // Filter out completely blank options or validate
     const filledOptions = options.map((opt) => ({
       ...opt,
       text: opt.text.trim()
@@ -204,7 +204,7 @@ export const QuizAuthoringView: React.FC<QuizAuthoringViewProps> = ({
     }
 
     if (questionType === 'SINGLE_CHOICE' && correctCount > 1) {
-      showError('Câu hỏi trắc nghiệm một đáp án (Single Choice) chỉ được chọn đúng 1 phương án.');
+      showError('Câu hỏi trắc nghiệm một đáp án chỉ được chọn đúng 1 phương án.');
       return;
     }
 
@@ -261,12 +261,10 @@ export const QuizAuthoringView: React.FC<QuizAuthoringViewProps> = ({
     const targetIndex = direction === 'UP' ? index - 1 : index + 1;
     if (targetIndex < 0 || targetIndex >= questions.length) return;
 
-    // Swap
     const temp = questions[index];
     questions[index] = questions[targetIndex];
     questions[targetIndex] = temp;
 
-    // Optimistic UI update
     setQuiz({ ...quiz, questions });
 
     setIsReordering(true);
@@ -282,7 +280,6 @@ export const QuizAuthoringView: React.FC<QuizAuthoringViewProps> = ({
     }
   };
 
-  // Helper option handlers
   const handleOptionTextChange = (idx: number, text: string) => {
     const updated = [...options];
     updated[idx].text = text;
@@ -298,12 +295,10 @@ export const QuizAuthoringView: React.FC<QuizAuthoringViewProps> = ({
   const handleOptionCorrectToggle = (idx: number) => {
     const updated = [...options];
     if (questionType === 'SINGLE_CHOICE') {
-      // Only 1 option is correct
       updated.forEach((opt, i) => {
         opt.isCorrect = i === idx;
       });
     } else {
-      // Toggle
       updated[idx].isCorrect = !updated[idx].isCorrect;
     }
     setOptions(updated);
@@ -323,7 +318,6 @@ export const QuizAuthoringView: React.FC<QuizAuthoringViewProps> = ({
       return;
     }
     const updated = options.filter((_, i) => i !== idx);
-    // If the removed option was the only correct one, make the first one correct
     if (updated.every((opt) => !opt.isCorrect) && updated.length > 0) {
       updated[0].isCorrect = true;
     }
@@ -333,7 +327,7 @@ export const QuizAuthoringView: React.FC<QuizAuthoringViewProps> = ({
   if (isLoading) {
     return (
       <div className="py-16 flex flex-col items-center justify-center gap-3 text-slate-500">
-        <span className="inline-block animate-spin w-8 h-8 border-3 border-primary border-t-transparent rounded-full" />
+        <span className="inline-block animate-spin w-8 h-8 border-2 border-primary border-t-transparent rounded-full" />
         <span className="text-xs font-semibold">Đang tải dữ liệu bài kiểm tra...</span>
       </div>
     );
@@ -343,25 +337,25 @@ export const QuizAuthoringView: React.FC<QuizAuthoringViewProps> = ({
   const totalPoints = quiz?.totalPoints || 0;
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-5">
       {/* 1. TOP SUMMARY BANNER */}
-      <div className="bg-gradient-to-r from-primary/10 via-primary/5 to-transparent p-5 rounded-2xl border border-primary/20 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+      <div className="bg-gradient-to-r from-primary/10 via-primary/5 to-transparent p-4 sm:p-5 rounded-2xl border border-primary/20 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
         <div className="space-y-1">
           <div className="flex items-center gap-2">
-            <span className="material-symbols-outlined text-primary text-[24px]">
+            <span className="material-symbols-outlined text-primary text-[22px]">
               quiz
             </span>
-            <h4 className="font-extrabold text-base text-slate-900 m-0">
+            <h4 className="font-extrabold text-sm sm:text-base text-slate-900 m-0">
               {quiz?.title || quizTitle || lesson.title}
             </h4>
           </div>
-          <p className="text-xs text-slate-500 m-0">
+          <p className="text-xs text-slate-600 m-0">
             Điểm đạt:{' '}
-            <span className="font-bold text-slate-700">
+            <span className="font-bold text-slate-900">
               {quiz?.passingScore ?? passingScore}%
             </span>{' '}
-            • Số lần làm:{' '}
-            <span className="font-bold text-slate-700">
+            • Số lần làm tối đa:{' '}
+            <span className="font-bold text-slate-900">
               {unlimitedAttempts || quiz?.maxAttempts == null
                 ? 'Không giới hạn'
                 : `${quiz?.maxAttempts} lần`}
@@ -370,8 +364,8 @@ export const QuizAuthoringView: React.FC<QuizAuthoringViewProps> = ({
         </div>
 
         {/* Quick Stats Badges */}
-        <div className="flex items-center gap-2.5 flex-wrap">
-          <div className="px-3 py-1.5 bg-white rounded-xl border border-slate-200 shadow-2xs flex items-center gap-1.5 text-xs">
+        <div className="flex items-center gap-2 flex-wrap shrink-0">
+          <div className="px-3 py-1.5 bg-white rounded-xl border border-slate-200 shadow-sm flex items-center gap-1.5 text-xs">
             <span className="material-symbols-outlined text-indigo-600 text-[16px]">
               help
             </span>
@@ -379,7 +373,7 @@ export const QuizAuthoringView: React.FC<QuizAuthoringViewProps> = ({
             <span className="text-slate-500">câu hỏi</span>
           </div>
 
-          <div className="px-3 py-1.5 bg-white rounded-xl border border-slate-200 shadow-2xs flex items-center gap-1.5 text-xs">
+          <div className="px-3 py-1.5 bg-white rounded-xl border border-slate-200 shadow-sm flex items-center gap-1.5 text-xs">
             <span className="material-symbols-outlined text-emerald-600 text-[16px]">
               military_tech
             </span>
@@ -390,7 +384,7 @@ export const QuizAuthoringView: React.FC<QuizAuthoringViewProps> = ({
           <button
             type="button"
             onClick={() => setIsEditingSettings(!isEditingSettings)}
-            className="px-3 py-1.5 bg-white hover:bg-slate-50 text-slate-700 border border-slate-200 rounded-xl text-xs font-bold transition-all flex items-center gap-1 cursor-pointer"
+            className="px-3 py-1.5 bg-white hover:bg-slate-50 text-slate-700 border border-slate-200 rounded-xl text-xs font-bold transition-all flex items-center gap-1 cursor-pointer shadow-sm"
             title="Đổi cấu hình bài thi"
           >
             <span className="material-symbols-outlined text-[16px]">settings</span>
@@ -403,7 +397,7 @@ export const QuizAuthoringView: React.FC<QuizAuthoringViewProps> = ({
       {isEditingSettings && (
         <form
           onSubmit={handleSaveSettings}
-          className="bg-surface-container-low p-5 rounded-2xl border border-outline-variant/60 space-y-4 animate-in fade-in duration-200"
+          className="bg-surface-container-low p-4 sm:p-5 rounded-2xl border border-outline-variant/60 space-y-4"
         >
           <div className="flex items-center justify-between border-b border-slate-200/80 pb-3">
             <span className="text-xs font-bold uppercase tracking-wider text-slate-800 flex items-center gap-1.5">
@@ -424,7 +418,7 @@ export const QuizAuthoringView: React.FC<QuizAuthoringViewProps> = ({
                 value={quizTitle}
                 onChange={(e) => setQuizTitle(e.target.value)}
                 placeholder="Nhập tiêu đề bài trắc nghiệm..."
-                className="w-full px-3.5 py-2 bg-white border border-slate-200 rounded-xl text-xs text-slate-800 focus:outline-none focus:border-primary"
+                className="w-full px-3.5 py-2 bg-white border border-slate-200 rounded-xl text-xs text-slate-800 focus:outline-none focus:border-primary shadow-sm"
               />
             </div>
 
@@ -441,7 +435,7 @@ export const QuizAuthoringView: React.FC<QuizAuthoringViewProps> = ({
                   step={5}
                   value={passingScore}
                   onChange={(e) => setPassingScore(Number(e.target.value))}
-                  className="w-full px-3.5 py-2 bg-white border border-slate-200 rounded-xl text-xs text-slate-800 focus:outline-none focus:border-primary pr-8"
+                  className="w-full px-3.5 py-2 bg-white border border-slate-200 rounded-xl text-xs text-slate-800 focus:outline-none focus:border-primary pr-8 shadow-sm"
                 />
                 <span className="absolute right-3 top-2 text-slate-400 font-bold">%</span>
               </div>
@@ -453,7 +447,7 @@ export const QuizAuthoringView: React.FC<QuizAuthoringViewProps> = ({
               <label className="block font-bold text-slate-700">
                 Số lần làm bài tối đa:
               </label>
-              <div className="flex items-center gap-3">
+              <div className="flex items-center gap-3 flex-wrap">
                 <input
                   type="number"
                   min={1}
@@ -461,7 +455,7 @@ export const QuizAuthoringView: React.FC<QuizAuthoringViewProps> = ({
                   disabled={unlimitedAttempts}
                   value={maxAttempts}
                   onChange={(e) => setMaxAttempts(Number(e.target.value))}
-                  className="w-28 px-3.5 py-2 bg-white border border-slate-200 rounded-xl text-xs text-slate-800 focus:outline-none focus:border-primary disabled:bg-slate-100 disabled:text-slate-400"
+                  className="w-28 px-3.5 py-2 bg-white border border-slate-200 rounded-xl text-xs text-slate-800 focus:outline-none focus:border-primary disabled:bg-slate-100 disabled:text-slate-400 shadow-sm"
                 />
                 <label className="flex items-center gap-2 cursor-pointer text-xs font-semibold text-slate-700">
                   <input
@@ -508,7 +502,7 @@ export const QuizAuthoringView: React.FC<QuizAuthoringViewProps> = ({
       {isQuestionFormOpen && (
         <form
           onSubmit={handleSaveQuestion}
-          className="bg-white p-5 rounded-2xl border-2 border-primary/30 shadow-md space-y-4 animate-in fade-in duration-200"
+          className="bg-white p-4 sm:p-5 rounded-2xl border-2 border-primary/30 shadow-md space-y-4"
         >
           <div className="flex items-center justify-between border-b border-slate-100 pb-3">
             <div className="flex items-center gap-2">
@@ -539,7 +533,7 @@ export const QuizAuthoringView: React.FC<QuizAuthoringViewProps> = ({
                 value={questionText}
                 onChange={(e) => setQuestionText(e.target.value)}
                 placeholder="Ví dụ: Đâu là cấu hình đúng khi kết nối cơ sở dữ liệu PostgreSQL trong Spring Boot?"
-                className="w-full px-3.5 py-2.5 bg-surface-container-low border border-slate-200 rounded-xl text-xs text-slate-800 focus:bg-white focus:outline-none focus:border-primary leading-relaxed"
+                className="w-full px-3.5 py-2.5 bg-surface-container-low border border-slate-200 rounded-xl text-xs text-slate-800 focus:bg-white focus:outline-none focus:border-primary leading-relaxed shadow-sm"
               />
             </div>
 
@@ -552,7 +546,6 @@ export const QuizAuthoringView: React.FC<QuizAuthoringViewProps> = ({
                     type="button"
                     onClick={() => {
                       setQuestionType('SINGLE_CHOICE');
-                      // Ensure only 1 is selected
                       const updated = [...options];
                       let found = false;
                       updated.forEach((opt) => {
@@ -600,7 +593,7 @@ export const QuizAuthoringView: React.FC<QuizAuthoringViewProps> = ({
                     step={0.25}
                     value={points}
                     onChange={(e) => setPoints(Number(e.target.value))}
-                    className="w-full px-3.5 py-2 bg-surface-container-low border border-slate-200 rounded-xl text-xs text-slate-800 focus:bg-white focus:outline-none focus:border-primary pr-12"
+                    className="w-full px-3.5 py-2 bg-surface-container-low border border-slate-200 rounded-xl text-xs text-slate-800 focus:bg-white focus:outline-none focus:border-primary pr-12 shadow-sm"
                   />
                   <span className="absolute right-3 top-2 text-slate-400 font-semibold">điểm</span>
                 </div>
@@ -614,19 +607,19 @@ export const QuizAuthoringView: React.FC<QuizAuthoringViewProps> = ({
                   Các phương án trả lời ({options.length}/6) <span className="text-rose-500">*</span>
                 </label>
                 <span className="text-[11px] text-slate-500">
-                  Tick chọn phương án đúng ở bên trái
+                  Bấm vào chữ cái để chọn đáp án đúng
                 </span>
               </div>
 
               <div className="space-y-2.5">
                 {options.map((opt, idx) => {
-                  const letter = String.fromCharCode(65 + idx); // A, B, C, D...
+                  const letter = String.fromCharCode(65 + idx);
                   return (
                     <div
                       key={idx}
                       className={`p-3 rounded-xl border transition-all space-y-2 ${
                         opt.isCorrect
-                          ? 'bg-emerald-50/60 border-emerald-300'
+                          ? 'bg-emerald-50/70 border-emerald-300'
                           : 'bg-surface-container-low/80 border-slate-200'
                       }`}
                     >
@@ -637,7 +630,7 @@ export const QuizAuthoringView: React.FC<QuizAuthoringViewProps> = ({
                           onClick={() => handleOptionCorrectToggle(idx)}
                           className={`w-7 h-7 rounded-lg flex items-center justify-center font-bold text-xs shrink-0 transition-all cursor-pointer ${
                             opt.isCorrect
-                              ? 'bg-emerald-600 text-white shadow-xs'
+                              ? 'bg-emerald-600 text-white shadow-sm'
                               : 'bg-white text-slate-500 border border-slate-300 hover:border-emerald-500'
                           }`}
                           title={
@@ -659,7 +652,7 @@ export const QuizAuthoringView: React.FC<QuizAuthoringViewProps> = ({
                           value={opt.text}
                           onChange={(e) => handleOptionTextChange(idx, e.target.value)}
                           placeholder={`Nội dung phương án ${letter}...`}
-                          className="flex-1 px-3 py-1.5 bg-white border border-slate-200 rounded-lg text-xs text-slate-800 focus:outline-none focus:border-primary"
+                          className="flex-1 px-3 py-1.5 bg-white border border-slate-200 rounded-lg text-xs text-slate-800 focus:outline-none focus:border-primary shadow-sm"
                         />
 
                         {/* Delete option button */}
@@ -676,7 +669,7 @@ export const QuizAuthoringView: React.FC<QuizAuthoringViewProps> = ({
                       </div>
 
                       {/* Explanation input (optional) */}
-                      <div className="pl-9.5">
+                      <div className="pl-10">
                         <input
                           type="text"
                           value={opt.explanation || ''}
@@ -684,7 +677,7 @@ export const QuizAuthoringView: React.FC<QuizAuthoringViewProps> = ({
                             handleOptionExplanationChange(idx, e.target.value)
                           }
                           placeholder="Giải thích vì sao đúng / sai (tùy chọn)..."
-                          className="w-full px-2.5 py-1 bg-white/70 border border-slate-200/70 rounded-md text-[11px] text-slate-600 focus:bg-white focus:outline-none"
+                          className="w-full px-2.5 py-1 bg-white/70 border border-slate-200/70 rounded-md text-[11px] text-slate-600 focus:bg-white focus:outline-none shadow-sm"
                         />
                       </div>
                     </div>
@@ -739,7 +732,7 @@ export const QuizAuthoringView: React.FC<QuizAuthoringViewProps> = ({
             <button
               type="button"
               onClick={openAddQuestion}
-              className="bg-primary hover:bg-primary/90 text-white text-xs font-bold px-3.5 py-1.5 rounded-xl transition-all shadow-xs flex items-center gap-1 cursor-pointer"
+              className="bg-primary hover:bg-primary/90 text-white text-xs font-bold px-3.5 py-1.5 rounded-xl transition-all shadow-sm flex items-center gap-1 cursor-pointer"
             >
               <span className="material-symbols-outlined text-[16px]">add</span>
               <span>Thêm câu hỏi mới</span>
@@ -764,7 +757,7 @@ export const QuizAuthoringView: React.FC<QuizAuthoringViewProps> = ({
               <button
                 type="button"
                 onClick={openAddQuestion}
-                className="bg-primary hover:bg-primary/90 text-white text-xs font-bold px-4 py-2 rounded-xl transition-all shadow-xs inline-flex items-center gap-1.5 cursor-pointer mt-1"
+                className="bg-primary hover:bg-primary/90 text-white text-xs font-bold px-4 py-2 rounded-xl transition-all shadow-sm inline-flex items-center gap-1.5 cursor-pointer mt-1"
               >
                 <span className="material-symbols-outlined text-[18px]">add</span>
                 <span>Tạo câu hỏi đầu tiên</span>
@@ -776,7 +769,7 @@ export const QuizAuthoringView: React.FC<QuizAuthoringViewProps> = ({
             {questions.map((q, idx) => (
               <div
                 key={q.id}
-                className="bg-white p-4 rounded-2xl border border-slate-200 hover:border-slate-300 transition-all space-y-3 shadow-2xs text-xs"
+                className="bg-white p-4 rounded-2xl border border-slate-200 hover:border-slate-300 transition-all space-y-3 shadow-sm text-xs"
               >
                 {/* Question Header */}
                 <div className="flex items-start justify-between gap-3">
@@ -844,12 +837,12 @@ export const QuizAuthoringView: React.FC<QuizAuthoringViewProps> = ({
                 </div>
 
                 {/* Question Text */}
-                <p className="font-medium text-slate-800 leading-relaxed m-0 text-xs whitespace-pre-wrap">
+                <p className="font-semibold text-slate-800 leading-relaxed m-0 text-xs whitespace-pre-wrap break-words">
                   {q.questionText}
                 </p>
 
                 {/* Options Preview */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-1">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 pt-1">
                   {q.options?.map((opt, optIdx) => {
                     const letter = String.fromCharCode(65 + optIdx);
                     return (
@@ -870,10 +863,10 @@ export const QuizAuthoringView: React.FC<QuizAuthoringViewProps> = ({
                         >
                           {opt.isCorrect ? '✓' : letter}
                         </span>
-                        <div className="overflow-hidden">
-                          <span className="truncate block">{opt.text}</span>
+                        <div className="overflow-hidden flex-1 min-w-0">
+                          <span className="break-words block font-medium leading-snug">{opt.text}</span>
                           {opt.explanation && (
-                            <span className="text-[10px] text-slate-500 italic block mt-0.5">
+                            <span className="text-[10px] text-slate-500 italic block mt-0.5 break-words">
                               {opt.explanation}
                             </span>
                           )}
@@ -890,8 +883,8 @@ export const QuizAuthoringView: React.FC<QuizAuthoringViewProps> = ({
 
       {/* 5. DELETE CONFIRMATION MODAL */}
       {deletingQuestionId && (
-        <div className="fixed inset-0 z-60 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs">
-          <div className="bg-white rounded-2xl p-5 max-w-sm w-full space-y-4 shadow-xl animate-in fade-in zoom-in-95">
+        <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm">
+          <div className="bg-white rounded-2xl p-5 max-w-sm w-full space-y-4 shadow-xl">
             <div className="flex items-center gap-3 text-rose-600">
               <span className="material-symbols-outlined text-[28px]">warning</span>
               <h5 className="font-bold text-base text-slate-900 m-0">Xác nhận xóa câu hỏi</h5>
