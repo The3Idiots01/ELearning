@@ -64,7 +64,7 @@ public class QuizAuthoringService {
                 .toList();
 
         BigDecimal totalPoints = questions.stream()
-                .map(QuizQuestion::getPoints)
+                .map(q -> q.getPoints() != null ? q.getPoints() : BigDecimal.ZERO)
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
 
         return QuizDetailResponse.builder()
@@ -108,7 +108,7 @@ public class QuizAuthoringService {
                 .toList();
 
         BigDecimal totalPoints = questions.stream()
-                .map(QuizQuestion::getPoints)
+                .map(q -> q.getPoints() != null ? q.getPoints() : BigDecimal.ZERO)
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
 
         return QuizDetailResponse.builder()
@@ -134,7 +134,10 @@ public class QuizAuthoringService {
         validateLessonIsQuiz(lesson);
 
         Quiz quiz = quizRepository.findByLesson_Id(lessonId)
-                .orElseThrow(() -> new AppException(ErrorCode.QUIZ_NOT_FOUND));
+                .orElseGet(() -> quizRepository.save(Quiz.builder()
+                        .lesson(lesson)
+                        .title(lesson.getTitle())
+                        .build()));
 
         List<QuizOptionDto> normalizedOptions = validateAndNormalizeOptions(request.getOptions(), request.getQuestionType());
         String optionsJson = serializeOptions(normalizedOptions);
@@ -197,6 +200,7 @@ public class QuizAuthoringService {
                 .orElseThrow(() -> new AppException(ErrorCode.QUIZ_QUESTION_NOT_FOUND));
 
         quizQuestionRepository.delete(question);
+        quizQuestionRepository.flush();
 
         // Đánh số lại thứ tự position cho các câu còn lại (0, 1, 2...)
         List<QuizQuestion> remaining = quizQuestionRepository.findByQuiz_IdOrderByPositionAsc(quiz.getId());
@@ -219,15 +223,18 @@ public class QuizAuthoringService {
                 .orElseThrow(() -> new AppException(ErrorCode.QUIZ_NOT_FOUND));
 
         List<QuizQuestion> existing = quizQuestionRepository.findByQuiz_IdOrderByPositionAsc(quiz.getId());
-        if (existing.size() != request.getQuestionIds().size()) {
+        List<Long> submittedIds = request.getQuestionIds();
+        if (submittedIds == null
+                || existing.size() != submittedIds.size()
+                || !new java.util.HashSet<>(submittedIds).equals(existing.stream().map(QuizQuestion::getId).collect(Collectors.toSet()))) {
             throw new AppException(ErrorCode.ORDER_PAYLOAD_MISMATCH);
         }
 
         Map<Long, QuizQuestion> questionMap = existing.stream()
                 .collect(Collectors.toMap(QuizQuestion::getId, Function.identity()));
 
-        for (int i = 0; i < request.getQuestionIds().size(); i++) {
-            Long qId = request.getQuestionIds().get(i);
+        for (int i = 0; i < submittedIds.size(); i++) {
+            Long qId = submittedIds.get(i);
             QuizQuestion q = questionMap.get(qId);
             if (q == null) {
                 throw new AppException(ErrorCode.ORDER_PAYLOAD_MISMATCH);
@@ -263,13 +270,19 @@ public class QuizAuthoringService {
             throw new AppException(ErrorCode.QUIZ_SINGLE_CHOICE_MULTIPLE_CORRECT);
         }
 
+        java.util.Set<String> seenIds = new java.util.HashSet<>();
         List<QuizOptionDto> normalized = new ArrayList<>();
         for (int i = 0; i < options.size(); i++) {
             QuizOptionDto opt = options.get(i);
-            String id = (opt.getId() != null && !opt.getId().isBlank()) ? opt.getId().trim() : "opt_" + (i + 1);
+            String rawId = (opt.getId() != null && !opt.getId().isBlank()) ? opt.getId().trim() : "opt_" + (i + 1);
+            String id = rawId;
+            if (seenIds.contains(id)) {
+                id = "opt_" + (i + 1);
+            }
+            seenIds.add(id);
             normalized.add(QuizOptionDto.builder()
                     .id(id)
-                    .text(opt.getText().trim())
+                    .text(opt.getText() != null ? opt.getText().trim() : "")
                     .isCorrect(Boolean.TRUE.equals(opt.getIsCorrect()))
                     .explanation(opt.getExplanation())
                     .build());

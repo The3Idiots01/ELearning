@@ -6,6 +6,7 @@ import { curriculumApi } from '../api/curriculumApi';
 import { apiClient } from '../../../lib/apiClient';
 import { useToast } from '../../../app/context/ToastContext';
 import { formatDuration, formatFileSize } from '../../../lib/formatters';
+import { QuizAuthoringView } from './QuizAuthoringView';
 
 interface LessonContentModalProps {
   isOpen: boolean;
@@ -212,12 +213,14 @@ export const LessonContentModal: React.FC<LessonContentModalProps> = ({
       onClose={onClose}
       title={`Soạn nội dung: ${lesson.title}`}
       subtitle={`Định dạng bài học: ${lesson.contentType} • Trạng thái: ${lesson.uploadStatus || 'READY'}`}
-      maxWidth="2xl"
+      maxWidth={lesson.contentType === 'QUIZ' ? '4xl' : '2xl'}
       icon={
         lesson.contentType === 'VIDEO'
           ? 'play_circle'
           : lesson.contentType === 'ARTICLE'
           ? 'article'
+          : lesson.contentType === 'QUIZ'
+          ? 'quiz'
           : 'description'
       }
     >
@@ -441,6 +444,15 @@ export const LessonContentModal: React.FC<LessonContentModalProps> = ({
                   <span>Tải lên tệp PDF / DOCX / ZIP (&lt;= 200MB)</span>
                 </button>
               </div>
+            )}
+
+            {/* FORMAT: QUIZ (ASSESSMENT) */}
+            {lesson.contentType === 'QUIZ' && (
+              <QuizAuthoringView
+                courseId={courseId}
+                lesson={lesson}
+                onContentUpdated={onContentUpdated}
+              />
             )}
           </div>
         )}
