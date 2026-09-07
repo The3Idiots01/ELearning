@@ -41,17 +41,17 @@ export const Modal: React.FC<ModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6 overflow-y-auto bg-slate-900/60 backdrop-blur-xs animate-in fade-in duration-200">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6 overflow-hidden bg-slate-900/60 backdrop-blur-sm">
       {/* Background click backdrop */}
       <div className="fixed inset-0" onClick={onClose} />
 
       {/* Modal Card */}
       <div
-        className={`relative w-full ${maxWidthClasses[maxWidth]} bg-surface-container-lowest text-on-surface rounded-3xl shadow-2xl border border-outline-variant/80 overflow-hidden transform transition-all z-10 my-8`}
+        className={`relative w-full ${maxWidthClasses[maxWidth]} max-h-[90vh] flex flex-col bg-surface-container-lowest text-on-surface rounded-3xl shadow-2xl border border-outline-variant/80 overflow-hidden transform transition-all z-10`}
         onClick={(e) => e.stopPropagation()}
       >
         {/* Modal Header */}
-        <div className="flex items-start justify-between p-6 border-b border-outline-variant/60 bg-surface-container-low/40">
+        <div className="flex items-start justify-between p-6 border-b border-outline-variant/60 bg-surface-container-low/40 shrink-0">
           <div className="flex items-start gap-3">
             {icon && (
               <div className="w-10 h-10 rounded-2xl bg-primary/10 text-primary flex items-center justify-center shrink-0">
@@ -75,7 +75,7 @@ export const Modal: React.FC<ModalProps> = ({
         </div>
 
         {/* Modal Body */}
-        <div className="p-6">{children}</div>
+        <div className="p-6 overflow-y-auto flex-1 min-h-0">{children}</div>
       </div>
     </div>
   );

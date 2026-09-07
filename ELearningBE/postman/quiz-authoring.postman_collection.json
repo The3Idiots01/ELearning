@@ -1,0 +1,310 @@
+{
+	"info": {
+		"_postman_id": "c928fae1-4b17-4389-9831-75466ba0e481",
+		"name": "Learnova - Quiz Authoring APIs",
+		"description": "Bộ API kiểm thử cho chức năng Soạn thảo Quiz của Giảng viên (US-07) trong hệ thống Learnova LMS.",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+	},
+	"variable": [
+		{
+			"key": "baseUrl",
+			"value": "http://localhost:8080",
+			"type": "string"
+		},
+		{
+			"key": "accessToken",
+			"value": "",
+			"type": "string"
+		},
+		{
+			"key": "courseId",
+			"value": "1",
+			"type": "string"
+		},
+		{
+			"key": "lessonId",
+			"value": "1",
+			"type": "string"
+		},
+		{
+			"key": "questionId",
+			"value": "1",
+			"type": "string"
+		}
+	],
+	"item": [
+		{
+			"name": "1. Authentication",
+			"item": [
+				{
+					"name": "Login (Lecturer)",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"var jsonData = pm.response.json();",
+									"if (jsonData.result && jsonData.result.accessToken) {",
+									"    pm.collectionVariables.set(\"accessToken\", jsonData.result.accessToken);",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"email\": \"quangtienhoihop@gmail.com\",\n  \"password\": \"123456\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/v1/auth/login",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "v1", "auth", "login"]
+						}
+					}
+				}
+			]
+		},
+		{
+			"name": "2. Quiz Authoring",
+			"item": [
+				{
+					"name": "Upsert Quiz Configuration",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{accessToken}}"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"title\": \"Bài kiểm tra 15 phút: Spring Boot & PostgreSQL\",\n  \"passingScore\": 80.00,\n  \"maxAttempts\": 3\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/v1/lecturer/courses/{{courseId}}/lessons/{{lessonId}}/quiz",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "v1", "lecturer", "courses", "{{courseId}}", "lessons", "{{lessonId}}", "quiz"]
+						}
+					}
+				},
+				{
+					"name": "Get Quiz Detail",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{accessToken}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/api/v1/lecturer/courses/{{courseId}}/lessons/{{lessonId}}/quiz",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "v1", "lecturer", "courses", "{{courseId}}", "lessons", "{{lessonId}}", "quiz"]
+						}
+					}
+				},
+				{
+					"name": "Add Question (Single Choice)",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"var jsonData = pm.response.json();",
+									"if (jsonData.result && jsonData.result.id) {",
+									"    pm.collectionVariables.set(\"questionId\", jsonData.result.id);",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{accessToken}}"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"questionText\": \"Trong Spring Boot, annotation nào được sử dụng để định nghĩa REST Controller?\",\n  \"questionType\": \"SINGLE_CHOICE\",\n  \"points\": 1.00,\n  \"options\": [\n    {\n      \"text\": \"@Controller\",\n      \"isCorrect\": false\n    },\n    {\n      \"text\": \"@RestController\",\n      \"isCorrect\": true,\n      \"explanation\": \"@RestController = @Controller + @ResponseBody\"\n    },\n    {\n      \"text\": \"@Service\",\n      \"isCorrect\": false\n    }\n  ]\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/v1/lecturer/courses/{{courseId}}/lessons/{{lessonId}}/quiz/questions",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "v1", "lecturer", "courses", "{{courseId}}", "lessons", "{{lessonId}}", "quiz", "questions"]
+						}
+					}
+				},
+				{
+					"name": "Add Question (Multiple Choice)",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{accessToken}}"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"questionText\": \"Các HTTP method nào sau đây có tính chất Idempotent?\",\n  \"questionType\": \"MULTIPLE_CHOICE\",\n  \"points\": 2.00,\n  \"options\": [\n    {\n      \"text\": \"GET\",\n      \"isCorrect\": true\n    },\n    {\n      \"text\": \"POST\",\n      \"isCorrect\": false\n    },\n    {\n      \"text\": \"PUT\",\n      \"isCorrect\": true\n    },\n    {\n      \"text\": \"DELETE\",\n      \"isCorrect\": true\n    }\n  ]\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/v1/lecturer/courses/{{courseId}}/lessons/{{lessonId}}/quiz/questions",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "v1", "lecturer", "courses", "{{courseId}}", "lessons", "{{lessonId}}", "quiz", "questions"]
+						}
+					}
+				},
+				{
+					"name": "Update Question",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{accessToken}}"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"questionText\": \"[Đã cập nhật] Trong Spring Boot, annotation nào được sử dụng để định nghĩa REST Controller?\",\n  \"questionType\": \"SINGLE_CHOICE\",\n  \"points\": 2.00,\n  \"options\": [\n    {\n      \"text\": \"@Controller (truyền thống)\",\n      \"isCorrect\": false\n    },\n    {\n      \"text\": \"@RestController (RESTful)\",\n      \"isCorrect\": true,\n      \"explanation\": \"Chính xác!\"\n    }\n  ]\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/v1/lecturer/courses/{{courseId}}/lessons/{{lessonId}}/quiz/questions/{{questionId}}",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "v1", "lecturer", "courses", "{{courseId}}", "lessons", "{{lessonId}}", "quiz", "questions", "{{questionId}}"]
+						}
+					}
+				},
+				{
+					"name": "Reorder Questions",
+					"request": {
+						"method": "PATCH",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{accessToken}}"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"questionIds\": [1, 2]\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/v1/lecturer/courses/{{courseId}}/lessons/{{lessonId}}/quiz/questions/reorder",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "v1", "lecturer", "courses", "{{courseId}}", "lessons", "{{lessonId}}", "quiz", "questions", "reorder"]
+						}
+					}
+				},
+				{
+					"name": "Delete Question",
+					"request": {
+						"method": "DELETE",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{accessToken}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/api/v1/lecturer/courses/{{courseId}}/lessons/{{lessonId}}/quiz/questions/{{questionId}}",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "v1", "lecturer", "courses", "{{courseId}}", "lessons", "{{lessonId}}", "quiz", "questions", "{{questionId}}"]
+						}
+					}
+				}
+			]
+		},
+		{
+			"name": "3. Negative Validation Tests",
+			"item": [
+				{
+					"name": "Fail: Single Choice with >1 correct answers",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{accessToken}}"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"questionText\": \"Test lỗi single choice có 2 đáp án đúng\",\n  \"questionType\": \"SINGLE_CHOICE\",\n  \"points\": 1.00,\n  \"options\": [\n    {\n      \"text\": \"Đáp án 1\",\n      \"isCorrect\": true\n    },\n    {\n      \"text\": \"Đáp án 2\",\n      \"isCorrect\": true\n    }\n  ]\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/v1/lecturer/courses/{{courseId}}/lessons/{{lessonId}}/quiz/questions",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "v1", "lecturer", "courses", "{{courseId}}", "lessons", "{{lessonId}}", "quiz", "questions"]
+						}
+					}
+				},
+				{
+					"name": "Fail: Question with 0 correct answers",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{accessToken}}"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"questionText\": \"Test lỗi không có đáp án đúng\",\n  \"questionType\": \"MULTIPLE_CHOICE\",\n  \"points\": 1.00,\n  \"options\": [\n    {\n      \"text\": \"Đáp án 1\",\n      \"isCorrect\": false\n    },\n    {\n      \"text\": \"Đáp án 2\",\n      \"isCorrect\": false\n    }\n  ]\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/v1/lecturer/courses/{{courseId}}/lessons/{{lessonId}}/quiz/questions",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "v1", "lecturer", "courses", "{{courseId}}", "lessons", "{{lessonId}}", "quiz", "questions"]
+						}
+					}
+				}
+			]
+		}
+	]
+}

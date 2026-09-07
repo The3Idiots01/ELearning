@@ -6,6 +6,7 @@ import { curriculumApi } from '../api/curriculumApi';
 import { apiClient } from '../../../lib/apiClient';
 import { useToast } from '../../../app/context/ToastContext';
 import { formatDuration, formatFileSize } from '../../../lib/formatters';
+import { QuizAuthoringView } from './QuizAuthoringView';
 
 interface LessonContentModalProps {
   isOpen: boolean;
@@ -206,6 +207,25 @@ export const LessonContentModal: React.FC<LessonContentModalProps> = ({
       showError(err.message || 'Lỗi khi xóa tài liệu.');
     }
   };
+
+  if (lesson.contentType === 'QUIZ') {
+    return (
+      <Modal
+        isOpen={isOpen}
+        onClose={onClose}
+        title={`Soạn bài trắc nghiệm: ${lesson.title}`}
+        subtitle="Cấu hình bài thi và quản lý ngân hàng câu hỏi trắc nghiệm"
+        maxWidth="4xl"
+        icon="quiz"
+      >
+        <QuizAuthoringView
+          courseId={courseId}
+          lesson={lesson}
+          onContentUpdated={onContentUpdated}
+        />
+      </Modal>
+    );
+  }
 
   return (
     <Modal

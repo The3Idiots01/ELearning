@@ -1,0 +1,310 @@
+###############################################################################
+# Learnova — Quiz Authoring Test Flow (.http)
+#
+# Dùng với extension "REST Client" của VS Code (humao.rest-client) hoặc JetBrains HTTP Client.
+# Cách chạy: Bấm "Send Request" phía trên từng block theo thứ tự từ trên xuống dưới.
+#
+# Chuẩn bị:
+#   1. Backend đang chạy (./mvnw spring-boot:run)
+#   2. Tài khoản có role LECTURER
+###############################################################################
+
+@baseUrl = http://localhost:8080
+@email = quangtienhoihop@gmail.com
+@password = 123456
+
+###############################################################################
+# 1. LOGIN — Lấy access token của Giảng viên
+###############################################################################
+# @name login
+POST {{baseUrl}}/api/v1/auth/login
+Content-Type: application/json
+
+{
+  "email": "{{email}}",
+  "password": "{{password}}"
+}
+
+### Lưu token vào biến
+@token = {{login.response.body.$.result.accessToken}}
+
+###############################################################################
+# 2. KHỞI TẠO KHÓA HỌC & BÀI HỌC DẠNG QUIZ (Để lấy courseId và lessonId)
+###############################################################################
+
+# 2.1 Tạo Course DRAFT
+# @name createCourse
+POST {{baseUrl}}/api/v1/lecturer/courses
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "title": "Khóa học Test Quiz Authoring",
+  "categoryId": 1
+}
+
+###
+@courseId = {{createCourse.response.body.$.result.id}}
+
+# 2.2 Tạo Chương (Section)
+# @name createSection
+POST {{baseUrl}}/api/v1/lecturer/courses/{{courseId}}/sections
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "title": "Chương 1: Kiểm tra kiến thức tổng quan"
+}
+
+###
+@sectionId = {{createSection.response.body.$.result.id}}
+
+# 2.3 Tạo Bài học có contentType = 'QUIZ'
+# @name createQuizLesson
+POST {{baseUrl}}/api/v1/lecturer/courses/{{courseId}}/sections/{{sectionId}}/lessons
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "title": "Bài kiểm tra số 1: Trắc nghiệm Spring Boot & DB",
+  "contentType": "QUIZ"
+}
+
+###
+@lessonId = {{createQuizLesson.response.body.$.result.id}}
+
+
+###############################################################################
+# 3. QUIZ AUTHORING APIS — THỰC HIỆN TEST
+###############################################################################
+
+### 3.1 Cấu hình / Tạo bài Quiz (Upsert Quiz)
+# @name upsertQuiz
+PUT {{baseUrl}}/api/v1/lecturer/courses/{{courseId}}/lessons/{{lessonId}}/quiz
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "title": "Bài kiểm tra 15 phút: Spring Boot & PostgreSQL",
+  "passingScore": 80.00,
+  "maxAttempts": 3
+}
+
+### 3.2 Lấy thông tin chi tiết bài Quiz
+# @name getQuiz
+GET {{baseUrl}}/api/v1/lecturer/courses/{{courseId}}/lessons/{{lessonId}}/quiz
+Authorization: Bearer {{token}}
+
+### 3.3 Thêm câu hỏi 1: SINGLE_CHOICE (Chọn 1 đáp án đúng)
+# @name addQuestion1
+POST {{baseUrl}}/api/v1/lecturer/courses/{{courseId}}/lessons/{{lessonId}}/quiz/questions
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "questionText": "Trong Spring Boot, annotation nào được sử dụng phổ biến nhất để định nghĩa một RESTful Web Controller?",
+  "questionType": "SINGLE_CHOICE",
+  "points": 1.00,
+  "options": [
+    {
+      "id": "opt_1",
+      "text": "@Controller",
+      "isCorrect": false,
+      "explanation": "@Controller dùng cho mô hình Spring MVC truyền thống trả về view template."
+    },
+    {
+      "id": "opt_2",
+      "text": "@RestController",
+      "isCorrect": true,
+      "explanation": "Chính xác! @RestController = @Controller + @ResponseBody."
+    },
+    {
+      "id": "opt_3",
+      "text": "@Service",
+      "isCorrect": false,
+      "explanation": "@Service dùng cho tầng xử lý nghiệp vụ (Business Logic)."
+    },
+    {
+      "id": "opt_4",
+      "text": "@Component",
+      "isCorrect": false,
+      "explanation": "@Component là annotation tổng quát."
+    }
+  ]
+}
+
+###
+@questionId1 = {{addQuestion1.response.body.$.result.id}}
+
+### 3.4 Thêm câu hỏi 2: MULTIPLE_CHOICE (Chọn nhiều đáp án đúng)
+# @name addQuestion2
+POST {{baseUrl}}/api/v1/lecturer/courses/{{courseId}}/lessons/{{lessonId}}/quiz/questions
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "questionText": "Những phương thức HTTP nào sau đây có tính chất Idempotent theo chuẩn RFC 7231?",
+  "questionType": "MULTIPLE_CHOICE",
+  "points": 2.00,
+  "options": [
+    {
+      "id": "opt_a",
+      "text": "GET",
+      "isCorrect": true,
+      "explanation": "GET là idempotent (gọi nhiều lần không thay đổi trạng thái tài nguyên)."
+    },
+    {
+      "id": "opt_b",
+      "text": "POST",
+      "isCorrect": false,
+      "explanation": "POST KHÔNG idempotent vì mỗi lần gọi có thể tạo mới một tài nguyên khác nhau."
+    },
+    {
+      "id": "opt_c",
+      "text": "PUT",
+      "isCorrect": true,
+      "explanation": "PUT là idempotent (ghi đè toàn bộ tài nguyên)."
+    },
+    {
+      "id": "opt_d",
+      "text": "DELETE",
+      "isCorrect": true,
+      "explanation": "DELETE là idempotent (xóa một tài nguyên đã bị xóa thì kết quả cuối cùng không đổi)."
+    }
+  ]
+}
+
+###
+@questionId2 = {{addQuestion2.response.body.$.result.id}}
+
+### 3.5 Thêm câu hỏi 3: Câu hỏi Đúng/Sai (Single Choice 2 phương án)
+# @name addQuestion3
+POST {{baseUrl}}/api/v1/lecturer/courses/{{courseId}}/lessons/{{lessonId}}/quiz/questions
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "questionText": "Trong PostgreSQL, kiểu dữ liệu JSONB lưu trữ dữ liệu dạng nhị phân đã phân tích cú pháp (parsed binary), giúp truy vấn nhanh hơn JSON thông thường.",
+  "questionType": "SINGLE_CHOICE",
+  "points": 1.00,
+  "options": [
+    {
+      "id": "true_opt",
+      "text": "Đúng",
+      "isCorrect": true,
+      "explanation": "Chính xác! JSONB parse sẵn nên hỗ trợ index và truy vấn nhanh hơn."
+    },
+    {
+      "id": "false_opt",
+      "text": "Sai",
+      "isCorrect": false,
+      "explanation": "Không chính xác."
+    }
+  ]
+}
+
+###
+@questionId3 = {{addQuestion3.response.body.$.result.id}}
+
+### 3.6 Cập nhật câu hỏi 3 (Sửa nội dung & điểm số)
+PUT {{baseUrl}}/api/v1/lecturer/courses/{{courseId}}/lessons/{{lessonId}}/quiz/questions/{{questionId3}}
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "questionText": "[ĐÃ SỬA] Trong PostgreSQL, kiểu dữ liệu JSONB lưu trữ dữ liệu dạng binary đã phân tích cú pháp (parsed binary).",
+  "questionType": "SINGLE_CHOICE",
+  "points": 1.50,
+  "options": [
+    {
+      "id": "true_opt",
+      "text": "Đúng (Chính xác)",
+      "isCorrect": true,
+      "explanation": "JSONB hỗ trợ GIN index."
+    },
+    {
+      "id": "false_opt",
+      "text": "Sai (Không đúng)",
+      "isCorrect": false,
+      "explanation": "JSON lưu text nguyên bản, còn JSONB lưu binary."
+    }
+  ]
+}
+
+### 3.7 Đổi thứ tự câu hỏi (Reorder)
+PATCH {{baseUrl}}/api/v1/lecturer/courses/{{courseId}}/lessons/{{lessonId}}/quiz/questions/reorder
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "questionIds": [
+    {{questionId2}},
+    {{questionId1}},
+    {{questionId3}}
+  ]
+}
+
+### 3.8 Xem lại chi tiết bài Quiz sau khi đổi thứ tự
+GET {{baseUrl}}/api/v1/lecturer/courses/{{courseId}}/lessons/{{lessonId}}/quiz
+Authorization: Bearer {{token}}
+
+### 3.9 Xóa câu hỏi 3
+DELETE {{baseUrl}}/api/v1/lecturer/courses/{{courseId}}/lessons/{{lessonId}}/quiz/questions/{{questionId3}}
+Authorization: Bearer {{token}}
+
+### 3.10 Xem lại bài Quiz sau khi xóa câu hỏi 3
+GET {{baseUrl}}/api/v1/lecturer/courses/{{courseId}}/lessons/{{lessonId}}/quiz
+Authorization: Bearer {{token}}
+
+
+###############################################################################
+# 4. NEGATIVE TESTS (Kiểm thử các trường hợp bắt lỗi nghiệp vụ)
+###############################################################################
+
+### 4.1 Lỗi: Câu hỏi SINGLE_CHOICE nhưng lại tick > 1 đáp án đúng (Kỳ vọng: 400 Bad Request)
+POST {{baseUrl}}/api/v1/lecturer/courses/{{courseId}}/lessons/{{lessonId}}/quiz/questions
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "questionText": "Câu hỏi test lỗi single choice có 2 đáp án đúng",
+  "questionType": "SINGLE_CHOICE",
+  "points": 1.00,
+  "options": [
+    { "text": "Đáp án 1", "isCorrect": true },
+    { "text": "Đáp án 2", "isCorrect": true }
+  ]
+}
+
+### 4.2 Lỗi: Câu hỏi không có bất kỳ đáp án đúng nào (Kỳ vọng: 400 Bad Request - BR-15)
+POST {{baseUrl}}/api/v1/lecturer/courses/{{courseId}}/lessons/{{lessonId}}/quiz/questions
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "questionText": "Câu hỏi test lỗi không có đáp án đúng",
+  "questionType": "MULTIPLE_CHOICE",
+  "points": 1.00,
+  "options": [
+    { "text": "Đáp án 1", "isCorrect": false },
+    { "text": "Đáp án 2", "isCorrect": false }
+  ]
+}
+
+### 4.3 Lỗi: Thao tác vào lesson không phải là QUIZ (Kỳ vọng: 400 Bad Request - LESSON_NOT_A_QUIZ)
+# @name createVideoLesson
+POST {{baseUrl}}/api/v1/lecturer/courses/{{courseId}}/sections/{{sectionId}}/lessons
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "title": "Bài học Video thường",
+  "contentType": "VIDEO"
+}
+
+###
+@videoLessonId = {{createVideoLesson.response.body.$.result.id}}
+
+### Gọi API quiz trên video lesson (Sẽ bị chặn)
+GET {{baseUrl}}/api/v1/lecturer/courses/{{courseId}}/lessons/{{videoLessonId}}/quiz
+Authorization: Bearer {{token}}
