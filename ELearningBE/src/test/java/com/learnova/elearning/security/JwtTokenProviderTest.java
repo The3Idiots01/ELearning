@@ -22,15 +22,13 @@ class JwtTokenProviderTest {
     @Test
     void testGenerateAndValidateAccessToken() {
         Long userId = 101L;
-        String role = "ADMIN";
-
-        String token = jwtTokenProvider.generateAccessToken(userId, role);
+        String token = jwtTokenProvider.generateAccessToken(userId);
         assertNotNull(token);
         assertTrue(jwtTokenProvider.validateToken(token));
 
         Claims claims = jwtTokenProvider.getClaimsFromToken(token);
         assertEquals(userId, jwtTokenProvider.getUserIdFromToken(token));
-        assertEquals(role, jwtTokenProvider.getRoleFromToken(token));
+        assertNull(claims.get("role"));
         assertNull(claims.get("email")); // verify email is not included in access token
     }
 

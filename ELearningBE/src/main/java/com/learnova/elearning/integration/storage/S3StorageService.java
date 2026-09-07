@@ -6,6 +6,7 @@ import com.learnova.elearning.integration.storage.model.ObjectMetadata;
 import com.learnova.elearning.integration.storage.model.PresignedUpload;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
+import org.springframework.core.io.Resource;
 import org.springframework.stereotype.Service;
 import software.amazon.awssdk.services.s3.S3Client;
 import software.amazon.awssdk.services.s3.model.Delete;
@@ -127,6 +128,12 @@ public class S3StorageService implements StorageService {
         } catch (S3Exception e) {
             log.warn("S3 deleteByPrefix failed for prefix {}: {}", prefix, e.getMessage());
         }
+    }
+
+    @Override
+    public Resource openReadable(String key) {
+        throw new UnsupportedOperationException(
+                "S3StorageService không hỗ trợ openReadable — nhánh provider=s3 luôn đi redirect (§4.7)");
     }
 
     private void flushDelete(List<ObjectIdentifier> keys) {

@@ -5,6 +5,11 @@ export function formatCurrencyVND(amount: number | undefined | null): string {
   return `${amount.toLocaleString('vi-VN')} đ`;
 }
 
+export function formatRevenueVND(amount: number | undefined | null): string {
+  if (amount === undefined || amount === null) return '0 đ';
+  return `${amount.toLocaleString('vi-VN')} đ`;
+}
+
 export function formatDuration(seconds: number | undefined | null): string {
   if (!seconds || seconds <= 0) return '0 phút';
   const mins = Math.floor(seconds / 60);

@@ -1,27 +1,78 @@
 import React, { useState, useEffect } from 'react';
-import type { CourseDetail, Curriculum, Lesson } from '../../../../types/course';
+import type { CourseDetail, Curriculum, Lesson, ProgressSnapshot } from '../../../../types/course';
 import { formatDuration } from '../../../../lib/formatters';
 import { DocumentViewer } from '../../components/DocumentViewer';
+import { LessonVideoPlayer } from '../../components/LessonVideoPlayer';
+import { playbackApi } from '../../api/playbackApi';
+import { ApiError } from '../../../../lib/apiClient';
+import { useCourseProgress } from '../../hooks/useCourseProgress';
 
 interface LearningWorkspacePageProps {
   courseId: number;
   courseDetail: CourseDetail | null;
   curriculum: Curriculum | null;
   isLoading: boolean;
+  courseProgressPercent?: number | null;
   onCompleteLesson: (lessonId: number) => Promise<boolean>;
+  onLessonProgress: (snapshot: ProgressSnapshot) => void;
   onBack: () => void;
 }
 
 export const LearningWorkspacePage: React.FC<LearningWorkspacePageProps> = ({
+  courseId,
   courseDetail,
   curriculum,
   isLoading,
+  courseProgressPercent,
   onCompleteLesson,
+  onLessonProgress,
   onBack
 }) => {
   const [activeLesson, setActiveLesson] = useState<Lesson | null>(null);
   const [isCompleting, setIsCompleting] = useState(false);
   const [expandedSections, setExpandedSections] = useState<Record<number, boolean>>({});
+  const [playbackUrl, setPlaybackUrl] = useState<string | null>(null);
+  const [playbackError, setPlaybackError] = useState<string | null>(null);
+  const [isLoadingPlayback, setIsLoadingPlayback] = useState(false);
+
+  // Xin PlaybackTicket khi bấm phát, thay vì dùng URL ký sẵn hàng loạt trong
+  // curriculum (§7.1 G1). VIDEO dùng LessonVideoPlayer riêng (Task 10 — có
+  // resume + heartbeat + watermark); ở đây chỉ còn lo FILE, và ARTICLE không
+  // cần ticket vì chỉ có contentText.
+  useEffect(() => {
+    const needsPlayback = activeLesson?.contentType === 'FILE';
+    if (!activeLesson || !needsPlayback || !activeLesson.playable) {
+      setPlaybackUrl(null);
+      setPlaybackError(null);
+      return;
+    }
+
+    let cancelled = false;
+    setPlaybackUrl(null);
+    setPlaybackError(null);
+    setIsLoadingPlayback(true);
+
+    playbackApi
+      .getPlaybackTicket(courseId, activeLesson.id)
+      .then((ticket) => {
+        if (!cancelled) setPlaybackUrl(ticket.streamUrl);
+      })
+      .catch((err) => {
+        if (cancelled) return;
+        const message =
+          err instanceof ApiError
+            ? err.message
+            : 'Không thể tải video bài giảng. Vui lòng thử lại.';
+        setPlaybackError(message);
+      })
+      .finally(() => {
+        if (!cancelled) setIsLoadingPlayback(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [courseId, activeLesson]);
 
   useEffect(() => {
     if (curriculum && curriculum.sections.length > 0) {
@@ -42,6 +93,11 @@ export const LearningWorkspacePage: React.FC<LearningWorkspacePageProps> = ({
     }
   }, [curriculum]);
 
+  const { totalLessons, completedLessons: completedCount, percent: overallProgress } = useCourseProgress(
+    curriculum,
+    courseProgressPercent
+  );
+
   if (isLoading || !curriculum) {
     return (
       <div className="min-h-screen bg-slate-950 text-white flex items-center justify-center p-8 flex-1">
@@ -54,16 +110,6 @@ export const LearningWorkspacePage: React.FC<LearningWorkspacePageProps> = ({
       </div>
     );
   }
-
-  let totalLessons = 0;
-  let completedCount = 0;
-  curriculum.sections.forEach((sec) => {
-    sec.lessons.forEach((les) => {
-      totalLessons++;
-      if (les.completed) completedCount++;
-    });
-  });
-  const overallProgress = totalLessons > 0 ? Math.round((completedCount / totalLessons) * 100) : 0;
 
   const toggleSection = (sectionId: number) => {
     setExpandedSections((prev) => ({ ...prev, [sectionId]: !prev[sectionId] }));
@@ -150,27 +196,7 @@ export const LearningWorkspacePage: React.FC<LearningWorkspacePageProps> = ({
             </div>
           ) : activeLesson.contentType === 'VIDEO' ? (
             <div className="w-full bg-black aspect-video max-h-[60vh] flex items-center justify-center relative border-b border-slate-800 shrink-0">
-              {activeLesson.contentUrl ? (
-                <video
-                  key={activeLesson.contentUrl}
-                  src={activeLesson.contentUrl}
-                  controls
-                  autoPlay
-                  className="w-full h-full max-h-[60vh] object-contain"
-                />
-              ) : (
-                <div className="text-center p-8 text-slate-400 space-y-3">
-                  <span className="material-symbols-outlined text-[54px] text-primary-container animate-bounce">
-                    play_circle
-                  </span>
-                  <h3 className="text-sm font-bold text-white m-0 font-display">
-                    Video bài giảng: {activeLesson.title}
-                  </h3>
-                  <p className="text-xs text-slate-400 max-w-md mx-auto m-0">
-                    Video bài học đã sẵn sàng. Bạn có thể bấm nút &quot;Đánh dấu hoàn thành&quot; phía dưới để tiếp tục tiến trình.
-                  </p>
-                </div>
-              )}
+              <LessonVideoPlayer courseId={courseId} lesson={activeLesson} onProgress={onLessonProgress} />
             </div>
           ) : activeLesson.contentType === 'ARTICLE' ? (
             /* ARTICLE Content Type */
@@ -189,12 +215,20 @@ export const LearningWorkspacePage: React.FC<LearningWorkspacePageProps> = ({
           ) : (
             /* FILE Content Type */
             <div className="w-full min-h-[1400px] sm:min-h-[1600px] p-3 sm:p-5 border-b border-slate-800 flex flex-col shrink-0">
-              <DocumentViewer
-                url={activeLesson.contentUrl}
-                fileName={activeLesson.originalFileName}
-                mimeType={activeLesson.mimeType}
-                title={activeLesson.title}
-              />
+              {playbackError ? (
+                <p className="text-xs text-rose-400 font-bold">{playbackError}</p>
+              ) : isLoadingPlayback ? (
+                <div className="flex-1 flex items-center justify-center text-slate-400">
+                  <span className="material-symbols-outlined text-[40px] animate-spin">progress_activity</span>
+                </div>
+              ) : (
+                <DocumentViewer
+                  url={playbackUrl ?? undefined}
+                  fileName={activeLesson.originalFileName}
+                  mimeType={activeLesson.mimeType}
+                  title={activeLesson.title}
+                />
+              )}
             </div>
           )}
 

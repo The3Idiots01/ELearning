@@ -23,6 +23,7 @@ import { InstructorLayout } from './app/routes/InstructorLayout';
 import { InstructorCoursesRoute } from './app/routes/InstructorCoursesRoute';
 import { CourseSettingsRoute } from './app/routes/CourseSettingsRoute';
 import { CurriculumEditorRoute } from './app/routes/CurriculumEditorRoute';
+import { RevenueRoute } from './app/routes/RevenueRoute';
 
 export function App() {
   const { appMode } = useAuth();
@@ -83,6 +84,7 @@ export function App() {
           }
         >
           <Route path="/instructor/courses" element={<InstructorCoursesRoute />} />
+          <Route path="/instructor/revenue" element={<RevenueRoute />} />
           <Route path="/instructor/courses/:courseId/settings" element={<CourseSettingsRoute />} />
           <Route path="/instructor/courses/:courseId/curriculum" element={<CurriculumEditorRoute />} />
         </Route>

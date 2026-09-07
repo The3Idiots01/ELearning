@@ -76,7 +76,7 @@ class UserProfileServiceTest {
                 .id(1L)
                 .fullName("Nguyễn Văn A")
                 .email("vana@example.com")
-                .role(UserRole.LEARNER)
+                .role(UserRole.USER)
                 .authProvider(AuthProvider.LOCAL)
                 .avatarUrl("users/1/avatar/old-uuid.png")
                 .bio("Lập trình viên đam mê học hỏi")

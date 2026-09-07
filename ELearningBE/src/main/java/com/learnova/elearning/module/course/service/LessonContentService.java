@@ -14,9 +14,11 @@ import com.learnova.elearning.module.course.entity.Lesson;
 import com.learnova.elearning.module.course.entity.LessonResource;
 import com.learnova.elearning.module.course.entity.enums.LessonContentType;
 import com.learnova.elearning.module.course.entity.enums.LessonUploadStatus;
+import com.learnova.elearning.module.course.event.LessonContentAttachedEvent;
 import com.learnova.elearning.module.course.repository.LessonRepository;
 import com.learnova.elearning.module.course.repository.LessonResourceRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -38,6 +40,7 @@ public class LessonContentService {
     private final StorageService storageService;
     private final StorageKeyFactory keyFactory;
     private final LessonResponseAssembler lessonAssembler;
+    private final ApplicationEventPublisher events;
 
     // ---- Lesson content (VIDEO / FILE) ------------------------------------
 
@@ -67,16 +70,20 @@ public class LessonContentService {
         lesson.setOriginalFileName(request.getOriginalFileName());
         lesson.setFileSizeBytes(meta.sizeBytes());
         lesson.setMimeType(effectiveType);
-        lesson.setUploadStatus(LessonUploadStatus.READY);
-        lesson.setDurationSeconds(
-                purpose == UploadPurpose.LESSON_VIDEO && request.getDurationSeconds() != null
-                        ? request.getDurationSeconds()
-                        : 0);
+        lesson.setDurationSeconds(0);
+
+        boolean isVideo = purpose == UploadPurpose.LESSON_VIDEO;
+        // duration client khai bị bỏ hẳn — không tin client (§7.5). VIDEO chuyển
+        // PROCESSING, job nền (VideoMetadataProcessor) đo duration thật rồi mới READY.
+        lesson.setUploadStatus(isVideo ? LessonUploadStatus.PROCESSING : LessonUploadStatus.READY);
 
         Lesson saved = lessonRepository.save(lesson);
 
         if (oldKey != null && !oldKey.equals(key)) {
             storageService.delete(oldKey);
+        }
+        if (isVideo) {
+            events.publishEvent(new LessonContentAttachedEvent(saved.getId(), key));
         }
         return lessonAssembler.assembleOne(saved);
     }

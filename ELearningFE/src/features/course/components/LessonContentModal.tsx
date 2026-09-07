@@ -32,9 +32,6 @@ export const LessonContentModal: React.FC<LessonContentModalProps> = ({
   const [contentText, setContentText] = useState(lesson.contentText || '');
   const [isSavingText, setIsSavingText] = useState(false);
 
-  // Video duration manual input state (if not auto-detected)
-  const [videoDuration, setVideoDuration] = useState<number>(lesson.durationSeconds || 300);
-
   // Upload states
   const [isUploading, setIsUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
@@ -119,18 +116,22 @@ export const LessonContentModal: React.FC<LessonContentModalProps> = ({
       setUploadProgress(85);
       setUploadStatusText('Đang gắn nội dung và xác thực metadata...');
 
-      // 3. Attach content metadata to lesson
+      // 3. Attach content metadata to lesson. durationSeconds không còn gửi cho
+      // VIDEO — server tự đo thật ở job nền (§7.5), không tin giá trị client khai.
       await curriculumApi.attachContent(courseId, lesson.id, {
         storageKey: presign.storageKey,
         originalFileName: file.name,
         fileSizeBytes: file.size,
-        mimeType: file.type || (lesson.contentType === 'VIDEO' ? 'video/mp4' : 'application/pdf'),
-        durationSeconds: lesson.contentType === 'VIDEO' ? videoDuration : undefined
+        mimeType: file.type || (lesson.contentType === 'VIDEO' ? 'video/mp4' : 'application/pdf')
       });
 
       setUploadProgress(100);
       setUploadStatusText('Hoàn tất tải lên thành công!');
-      showSuccess(`Đã tải lên và gắn nội dung ${lesson.contentType} thành công!`);
+      if (lesson.contentType === 'VIDEO') {
+        showSuccess('Đã tải lên video! Hệ thống đang xử lý ở nền, quay lại sau ít phút để xem trạng thái.');
+      } else {
+        showSuccess(`Đã tải lên và gắn nội dung ${lesson.contentType} thành công!`);
+      }
       onContentUpdated();
     } catch (err: any) {
       showError(err.message || 'Lỗi trong quá trình upload file.');
@@ -231,7 +232,11 @@ export const LessonContentModal: React.FC<LessonContentModalProps> = ({
       isOpen={isOpen}
       onClose={onClose}
       title={`Soạn nội dung: ${lesson.title}`}
-      subtitle={`Định dạng bài học: ${lesson.contentType} • Trạng thái: ${lesson.uploadStatus || 'READY'}`}
+      subtitle={`Định dạng bài học: ${lesson.contentType}${
+        lesson.contentType === 'VIDEO' || lesson.contentType === 'FILE'
+          ? ` • Trạng thái: ${lesson.uploadStatus || 'EMPTY'}`
+          : ''
+      }`}
       maxWidth="2xl"
       icon={
         lesson.contentType === 'VIDEO'
@@ -283,13 +288,26 @@ export const LessonContentModal: React.FC<LessonContentModalProps> = ({
                       Tệp Video hiện tại
                     </span>
                     <span
-                      className={`text-[10px] font-bold px-2 py-0.5 rounded ${
+                      className={`text-[10px] font-bold px-2 py-0.5 rounded flex items-center gap-1 ${
                         lesson.uploadStatus === 'READY'
                           ? 'bg-emerald-100 text-emerald-800'
+                          : lesson.uploadStatus === 'PROCESSING'
+                          ? 'bg-indigo-100 text-indigo-800'
+                          : lesson.uploadStatus === 'FAILED'
+                          ? 'bg-rose-100 text-rose-800'
                           : 'bg-amber-100 text-amber-800'
                       }`}
                     >
-                      {lesson.uploadStatus === 'READY' ? 'Đã sẵn sàng' : 'Chưa có video'}
+                      {lesson.uploadStatus === 'PROCESSING' && (
+                        <span className="inline-block animate-spin w-2.5 h-2.5 border-2 border-indigo-800 border-t-transparent rounded-full" />
+                      )}
+                      {lesson.uploadStatus === 'READY'
+                        ? 'Đã sẵn sàng'
+                        : lesson.uploadStatus === 'PROCESSING'
+                        ? 'Đang xử lý video...'
+                        : lesson.uploadStatus === 'FAILED'
+                        ? 'Xử lý thất bại — hãy tải lại'
+                        : 'Chưa có video'}
                     </span>
                   </div>
 
@@ -302,7 +320,8 @@ export const LessonContentModal: React.FC<LessonContentModalProps> = ({
                         <span className="font-semibold truncate">{lesson.originalFileName}</span>
                       </div>
                       <span className="text-slate-500 shrink-0">
-                        {formatFileSize(lesson.fileSizeBytes)} • {formatDuration(lesson.durationSeconds)}
+                        {formatFileSize(lesson.fileSizeBytes)}
+                        {lesson.uploadStatus === 'READY' && <> • {formatDuration(lesson.durationSeconds)}</>}
                       </span>
                     </div>
                   ) : (
@@ -310,23 +329,13 @@ export const LessonContentModal: React.FC<LessonContentModalProps> = ({
                       Chưa tải lên file video nào cho bài học này.
                     </p>
                   )}
-                </div>
 
-                {/* Duration Setting */}
-                <div className="flex items-center gap-3">
-                  <label className="text-xs font-bold text-slate-700 whitespace-nowrap">
-                    Thời lượng ước tính (giây):
-                  </label>
-                  <input
-                    type="number"
-                    value={videoDuration}
-                    onChange={(e) => setVideoDuration(Number(e.target.value))}
-                    min={1}
-                    className="w-32 px-3 py-1.5 bg-surface-container-low border border-outline-variant/70 rounded-xl text-xs text-on-surface focus:bg-white focus:border-primary focus:outline-none"
-                  />
-                  <span className="text-xs text-slate-500 font-medium">
-                    (~{formatDuration(videoDuration)})
-                  </span>
+                  {lesson.uploadStatus === 'PROCESSING' && (
+                    <p className="text-[11px] text-indigo-700 bg-indigo-50 border border-indigo-100 rounded-xl px-3 py-2 m-0">
+                      Hệ thống đang đo thời lượng thật của video ở nền. Bạn có thể đóng cửa sổ này và quay
+                      lại sau — không thể xuất bản khóa học khi còn bài học đang xử lý.
+                    </p>
+                  )}
                 </div>
 
                 {/* Upload Button & Progress */}

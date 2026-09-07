@@ -72,6 +72,17 @@ public enum ErrorCode {
     UPLOAD_METADATA_MISMATCH(1244, "Uploaded file does not match declared metadata", HttpStatus.BAD_REQUEST),
     STORAGE_UNAVAILABLE(1245, "Storage service is unavailable", HttpStatus.SERVICE_UNAVAILABLE),
 
+    // Content Delivery (1251 - 1257)
+    PLAYBACK_TICKET_INVALID(1251, "Playback ticket is invalid or malformed", HttpStatus.UNAUTHORIZED),
+    PLAYBACK_TICKET_EXPIRED(1252, "Playback ticket has expired", HttpStatus.UNAUTHORIZED),
+    PLAYBACK_TICKET_MISMATCH(1253, "Playback ticket does not belong to this session", HttpStatus.FORBIDDEN),
+    CONTENT_ACCESS_DENIED(1254, "You must be enrolled to access this content", HttpStatus.FORBIDDEN),
+    LESSON_CONTENT_NOT_READY(1255, "Lesson content is not ready for playback", HttpStatus.CONFLICT),
+    TOO_MANY_ACTIVE_STREAMS(1256, "Too many concurrent playback sessions", HttpStatus.TOO_MANY_REQUESTS),
+    CONTENT_RANGE_NOT_SATISFIABLE(1257, "Requested range not satisfiable", HttpStatus.REQUESTED_RANGE_NOT_SATISFIABLE),
+
+    // Knowledge Tracking (1261 - 1265)
+    PROGRESS_RATE_LIMITED(1261, "Progress updates are being sent too fast", HttpStatus.TOO_MANY_REQUESTS);
     // Quiz Domain (1301 - 1310)
     QUIZ_NOT_FOUND(1301, "Quiz not found", HttpStatus.NOT_FOUND),
     QUIZ_QUESTION_NOT_FOUND(1302, "Quiz question not found", HttpStatus.NOT_FOUND),

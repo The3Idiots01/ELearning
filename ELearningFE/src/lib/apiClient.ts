@@ -1,7 +1,9 @@
 import { storage } from './storage';
 import type { ApiResponse } from '../types/common';
 
-export const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8080';
+// §4.5 design_us15_us17.md — mặc định rỗng (relative) để đi qua vite proxy
+// /api, giữ FE và API same-site cho cookie lv_pb HttpOnly.
+export const API_BASE_URL = import.meta.env.VITE_API_URL || '';
 
 interface RequestOptions extends RequestInit {
   params?: Record<string, string | number | boolean | undefined | null>;

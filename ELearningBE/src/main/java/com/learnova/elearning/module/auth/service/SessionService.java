@@ -51,8 +51,8 @@ public class SessionService {
             throw new AppException(ErrorCode.USER_INACTIVE);
         }
 
-        // Sinh Access Token (chỉ chứa id & role) và Refresh Token
-        String accessToken = jwtTokenProvider.generateAccessToken(user.getId(), user.getRole().name());
+        // Sinh Access Token (chỉ chứa id) và Refresh Token
+        String accessToken = jwtTokenProvider.generateAccessToken(user.getId());
         String refreshToken = jwtTokenProvider.generateRefreshToken(user.getId());
 
         // Lưu Refresh Token vào Redis
@@ -93,7 +93,7 @@ public class SessionService {
         }
 
         // Tạo Access Token mới và rotate Refresh Token mới
-        String newAccessToken = jwtTokenProvider.generateAccessToken(user.getId(), user.getRole().name());
+        String newAccessToken = jwtTokenProvider.generateAccessToken(user.getId());
         String newRefreshToken = jwtTokenProvider.generateRefreshToken(user.getId());
 
         // Cập nhật Refresh Token mới vào Redis

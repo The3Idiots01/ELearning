@@ -27,7 +27,7 @@ public class CustomUserDetails implements UserDetails {
         this.role = user.getRole();
         this.isActive = user.getIsActive() != null && user.getIsActive();
         this.authorities = Collections.singletonList(
-                new SimpleGrantedAuthority("ROLE_" + (user.getRole() != null ? user.getRole().name() : UserRole.LEARNER.name()))
+                new SimpleGrantedAuthority("ROLE_" + (user.getRole() != null ? user.getRole().name() : UserRole.USER.name()))
         );
     }
 

@@ -169,12 +169,12 @@ public class RegistrationService {
             );
         }
 
-        // 5. Tạo mới User vào Database (mặc định role là LEARNER)
+        // 5. Tạo mới User vào Database (mặc định role là USER)
         User user = User.builder()
                 .fullName(pendingDto.getFullName())
                 .email(pendingDto.getEmail())
                 .passwordHash(pendingDto.getPasswordHash())
-                .role(UserRole.LEARNER)
+                .role(UserRole.USER)
                 .authProvider(AuthProvider.LOCAL)
                 .isActive(true)
                 .build();

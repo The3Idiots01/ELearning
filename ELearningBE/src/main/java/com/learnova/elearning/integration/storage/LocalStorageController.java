@@ -6,6 +6,7 @@ import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
+import org.springframework.context.annotation.Profile;
 import org.springframework.core.io.FileSystemResource;
 import org.springframework.core.io.Resource;
 import org.springframework.http.HttpHeaders;
@@ -27,6 +28,7 @@ import java.nio.file.Path;
 @RequiredArgsConstructor
 @Slf4j
 @ConditionalOnProperty(name = "learnova.storage.provider", havingValue = "local", matchIfMissing = true)
+@Profile("!prod")
 public class LocalStorageController {
 
     private final LocalStorageService storage;

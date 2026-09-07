@@ -2,6 +2,7 @@ package com.learnova.elearning.integration.storage;
 
 import com.learnova.elearning.integration.storage.model.ObjectMetadata;
 import com.learnova.elearning.integration.storage.model.PresignedUpload;
+import org.springframework.core.io.Resource;
 
 import java.time.Duration;
 import java.util.Optional;
@@ -26,4 +27,11 @@ public interface StorageService {
 
     /** Xóa mọi object theo tiền tố (dùng khi archive/xóa cả course). */
     void deleteByPrefix(String prefix);
+
+    /**
+     * Mở stream đọc object — dùng cho {@code StreamDeliveryStrategy} khi
+     * provider=local (§4.7, §7.4 design_us15_us17.md). Nhánh s3 luôn đi
+     * redirect nên không hỗ trợ thao tác này.
+     */
+    Resource openReadable(String key);
 }

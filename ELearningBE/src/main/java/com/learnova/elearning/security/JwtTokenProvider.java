@@ -46,16 +46,16 @@ public class JwtTokenProvider {
     }
 
     /**
-     * Sinh Access Token chỉ chứa `id` và `role`
+     * Sinh access token chỉ chứa user ID. Authority luôn được đọc lại từ DB
+     * trong JwtAuthenticationFilter để thay đổi role có hiệu lực ngay.
      */
-    public String generateAccessToken(Long userId, String role) {
+    public String generateAccessToken(Long userId) {
         Date now = new Date();
         Date expiryDate = new Date(now.getTime() + accessTokenExpirationMs);
 
         return Jwts.builder()
                 .subject(String.valueOf(userId))
                 .claim("id", userId)
-                .claim("role", role)
                 .issuedAt(now)
                 .expiration(expiryDate)
                 .signWith(getSigningKey())
@@ -154,14 +154,6 @@ public class JwtTokenProvider {
             return ((Number) idClaim).longValue();
         }
         return Long.parseLong(claims.getSubject());
-    }
-
-    /**
-     * Lấy Role từ JWT
-     */
-    public String getRoleFromToken(String token) {
-        Claims claims = getClaimsFromToken(token);
-        return claims.get("role", String.class);
     }
 
     /**

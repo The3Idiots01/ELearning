@@ -47,7 +47,7 @@ public class User {
     @Enumerated(EnumType.STRING)
     @Column(name = "role", nullable = false, length = 50)
     @Builder.Default
-    private UserRole role = UserRole.LEARNER;
+    private UserRole role = UserRole.USER;
 
     @Column(name = "bio", columnDefinition = "TEXT")
     private String bio;

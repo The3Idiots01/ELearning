@@ -300,7 +300,7 @@ export const InstructorCoursesPage: React.FC<InstructorCoursesPageProps> = ({
                         type="button"
                         onClick={() => onEditCourse(course.id)}
                         className="flex-1 bg-surface-container-low hover:bg-surface-container text-on-surface font-bold text-xs py-2 px-2.5 rounded-xl transition-colors flex items-center justify-center gap-1 cursor-pointer border border-outline-variant/60"
-                        title="Cài đặt thông tin và giá bán (US-05)"
+                        title="Cài đặt thông tin và giá bán"
                       >
                         <span className="material-symbols-outlined text-[16px]">tune</span>
                         <span>Cài đặt & Giá</span>
@@ -310,7 +310,7 @@ export const InstructorCoursesPage: React.FC<InstructorCoursesPageProps> = ({
                         type="button"
                         onClick={() => onEditCurriculum(course.id)}
                         className="flex-1 bg-primary/10 hover:bg-primary text-primary hover:text-white font-bold text-xs py-2 px-2.5 rounded-xl transition-all flex items-center justify-center gap-1 cursor-pointer"
-                        title="Biên soạn bài giảng đa định dạng (US-06)"
+                        title="Biên soạn giáo trình và bài học"
                       >
                         <span className="material-symbols-outlined text-[16px]">menu_book</span>
                         <span>Soạn bài</span>

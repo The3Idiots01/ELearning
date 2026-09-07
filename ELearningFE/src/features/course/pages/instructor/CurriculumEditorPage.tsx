@@ -143,7 +143,6 @@ export const CurriculumEditorPage: React.FC<CurriculumEditorPageProps> = ({
           <div className="overflow-hidden">
             <div className="flex items-center gap-2">
               <StatusBadge status={course.status} />
-              <span className="text-xs text-slate-400 font-semibold">• ID: #{course.id}</span>
             </div>
             <h1 className="text-base sm:text-lg font-black text-slate-900 truncate m-0 mt-0.5 font-display">
               Soạn Giáo Trình: {course.title}
@@ -159,7 +158,7 @@ export const CurriculumEditorPage: React.FC<CurriculumEditorPageProps> = ({
             className="bg-surface-container-low hover:bg-surface-container text-on-surface font-bold text-xs px-4 py-2.5 rounded-xl border border-outline-variant/60 transition-all flex items-center gap-1.5 cursor-pointer shadow-xs"
           >
             <span className="material-symbols-outlined text-[18px]">tune</span>
-            <span>Cài đặt thông tin & Giá (US-05)</span>
+            <span>Cài đặt thông tin & Giá</span>
           </button>
 
           <button
@@ -191,7 +190,7 @@ export const CurriculumEditorPage: React.FC<CurriculumEditorPageProps> = ({
 
             <div>
               <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">
-                Tổng bài giảng (US-06)
+                Tổng bài giảng
               </span>
               <strong className="text-lg font-black text-slate-900 font-display">
                 {totalLessons} bài học

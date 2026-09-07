@@ -154,7 +154,7 @@ class RegistrationServiceTest {
                 .fullName("Nguyen Van A")
                 .email(email)
                 .passwordHash("hashed_password")
-                .role(UserRole.LEARNER)
+                .role(UserRole.USER)
                 .authProvider(AuthProvider.LOCAL)
                 .isActive(true)
                 .build();
