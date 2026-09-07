@@ -187,9 +187,16 @@ export const LessonItem: React.FC<LessonItemProps> = ({
                 </span>
               )}
 
-              {/* Ready status */}
+              {/* Upload status */}
               {lesson.uploadStatus === 'READY' ? (
                 <span className="text-emerald-700 font-semibold">• Đã có nội dung</span>
+              ) : lesson.uploadStatus === 'PROCESSING' ? (
+                <span className="text-indigo-600 font-semibold flex items-center gap-1">
+                  <span className="inline-block animate-spin w-2.5 h-2.5 border-2 border-indigo-600 border-t-transparent rounded-full" />
+                  • Đang xử lý video...
+                </span>
+              ) : lesson.uploadStatus === 'FAILED' ? (
+                <span className="text-rose-600 font-semibold">• Xử lý thất bại, hãy tải lại video</span>
               ) : (
                 <span className="text-amber-600 font-semibold">• Chưa có nội dung</span>
               )}

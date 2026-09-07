@@ -1,8 +1,10 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import type { CourseDetail, Curriculum, Lesson } from '../../../../types/course';
 import { LevelBadge } from '../../../../components/common/Badge';
 import { formatCurrencyVND } from '../../../../lib/formatters';
 import { DocumentViewer } from '../../components/DocumentViewer';
+import { playbackApi } from '../../api/playbackApi';
+import { ApiError } from '../../../../lib/apiClient';
 
 interface CourseDetailPageProps {
   course: CourseDetail | null;
@@ -28,6 +30,45 @@ export const CourseDetailPage: React.FC<CourseDetailPageProps> = ({
   const [showEnrollConfirm, setShowEnrollConfirm] = useState(false);
   const [previewLesson, setPreviewLesson] = useState<{ lesson: Lesson; sectionTitle: string } | null>(null);
   const [lockedLesson, setLockedLesson] = useState<Lesson | null>(null);
+  const [previewPlaybackUrl, setPreviewPlaybackUrl] = useState<string | null>(null);
+  const [previewPlaybackError, setPreviewPlaybackError] = useState<string | null>(null);
+  const [isLoadingPreviewPlayback, setIsLoadingPreviewPlayback] = useState(false);
+
+  // Bài học xem thử (is_preview): cấp PlaybackTicket khách vãng lai (scope=PREVIEW)
+  // thay vì dùng contentUrl ký sẵn hàng loạt trong curriculum (§7.1 G1).
+  useEffect(() => {
+    const lesson = previewLesson?.lesson;
+    const needsPlayback = lesson?.contentType === 'VIDEO' || lesson?.contentType === 'FILE';
+    if (!course || !lesson || !needsPlayback || !lesson.playable) {
+      setPreviewPlaybackUrl(null);
+      setPreviewPlaybackError(null);
+      return;
+    }
+
+    let cancelled = false;
+    setPreviewPlaybackUrl(null);
+    setPreviewPlaybackError(null);
+    setIsLoadingPreviewPlayback(true);
+
+    playbackApi
+      .getPlaybackTicket(course.id, lesson.id)
+      .then((ticket) => {
+        if (!cancelled) setPreviewPlaybackUrl(ticket.streamUrl);
+      })
+      .catch((err) => {
+        if (cancelled) return;
+        const message =
+          err instanceof ApiError ? err.message : 'Không thể tải bài học xem thử. Vui lòng thử lại.';
+        setPreviewPlaybackError(message);
+      })
+      .finally(() => {
+        if (!cancelled) setIsLoadingPreviewPlayback(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [course, previewLesson]);
 
   if (isLoading || !course) {
     return (
@@ -51,7 +92,7 @@ export const CourseDetailPage: React.FC<CourseDetailPageProps> = ({
       return;
     }
 
-    const canPreview = les.isPreview || !!les.contentUrl;
+    const canPreview = les.isPreview || !!les.playable;
     if (canPreview) {
       setPreviewLesson({ lesson: les, sectionTitle });
     } else {
@@ -269,7 +310,7 @@ export const CourseDetailPage: React.FC<CourseDetailPageProps> = ({
 
                       <div className="divide-y divide-slate-100">
                         {sec.lessons.map((les, lIdx) => {
-                          const canPreview = les.isPreview || !!les.contentUrl;
+                          const canPreview = les.isPreview || !!les.playable;
                           return (
                             <button
                               key={les.id}
@@ -360,11 +401,11 @@ export const CourseDetailPage: React.FC<CourseDetailPageProps> = ({
             {/* Modal Player Content */}
             <div className="flex-1 overflow-y-auto min-h-0 flex flex-col">
               {previewLesson.lesson.contentType === 'VIDEO' ? (
-                previewLesson.lesson.contentUrl ? (
+                previewPlaybackUrl ? (
                   <div className="bg-black rounded-2xl overflow-hidden w-full h-full flex items-center justify-center border border-slate-800 shadow-inner">
                     <video
-                      key={previewLesson.lesson.contentUrl}
-                      src={previewLesson.lesson.contentUrl}
+                      key={previewPlaybackUrl}
+                      src={previewPlaybackUrl}
                       controls
                       autoPlay
                       className="w-full h-full max-h-[78vh] object-contain"
@@ -372,8 +413,16 @@ export const CourseDetailPage: React.FC<CourseDetailPageProps> = ({
                   </div>
                 ) : (
                   <div className="bg-slate-950 p-8 rounded-2xl text-center space-y-3 border border-slate-800 flex-1 flex flex-col items-center justify-center">
-                    <span className="material-symbols-outlined text-[54px] text-primary">play_circle</span>
-                    <p className="text-sm text-slate-300 font-bold">Video xem thử đã sẵn sàng.</p>
+                    <span
+                      className={`material-symbols-outlined text-[54px] ${
+                        previewPlaybackError ? 'text-rose-400' : isLoadingPreviewPlayback ? 'text-primary animate-spin' : 'text-primary'
+                      }`}
+                    >
+                      {previewPlaybackError ? 'lock' : isLoadingPreviewPlayback ? 'progress_activity' : 'play_circle'}
+                    </span>
+                    <p className="text-sm text-slate-300 font-bold">
+                      {previewPlaybackError ?? (isLoadingPreviewPlayback ? 'Đang tải video xem thử...' : 'Video xem thử đã sẵn sàng.')}
+                    </p>
                   </div>
                 )
               ) : previewLesson.lesson.contentType === 'ARTICLE' ? (
@@ -383,10 +432,12 @@ export const CourseDetailPage: React.FC<CourseDetailPageProps> = ({
                     {previewLesson.lesson.contentText || 'Bài học này bao gồm tài liệu kiến thức tổng hợp.'}
                   </div>
                 </div>
+              ) : previewPlaybackError ? (
+                <p className="text-xs text-rose-400 font-bold p-6">{previewPlaybackError}</p>
               ) : (
                 <div className="w-full min-h-[850px] flex-1 flex flex-col">
                   <DocumentViewer
-                    url={previewLesson.lesson.contentUrl}
+                    url={previewPlaybackUrl ?? undefined}
                     fileName={previewLesson.lesson.originalFileName}
                     mimeType={previewLesson.lesson.mimeType}
                     title={previewLesson.lesson.title}

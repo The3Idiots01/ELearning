@@ -24,6 +24,7 @@
 		<spring-dotenv-bom.version>5.1.0</spring-dotenv-bom.version>
 		<springdoc.version>3.1.0</springdoc.version>
 		<awssdk.version>2.31.0</awssdk.version>
+		<isoparser.version>1.9.56</isoparser.version>
 	</properties>
 
 	<dependencies>
@@ -124,6 +125,12 @@
 		<dependency>
 			<groupId>software.amazon.awssdk</groupId>
 			<artifactId>s3</artifactId>
+		</dependency>
+		<!-- MP4 box parser — đo duration thật từ moov/mvhd, không cần ffprobe (§7.5) -->
+		<dependency>
+			<groupId>org.mp4parser</groupId>
+			<artifactId>isoparser</artifactId>
+			<version>${isoparser.version}</version>
 		</dependency>
 		<!-- Dotenv Environment Variable Management -->
 		<dependency>

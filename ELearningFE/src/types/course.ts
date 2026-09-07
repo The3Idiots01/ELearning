@@ -3,7 +3,7 @@ import type { Category } from './category';
 export type CourseLevel = 'ALL' | 'BEGINNER' | 'INTERMEDIATE' | 'ADVANCED';
 export type CourseStatus = 'DRAFT' | 'PUBLISHED' | 'UNPUBLISHED' | 'SUSPENDED';
 export type LessonContentType = 'VIDEO' | 'ARTICLE' | 'FILE' | 'QUIZ';
-export type LessonUploadStatus = 'PENDING' | 'READY' | 'FAILED';
+export type LessonUploadStatus = 'EMPTY' | 'PENDING' | 'PROCESSING' | 'READY' | 'FAILED';
 
 export interface LessonResource {
   id: number;
@@ -24,7 +24,10 @@ export interface Lesson {
   isPreview?: boolean;
   position: number;
   contentText?: string;
-  contentUrl?: string;
+  /** true nếu có thể xin PlaybackTicket cho lesson này ngay bây giờ — thay cho contentUrl (§7.1). */
+  playable?: boolean;
+  lastPositionSeconds?: number;
+  coveragePercent?: number;
   originalFileName?: string;
   fileSizeBytes?: number;
   mimeType?: string;
@@ -184,6 +187,41 @@ export interface StatusLog {
   changedBy: number;
   reason?: string;
   createdAt: string;
+}
+
+export interface PlaybackTicket {
+  lessonId: number;
+  contentType: LessonContentType;
+  streamUrl: string;
+  expiresAt: string;
+  ttlSeconds: number;
+  durationSeconds?: number;
+  mimeType?: string;
+}
+
+/** Payload heartbeat — §5.4 design_us15_us17.md. playedRanges là nguyên văn video.played (tích luỹ). */
+export interface HeartbeatPayload {
+  positionSeconds: number;
+  playedRanges: [number, number][];
+  playbackRate: number;
+  clientSessionId: string;
+  durationSeconds: number;
+}
+
+export type CompletionSource = 'POSITION' | 'MANUAL' | 'QUIZ';
+
+/** Response của heartbeat — §5.4 design_us15_us17.md. */
+export interface ProgressSnapshot {
+  lessonId: number;
+  lastPositionSeconds: number;
+  maxPositionSeconds: number;
+  coveragePercent: number;
+  watchedSeconds: number;
+  newWatchedSeconds: number;
+  lessonCompleted: boolean;
+  completionSource?: CompletionSource | null;
+  courseProgressPercent?: number | null;
+  enrollmentStatus?: string;
 }
 
 export interface EnrolledCourse {

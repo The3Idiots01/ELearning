@@ -218,14 +218,12 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({
   }
 
   const roleBadgeColor = {
-    LEARNER: 'bg-blue-50 text-blue-700 border-blue-200',
-    LECTURER: 'bg-emerald-50 text-emerald-700 border-emerald-200',
+    USER: 'bg-blue-50 text-blue-700 border-blue-200',
     ADMIN: 'bg-purple-50 text-purple-700 border-purple-200'
   };
 
   const roleLabel = {
-    LEARNER: 'Học viên (Learner)',
-    LECTURER: 'Giảng viên (Lecturer)',
+    USER: 'Người dùng (Học viên & Giảng viên)',
     ADMIN: 'Quản trị viên (Admin)'
   };
 
@@ -342,10 +340,10 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({
                   </h2>
                   <span
                     className={`text-[10px] font-extrabold uppercase px-2.5 py-0.5 rounded-full border ${
-                      roleBadgeColor[profile?.role || 'LEARNER']
+                      roleBadgeColor[profile?.role || 'USER']
                     }`}
                   >
-                    {roleLabel[profile?.role || 'LEARNER']}
+                    {roleLabel[profile?.role || 'USER']}
                   </span>
                 </div>
 
@@ -353,10 +351,6 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({
                   <span className="flex items-center gap-1">
                     <span className="material-symbols-outlined text-[15px] text-primary">mail</span>
                     <span>{profile?.email}</span>
-                  </span>
-
-                  <span className="flex items-center gap-1 font-mono text-[11px] bg-slate-100 px-2 py-0.5 rounded-md text-slate-700">
-                    <span>ID: #{profile?.id || '—'}</span>
                   </span>
                 </div>
               </div>
@@ -823,7 +817,7 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({
                       </span>
                       <p className="text-xs font-bold text-slate-800 m-0 flex items-center gap-1.5">
                         <span className="material-symbols-outlined text-[16px] text-primary">school</span>
-                        <span>{roleLabel[profile?.role || 'LEARNER']}</span>
+                        <span>{roleLabel[profile?.role || 'USER']}</span>
                       </p>
                     </div>
 

@@ -7,6 +7,7 @@ import com.learnova.elearning.module.course.entity.CourseSection;
 import com.learnova.elearning.module.course.entity.Lesson;
 import com.learnova.elearning.module.course.entity.LessonResource;
 
+import java.math.BigDecimal;
 import java.util.List;
 
 /**
@@ -31,7 +32,8 @@ public final class CurriculumMapper {
                 .build();
     }
 
-    public static LessonResponse toLesson(Lesson lesson, String contentUrl, List<LessonResourceResponse> resources) {
+    public static LessonResponse toLesson(Lesson lesson, Boolean playable, Integer lastPositionSeconds,
+                                           BigDecimal coveragePercent, List<LessonResourceResponse> resources) {
         return LessonResponse.builder()
                 .id(lesson.getId())
                 .title(lesson.getTitle())
@@ -41,7 +43,9 @@ public final class CurriculumMapper {
                 .isPreview(lesson.getIsPreview())
                 .position(lesson.getPosition())
                 .contentText(lesson.getContentText())
-                .contentUrl(contentUrl)
+                .playable(playable)
+                .lastPositionSeconds(lastPositionSeconds)
+                .coveragePercent(coveragePercent)
                 .originalFileName(lesson.getOriginalFileName())
                 .fileSizeBytes(lesson.getFileSizeBytes())
                 .mimeType(lesson.getMimeType())

@@ -62,10 +62,16 @@ public class SecurityConfig {
                                 "/api/v1/payments/webhook",
                                 "/api/v1/payments/*/status"
                         ).permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/v1/courses/enrolled").authenticated()
+                        .requestMatchers(HttpMethod.GET, "/api/v1/courses/*/progress/**").authenticated()
+                        .requestMatchers(HttpMethod.GET, "/api/v1/courses/*/lessons/*/progress/**").authenticated()
+
+                        .requestMatchers(HttpMethod.GET, "/api/v1/content/stream").permitAll()
+                        .requestMatchers(HttpMethod.POST, "/api/v1/courses/*/lessons/*/progress/heartbeat").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/v1/categories/**").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/v1/courses/**").permitAll()
                         .requestMatchers("/api/v1/admin/**").hasRole("ADMIN")
-                        .requestMatchers("/api/v1/lecturer/**").hasAnyRole("ADMIN", "LECTURER","LEARNER")
+                        .requestMatchers("/api/v1/lecturer/**").hasAnyRole("ADMIN", "USER")
                         .anyRequest().authenticated()
                 )
                 .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);

@@ -3,7 +3,7 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { useToast } from '../context/ToastContext';
 import { LearningWorkspacePage } from '../../features/course/pages/student/LearningWorkspacePage';
 import { studentCourseApi } from '../../features/course/api/studentCourseApi';
-import type { CourseDetail, Curriculum } from '../../types/course';
+import type { CourseDetail, Curriculum, ProgressSnapshot } from '../../types/course';
 
 export function LearningWorkspaceRoute() {
   const { courseId } = useParams();
@@ -14,6 +14,7 @@ export function LearningWorkspaceRoute() {
   const [courseDetail, setCourseDetail] = useState<CourseDetail | null>(null);
   const [curriculum, setCurriculum] = useState<Curriculum | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(false);
+  const [courseProgressPercent, setCourseProgressPercent] = useState<number | null>(null);
 
   useEffect(() => {
     if (!courseIdNum) return;
@@ -43,7 +44,7 @@ export function LearningWorkspaceRoute() {
 
   const handleCompleteLesson = async (lessonId: number): Promise<boolean> => {
     try {
-      await studentCourseApi.completeLesson(courseIdNum, lessonId);
+      const response = await studentCourseApi.completeLesson(courseIdNum, lessonId);
       setCurriculum((prev) => {
         if (!prev) return prev;
         const updated = prev.sections.map((sec) => ({
@@ -54,11 +55,40 @@ export function LearningWorkspaceRoute() {
         }));
         return { ...prev, sections: updated };
       });
+      if (typeof response?.totalProgress === 'number') {
+        setCourseProgressPercent(response.totalProgress);
+      }
       showSuccess('Đã lưu tiến độ bài học!');
       return true;
     } catch (err: any) {
       showError(err.message || 'Lỗi khi lưu tiến độ.');
       return false;
+    }
+  };
+
+  // §5.4/§8.2 design_us15_us17.md — mỗi heartbeat cập nhật vị trí resume,
+  // coverage và (khi lesson vừa chuyển sang hoàn thành) % course từ server —
+  // BR-30, server là nguồn sự thật duy nhất.
+  const handleLessonProgress = (snapshot: ProgressSnapshot) => {
+    setCurriculum((prev) => {
+      if (!prev) return prev;
+      const updated = prev.sections.map((sec) => ({
+        ...sec,
+        lessons: sec.lessons.map((les) =>
+          les.id === snapshot.lessonId
+            ? {
+                ...les,
+                lastPositionSeconds: snapshot.lastPositionSeconds,
+                coveragePercent: snapshot.coveragePercent,
+                completed: les.completed || snapshot.lessonCompleted
+              }
+            : les
+        )
+      }));
+      return { ...prev, sections: updated };
+    });
+    if (snapshot.courseProgressPercent != null) {
+      setCourseProgressPercent(snapshot.courseProgressPercent);
     }
   };
 
@@ -70,7 +100,9 @@ export function LearningWorkspaceRoute() {
       courseDetail={courseDetail}
       curriculum={curriculum}
       isLoading={isLoading}
+      courseProgressPercent={courseProgressPercent}
       onCompleteLesson={handleCompleteLesson}
+      onLessonProgress={handleLessonProgress}
       onBack={() => navigate('/my-courses')}
     />
   );

@@ -14,6 +14,7 @@ import com.learnova.elearning.module.enrollment.dto.response.EnrollmentResponse;
 import com.learnova.elearning.module.enrollment.dto.response.ProgressResponse;
 import com.learnova.elearning.module.enrollment.entity.Enrollment;
 import com.learnova.elearning.module.enrollment.entity.LessonProgress;
+import com.learnova.elearning.module.enrollment.entity.enums.CompletionSource;
 import com.learnova.elearning.module.enrollment.entity.enums.EnrollmentStatus;
 import com.learnova.elearning.module.enrollment.repository.EnrollmentRepository;
 import com.learnova.elearning.module.enrollment.repository.LessonProgressRepository;
@@ -26,7 +27,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
-import java.math.RoundingMode;
 import java.time.Instant;
 import java.util.List;
 
@@ -96,50 +96,34 @@ public class EnrollmentService {
         Enrollment enrollment = enrollmentRepository.findByStudent_IdAndCourse_Id(studentId, courseId)
                 .orElseThrow(() -> new AppException(ErrorCode.ENROLLMENT_NOT_FOUND));
 
-        Lesson lesson = lessonRepository.findById(lessonId)
-                .orElseThrow(() -> new AppException(ErrorCode.LESSON_NOT_FOUND));
+        Lesson lesson = lessonRepository.findByIdAndSection_Course_Id(lessonId, courseId)
+                .orElseThrow(() -> new AppException(ErrorCode.LESSON_NOT_IN_COURSE));
 
-        // Check if lesson belongs to course
-        if (!lesson.getSection().getCourse().getId().equals(courseId)) {
-            throw new AppException(ErrorCode.LESSON_NOT_IN_COURSE);
-        }
+        // §5.8: áp dụng cho mọi contentType kể cả VIDEO. Dòng lesson_progress có
+        // thể đã tồn tại (heartbeat VIDEO tạo trước) mà chưa completed — không chỉ
+        // tạo mới khi chưa có dòng nào, mà còn phải hoàn thành nốt dòng dở dang đó.
+        LessonProgress progress = progressRepository.findByEnrollment_IdAndLesson_Id(enrollment.getId(), lessonId)
+                .orElseGet(() -> LessonProgress.builder()
+                        .enrollment(enrollment)
+                        .lesson(lesson)
+                        .build());
 
-        // Mark completed if not already marked
-        if (!progressRepository.existsByEnrollment_IdAndLesson_Id(enrollment.getId(), lessonId)) {
-            LessonProgress progress = LessonProgress.builder()
-                    .enrollment(enrollment)
-                    .lesson(lesson)
-                    .build();
+        // completed_at là một chiều (§5.7): set đúng một lần, gọi lại là no-op idempotent.
+        if (progress.getCompletedAt() == null) {
+            progress.setCompletedAt(Instant.now());
+            progress.setCompletionSource(CompletionSource.MANUAL);
             progressRepository.save(progress);
+            enrollmentRepository.recalculateCourseProgress(enrollment.getId(), courseId);
         }
 
-        // Calculate progress percentage
-        long totalLessons = lessonRepository.countBySection_Course_Id(courseId);
-        long completedLessons = progressRepository.countByEnrollment_Id(enrollment.getId());
-
-        BigDecimal progressPercent = BigDecimal.ZERO;
-        if (totalLessons > 0) {
-            double percent = ((double) completedLessons / totalLessons) * 100.00;
-            progressPercent = BigDecimal.valueOf(percent).setScale(2, RoundingMode.HALF_UP);
-        }
-
-        enrollment.setProgress(progressPercent);
-
-        // Complete enrollment if progress reaches 100%
-        if (progressPercent.compareTo(new BigDecimal("100.00")) >= 0) {
-            enrollment.setStatus(EnrollmentStatus.COMPLETED);
-            enrollment.setCompletedAt(Instant.now());
-        } else {
-            enrollment.setStatus(EnrollmentStatus.ACTIVE);
-            enrollment.setCompletedAt(null);
-        }
-        enrollmentRepository.save(enrollment);
+        Enrollment refreshed = enrollmentRepository.findById(enrollment.getId())
+                .orElseThrow(() -> new IllegalStateException("enrollment " + enrollment.getId() + " biến mất sau rollup"));
 
         return ProgressResponse.builder()
                 .lessonId(lessonId)
                 .completed(true)
-                .totalProgress(progressPercent)
-                .courseStatus(enrollment.getStatus().name())
+                .totalProgress(refreshed.getProgress())
+                .courseStatus(refreshed.getStatus().name())
                 .build();
     }
 

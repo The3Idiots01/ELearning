@@ -48,7 +48,6 @@ export const SectionItem: React.FC<SectionItemProps> = ({
   // Lesson Content Inline Form States
   // 1. Video
   const [videoFile, setVideoFile] = useState<File | null>(null);
-  const [videoDuration, setVideoDuration] = useState<number>(300);
   const videoInputRef = useRef<HTMLInputElement>(null);
 
   // 2. Article
@@ -69,7 +68,6 @@ export const SectionItem: React.FC<SectionItemProps> = ({
     setNewLessonTitle('');
     setNewLessonType('VIDEO');
     setVideoFile(null);
-    setVideoDuration(300);
     setArticleContent('');
     setDocFile(null);
     setIsPreview(false);
@@ -166,8 +164,7 @@ export const SectionItem: React.FC<SectionItemProps> = ({
           storageKey: presign.storageKey,
           originalFileName: videoFile.name,
           fileSizeBytes: videoFile.size,
-          mimeType: videoFile.type || 'video/mp4',
-          durationSeconds: videoDuration
+          mimeType: videoFile.type || 'video/mp4'
         });
       } else if (newLessonType === 'ARTICLE' && articleContent.trim()) {
         setUploadStatusText('Đang lưu nội dung bài viết...');
@@ -357,7 +354,7 @@ export const SectionItem: React.FC<SectionItemProps> = ({
                   post_add
                 </span>
                 <span className="text-xs font-black text-slate-900 uppercase tracking-wider font-display">
-                  Thêm & Soạn Bài Học Mới (All-In-One Form)
+                  Thêm & Soạn Bài Học Mới 
                 </span>
               </div>
               <button
@@ -412,7 +409,7 @@ export const SectionItem: React.FC<SectionItemProps> = ({
                   <div className="flex items-center justify-between">
                     <span className="text-xs font-bold text-slate-800 flex items-center gap-1.5">
                       <span className="material-symbols-outlined text-primary text-[18px]">movie</span>
-                      <span>Chọn file Video MP4 (Tối đa 500MB, BR-05)</span>
+                      <span>Chọn file Video MP4 (Tối đa 500MB)</span>
                     </span>
                     {videoFile && (
                       <span className="text-[11px] font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded">
@@ -431,29 +428,14 @@ export const SectionItem: React.FC<SectionItemProps> = ({
                     className="hidden"
                   />
 
-                  <div className="flex flex-col sm:flex-row items-center gap-3">
-                    <button
-                      type="button"
-                      onClick={() => videoInputRef.current?.click()}
-                      className="w-full sm:w-auto bg-primary/10 hover:bg-primary text-primary hover:text-white font-bold text-xs px-4 py-2.5 rounded-xl transition-all flex items-center justify-center gap-1.5 cursor-pointer"
-                    >
-                      <span className="material-symbols-outlined text-[18px]">upload_file</span>
-                      <span>{videoFile ? 'Đổi tệp Video' : 'Chọn tệp Video MP4'}</span>
-                    </button>
-
-                    <div className="flex items-center gap-2 w-full sm:w-auto">
-                      <label className="text-xs font-semibold text-slate-600 whitespace-nowrap">
-                        Thời lượng (giây):
-                      </label>
-                      <input
-                        type="number"
-                        value={videoDuration}
-                        onChange={(e) => setVideoDuration(Number(e.target.value))}
-                        min={1}
-                        className="w-28 px-3 py-1.5 bg-surface-container-low border border-outline-variant/70 rounded-xl text-xs"
-                      />
-                    </div>
-                  </div>
+                  <button
+                    type="button"
+                    onClick={() => videoInputRef.current?.click()}
+                    className="w-full sm:w-auto bg-primary/10 hover:bg-primary text-primary hover:text-white font-bold text-xs px-4 py-2.5 rounded-xl transition-all flex items-center justify-center gap-1.5 cursor-pointer"
+                  >
+                    <span className="material-symbols-outlined text-[18px]">upload_file</span>
+                    <span>{videoFile ? 'Đổi tệp Video' : 'Chọn tệp Video MP4'}</span>
+                  </button>
                 </div>
               )}
 

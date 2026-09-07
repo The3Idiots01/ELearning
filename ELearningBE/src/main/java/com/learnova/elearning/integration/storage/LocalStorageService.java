@@ -6,6 +6,8 @@ import com.learnova.elearning.integration.storage.model.ObjectMetadata;
 import com.learnova.elearning.integration.storage.model.PresignedUpload;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
+import org.springframework.core.io.FileSystemResource;
+import org.springframework.core.io.Resource;
 import org.springframework.stereotype.Service;
 import org.springframework.web.util.UriComponentsBuilder;
 
@@ -132,6 +134,15 @@ public class LocalStorageService implements StorageService {
         } catch (IOException e) {
             log.warn("Failed to walk prefix {}: {}", prefix, e.getMessage());
         }
+    }
+
+    @Override
+    public Resource openReadable(String key) {
+        Path path = resolve(key);
+        if (!Files.exists(path) || Files.isDirectory(path)) {
+            throw new AppException(ErrorCode.UPLOAD_OBJECT_NOT_FOUND, "Object not found in local storage: " + key);
+        }
+        return new FileSystemResource(path);
     }
 
     // ---- internal (gọi từ LocalStorageController) --------------------------

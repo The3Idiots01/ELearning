@@ -161,7 +161,6 @@ export const CourseSettingsPage: React.FC<CourseSettingsPageProps> = ({
           <div className="overflow-hidden">
             <div className="flex items-center gap-2">
               <StatusBadge status={course.status} />
-              <span className="text-xs text-slate-400 font-semibold">• ID: #{course.id}</span>
             </div>
             <h1 className="text-base sm:text-lg font-black text-slate-900 truncate m-0 mt-0.5 font-display">
               {course.title}
@@ -177,7 +176,7 @@ export const CourseSettingsPage: React.FC<CourseSettingsPageProps> = ({
             className="bg-surface-container-low hover:bg-surface-container text-primary font-bold text-xs px-4 py-2.5 rounded-xl border border-primary/30 transition-all flex items-center gap-1.5 cursor-pointer shadow-xs"
           >
             <span className="material-symbols-outlined text-[18px]">menu_book</span>
-            <span>Chuyển sang Soạn giáo trình (US-06)</span>
+            <span>Chuyển sang Soạn giáo trình</span>
           </button>
 
           <button

@@ -6,6 +6,7 @@ import com.learnova.elearning.module.course.dto.response.LessonResourceResponse;
 import com.learnova.elearning.module.course.dto.response.LessonResponse;
 import com.learnova.elearning.module.course.entity.Lesson;
 import com.learnova.elearning.module.course.entity.LessonResource;
+import com.learnova.elearning.module.course.entity.enums.LessonUploadStatus;
 import com.learnova.elearning.module.course.mapper.CurriculumMapper;
 import com.learnova.elearning.module.course.repository.LessonResourceRepository;
 import lombok.RequiredArgsConstructor;
@@ -31,12 +32,10 @@ public class LessonResponseAssembler {
                 .findByLesson_IdOrderByPositionAsc(lesson.getId()).stream()
                 .map(this::toResource)
                 .toList();
-        String contentUrl = null;
-        if (lesson.getStorageKey() != null) {
-            contentUrl = storageService.presignDownload(
-                    lesson.getStorageKey(), storageProperties.getDownloadTtl());
-        }
-        return CurriculumMapper.toLesson(lesson, contentUrl, resources);
+        // Owner/instructor luôn xem được nội dung của chính mình qua PlaybackTicket
+        // (scope=OWNER, §4.3) — không cần ký URL hàng loạt ở đây nữa (G1).
+        boolean playable = lesson.getStorageKey() != null && lesson.getUploadStatus() == LessonUploadStatus.READY;
+        return CurriculumMapper.toLesson(lesson, playable, null, null, resources);
     }
 
     public LessonResourceResponse toResource(LessonResource resource) {

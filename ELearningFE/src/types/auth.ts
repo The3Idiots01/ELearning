@@ -1,4 +1,4 @@
-export type Role = 'LEARNER' | 'LECTURER' | 'ADMIN';
+export type Role = 'USER' | 'ADMIN';
 export type AuthProvider = 'LOCAL' | 'GOOGLE' | 'GITHUB';
 
 export interface User {

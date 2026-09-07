@@ -2,7 +2,6 @@ package com.learnova.elearning.module.course.service;
 
 import com.learnova.elearning.common.exception.AppException;
 import com.learnova.elearning.common.exception.ErrorCode;
-import com.learnova.elearning.integration.storage.StorageProperties;
 import com.learnova.elearning.integration.storage.StorageService;
 import com.learnova.elearning.module.course.dto.request.CreateLessonRequest;
 import com.learnova.elearning.module.course.dto.request.CreateSectionRequest;
@@ -25,6 +24,7 @@ import com.learnova.elearning.module.course.repository.CourseSectionRepository;
 import com.learnova.elearning.module.course.repository.LessonRepository;
 import com.learnova.elearning.module.course.repository.LessonResourceRepository;
 import com.learnova.elearning.module.enrollment.entity.Enrollment;
+import com.learnova.elearning.module.enrollment.entity.LessonProgress;
 import com.learnova.elearning.module.enrollment.repository.EnrollmentRepository;
 import com.learnova.elearning.module.enrollment.repository.LessonProgressRepository;
 import lombok.RequiredArgsConstructor;
@@ -32,7 +32,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.Optional;
-import java.util.Set;
 
 import java.time.Instant;
 import java.util.ArrayList;
@@ -55,7 +54,6 @@ public class CurriculumService {
     private final LessonRepository lessonRepository;
     private final LessonResourceRepository resourceRepository;
     private final StorageService storageService;
-    private final StorageProperties storageProperties;
     private final LessonResponseAssembler lessonAssembler;
     private final CourseRepository courseRepository;
     private final EnrollmentRepository enrollmentRepository;
@@ -78,22 +76,21 @@ public class CurriculumService {
         }
 
         boolean enrolled = false;
-        Set<Long> completedLessonIds = Set.of();
+        Map<Long, LessonProgress> progressByLessonId = Map.of();
         if (studentId != null) {
             Optional<Enrollment> enrollment = enrollmentRepository.findByStudent_IdAndCourse_Id(studentId, courseId);
             if (enrollment.isPresent()) {
                 enrolled = true;
-                completedLessonIds = progressRepository.findByEnrollment_Id(enrollment.get().getId())
+                progressByLessonId = progressRepository.findByEnrollment_Id(enrollment.get().getId())
                         .stream()
-                        .map(lp -> lp.getLesson().getId())
-                        .collect(Collectors.toSet());
+                        .collect(Collectors.toMap(lp -> lp.getLesson().getId(), lp -> lp));
             }
         }
 
-        return buildPublicCurriculum(courseId, enrolled, completedLessonIds);
+        return buildPublicCurriculum(courseId, enrolled, progressByLessonId);
     }
 
-    private CurriculumResponse buildPublicCurriculum(Long courseId, boolean enrolled, Set<Long> completedLessonIds) {
+    private CurriculumResponse buildPublicCurriculum(Long courseId, boolean enrolled, Map<Long, LessonProgress> progressByLessonId) {
         List<CourseSection> sections = sectionRepository.findByCourse_IdOrderByPositionAsc(courseId);
         List<Long> sectionIds = sections.stream().map(CourseSection::getId).toList();
 
@@ -121,20 +118,26 @@ public class CurriculumService {
                             }
                         }, Collectors.toList())));
 
-        Set<Long> finalCompleted = completedLessonIds;
         List<SectionResponse> sectionResponses = sections.stream()
                 .map(section -> {
                     List<LessonResponse> lessonResponses = lessonsBySection
                             .getOrDefault(section.getId(), List.of()).stream()
                             .map(l -> {
-                                String contentUrl = null;
-                                if (l.getStorageKey() != null && (isEnrolled || Boolean.TRUE.equals(l.getIsPreview()))) {
-                                    contentUrl = storageService.presignDownload(l.getStorageKey(), storageProperties.getDownloadTtl());
-                                }
-                                LessonResponse resp = CurriculumMapper.toLesson(l, contentUrl,
+                                // Không ký URL hàng loạt nữa (G1) — chỉ báo learner có thể xin
+                                // PlaybackTicket cho lesson này hay không; URL cấp riêng lúc bấm phát.
+                                boolean playable = l.getStorageKey() != null
+                                        && l.getUploadStatus() == LessonUploadStatus.READY
+                                        && (isEnrolled || Boolean.TRUE.equals(l.getIsPreview()));
+                                LessonProgress progress = progressByLessonId.get(l.getId());
+                                LessonResponse resp = CurriculumMapper.toLesson(l, playable,
+                                        progress != null ? progress.getLastPositionSeconds() : null,
+                                        progress != null ? progress.getCoveragePercent() : null,
                                         resourcesByLesson.getOrDefault(l.getId(), List.of()));
-                                if (!finalCompleted.isEmpty()) {
-                                    resp.setCompleted(finalCompleted.contains(l.getId()));
+                                if (isEnrolled) {
+                                    // Dòng lesson_progress chỉ nghĩa "đã bắt đầu xem" từ V9 —
+                                    // hoàn thành phải lọc completedAt != null (§7.2), không phải
+                                    // đếm sự tồn tại của dòng.
+                                    resp.setCompleted(progress != null && progress.getCompletedAt() != null);
                                 }
                                 return resp;
                             })
@@ -175,11 +178,9 @@ public class CurriculumService {
                     List<LessonResponse> lessonResponses = lessonsBySection
                             .getOrDefault(section.getId(), List.of()).stream()
                             .map(l -> {
-                                String contentUrl = null;
-                                if (l.getStorageKey() != null) {
-                                    contentUrl = storageService.presignDownload(l.getStorageKey(), storageProperties.getDownloadTtl());
-                                }
-                                return CurriculumMapper.toLesson(l, contentUrl,
+                                boolean playable = l.getStorageKey() != null
+                                        && l.getUploadStatus() == LessonUploadStatus.READY;
+                                return CurriculumMapper.toLesson(l, playable, null, null,
                                         resourcesByLesson.getOrDefault(l.getId(), List.of()));
                             })
                             .toList();

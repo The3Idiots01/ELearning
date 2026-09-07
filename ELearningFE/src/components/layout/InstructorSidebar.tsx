@@ -7,6 +7,7 @@ export const InstructorSidebar: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const isCoursesActive = location.pathname === '/instructor/courses';
+  const isRevenueActive = location.pathname.startsWith('/instructor/revenue');
 
   return (
     <aside className="bg-surface-container-lowest border-r border-outline-variant/70 w-64 flex flex-col py-6 px-4 shrink-0 h-full">
@@ -35,6 +36,17 @@ export const InstructorSidebar: React.FC = () => {
         >
           <span className="material-symbols-outlined text-[20px]">video_library</span>
           <span>Khóa học của tôi</span>
+        </button>
+        <button
+          onClick={() => navigate('/instructor/revenue')}
+          className={`w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl transition-all font-bold text-xs cursor-pointer ${
+            isRevenueActive
+              ? 'bg-primary text-white shadow-sm shadow-primary/30'
+              : 'text-on-surface-variant hover:bg-surface-container-low hover:text-on-surface'
+          }`}
+        >
+          <span className="material-symbols-outlined text-[20px]">payments</span>
+          <span>Doanh thu</span>
         </button>
       </nav>
 
