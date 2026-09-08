@@ -1,5 +1,6 @@
 package com.learnova.elearning.module.quiz.entity;
 
+import com.learnova.elearning.module.course.entity.LearningOutcome;
 import com.learnova.elearning.module.quiz.entity.enums.QuestionType;
 import jakarta.persistence.*;
 import lombok.*;
@@ -30,6 +31,10 @@ public class QuizQuestion {
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "quiz_id", nullable = false)
     private Quiz quiz;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "outcome_id")
+    private LearningOutcome outcome;
 
     @Column(name = "question_text", nullable = false, columnDefinition = "TEXT")
     private String questionText;

@@ -1,6 +1,6 @@
 package com.learnova.elearning.module.quiz.entity;
 
-import com.learnova.elearning.module.course.entity.Lesson;
+import com.learnova.elearning.module.course.entity.Assessment;
 import jakarta.persistence.*;
 import lombok.*;
 import org.hibernate.annotations.CreationTimestamp;
@@ -12,7 +12,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * Bài kiểm tra gắn 1–1 với một Lesson có kiểu QUIZ (BR-15).
+ * Cấu hình QUIZ chuyên biệt của một assessment.
  */
 @Entity
 @Table(name = "quizzes")
@@ -28,11 +28,8 @@ public class Quiz {
     private Long id;
 
     @OneToOne(fetch = FetchType.LAZY, optional = false)
-    @JoinColumn(name = "lesson_id", nullable = false, unique = true)
-    private Lesson lesson;
-
-    @Column(name = "title", nullable = false, length = 255)
-    private String title;
+    @JoinColumn(name = "assessment_id", nullable = false, unique = true)
+    private Assessment assessment;
 
     @Column(name = "passing_score", nullable = false, precision = 5, scale = 2)
     @Builder.Default

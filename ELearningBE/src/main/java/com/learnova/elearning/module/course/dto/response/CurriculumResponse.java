@@ -11,4 +11,7 @@ public class CurriculumResponse {
 
     private Long courseId;
     private List<SectionResponse> sections;
+    /** Instructor-only pool; public curriculum always returns an empty list. */
+    @Builder.Default
+    private List<AssessmentResponse> unplacedAssessments = List.of();
 }

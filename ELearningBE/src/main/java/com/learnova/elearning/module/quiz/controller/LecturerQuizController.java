@@ -19,7 +19,7 @@ import org.springframework.web.bind.annotation.*;
  * Controller dành cho Giảng viên quản trị cấu hình bài Quiz và ngân hàng câu hỏi (US-07).
  */
 @RestController
-@RequestMapping("/api/v1/lecturer/courses/{courseId}/lessons/{lessonId}/quiz")
+@RequestMapping("/api/v1/lecturer/courses/{courseId}/assessments/{assessmentId}/quiz")
 @RequiredArgsConstructor
 public class LecturerQuizController {
 
@@ -28,32 +28,32 @@ public class LecturerQuizController {
     @GetMapping
     public ResponseEntity<ApiResponse<QuizDetailResponse>> getQuiz(
             @PathVariable Long courseId,
-            @PathVariable Long lessonId,
+            @PathVariable Long assessmentId,
             @AuthenticationPrincipal CustomUserDetails user
     ) {
-        QuizDetailResponse response = quizAuthoringService.getQuizDetail(courseId, lessonId, user.getId());
+        QuizDetailResponse response = quizAuthoringService.getQuizDetail(courseId, assessmentId, user.getId());
         return ResponseEntity.ok(ApiResponse.success("Lấy thông tin bài quiz thành công", response));
     }
 
     @PutMapping
     public ResponseEntity<ApiResponse<QuizDetailResponse>> upsertQuiz(
             @PathVariable Long courseId,
-            @PathVariable Long lessonId,
+            @PathVariable Long assessmentId,
             @Valid @RequestBody UpsertQuizRequest request,
             @AuthenticationPrincipal CustomUserDetails user
     ) {
-        QuizDetailResponse response = quizAuthoringService.upsertQuiz(courseId, lessonId, request, user.getId());
+        QuizDetailResponse response = quizAuthoringService.upsertQuiz(courseId, assessmentId, request, user.getId());
         return ResponseEntity.ok(ApiResponse.success("Cập nhật bài quiz thành công", response));
     }
 
     @PostMapping("/questions")
     public ResponseEntity<ApiResponse<QuestionDetailResponse>> addQuestion(
             @PathVariable Long courseId,
-            @PathVariable Long lessonId,
+            @PathVariable Long assessmentId,
             @Valid @RequestBody UpsertQuestionRequest request,
             @AuthenticationPrincipal CustomUserDetails user
     ) {
-        QuestionDetailResponse response = quizAuthoringService.addQuestion(courseId, lessonId, request, user.getId());
+        QuestionDetailResponse response = quizAuthoringService.addQuestion(courseId, assessmentId, request, user.getId());
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(ApiResponse.success("Thêm câu hỏi mới thành công", response));
     }
@@ -61,34 +61,34 @@ public class LecturerQuizController {
     @PutMapping("/questions/{questionId}")
     public ResponseEntity<ApiResponse<QuestionDetailResponse>> updateQuestion(
             @PathVariable Long courseId,
-            @PathVariable Long lessonId,
+            @PathVariable Long assessmentId,
             @PathVariable Long questionId,
             @Valid @RequestBody UpsertQuestionRequest request,
             @AuthenticationPrincipal CustomUserDetails user
     ) {
-        QuestionDetailResponse response = quizAuthoringService.updateQuestion(courseId, lessonId, questionId, request, user.getId());
+        QuestionDetailResponse response = quizAuthoringService.updateQuestion(courseId, assessmentId, questionId, request, user.getId());
         return ResponseEntity.ok(ApiResponse.success("Cập nhật câu hỏi thành công", response));
     }
 
     @DeleteMapping("/questions/{questionId}")
     public ResponseEntity<ApiResponse<Void>> deleteQuestion(
             @PathVariable Long courseId,
-            @PathVariable Long lessonId,
+            @PathVariable Long assessmentId,
             @PathVariable Long questionId,
             @AuthenticationPrincipal CustomUserDetails user
     ) {
-        quizAuthoringService.deleteQuestion(courseId, lessonId, questionId, user.getId());
+        quizAuthoringService.deleteQuestion(courseId, assessmentId, questionId, user.getId());
         return ResponseEntity.ok(ApiResponse.success("Xóa câu hỏi thành công", null));
     }
 
     @PatchMapping("/questions/reorder")
     public ResponseEntity<ApiResponse<Void>> reorderQuestions(
             @PathVariable Long courseId,
-            @PathVariable Long lessonId,
+            @PathVariable Long assessmentId,
             @Valid @RequestBody ReorderQuestionsRequest request,
             @AuthenticationPrincipal CustomUserDetails user
     ) {
-        quizAuthoringService.reorderQuestions(courseId, lessonId, request, user.getId());
+        quizAuthoringService.reorderQuestions(courseId, assessmentId, request, user.getId());
         return ResponseEntity.ok(ApiResponse.success("Sắp xếp lại câu hỏi thành công", null));
     }
 }

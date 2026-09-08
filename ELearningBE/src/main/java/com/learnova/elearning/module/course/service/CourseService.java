@@ -18,12 +18,14 @@ import com.learnova.elearning.module.course.dto.response.CourseResponse;
 import com.learnova.elearning.module.course.dto.response.CourseSummaryResponse;
 import com.learnova.elearning.module.course.entity.Course;
 import com.learnova.elearning.module.course.entity.CourseBullet;
+import com.learnova.elearning.module.course.entity.LearningOutcome;
 import com.learnova.elearning.module.course.entity.enums.BulletType;
 import com.learnova.elearning.module.course.entity.enums.CourseLevel;
 import com.learnova.elearning.module.course.entity.enums.CourseStatus;
 import com.learnova.elearning.module.course.mapper.CourseMapper;
 import com.learnova.elearning.module.course.repository.CourseBulletRepository;
 import com.learnova.elearning.module.course.repository.CourseRepository;
+import com.learnova.elearning.module.course.repository.LearningOutcomeRepository;
 import com.learnova.elearning.module.enrollment.repository.EnrollmentRepository;
 import com.learnova.elearning.module.user.entity.User;
 import com.learnova.elearning.module.user.repository.UserRepository;
@@ -59,6 +61,7 @@ public class CourseService {
 
     private final CourseRepository courseRepository;
     private final CourseBulletRepository bulletRepository;
+    private final LearningOutcomeRepository outcomeRepository;
     private final CategoryService categoryService;
     private final CourseOwnershipGuard ownershipGuard;
     private final UserRepository userRepository;
@@ -186,7 +189,6 @@ public class CourseService {
         Course course = ownershipGuard.requireEditableCourse(courseId, userId);
         checkOptimisticVersion(course, request.getVersion());
 
-        replaceBulletGroup(course, BulletType.LEARNING_OBJECTIVE, request.getLearningObjectives());
         replaceBulletGroup(course, BulletType.REQUIREMENT, request.getRequirements());
         replaceBulletGroup(course, BulletType.TARGET_AUDIENCE, request.getTargetAudiences());
 
@@ -260,18 +262,21 @@ public class CourseService {
 
     private CourseResponse toDetail(Course course) {
         Map<BulletType, List<String>> grouped = new EnumMap<>(BulletType.class);
-        for (BulletType type : BulletType.values()) {
-            grouped.put(type, List.of());
-        }
+        grouped.put(BulletType.REQUIREMENT, List.of());
+        grouped.put(BulletType.TARGET_AUDIENCE, List.of());
         List<CourseBullet> bullets = bulletRepository.findByCourse_IdOrderByBulletTypeAscPositionAsc(course.getId());
-        for (BulletType type : BulletType.values()) {
+        for (BulletType type : List.of(BulletType.REQUIREMENT, BulletType.TARGET_AUDIENCE)) {
             grouped.put(type, bullets.stream()
                     .filter(b -> b.getBulletType() == type)
                     .map(CourseBullet::getContent)
                     .toList());
         }
+        List<String> learningObjectives = outcomeRepository.findByCourse_IdOrderByPositionAsc(course.getId())
+                .stream()
+                .map(LearningOutcome::getStatement)
+                .toList();
         return CourseMapper.toDetail(course, signThumbnail(course),
-                grouped.get(BulletType.LEARNING_OBJECTIVE),
+                learningObjectives,
                 grouped.get(BulletType.REQUIREMENT),
                 grouped.get(BulletType.TARGET_AUDIENCE));
     }

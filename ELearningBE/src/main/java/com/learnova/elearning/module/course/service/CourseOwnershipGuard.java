@@ -5,10 +5,14 @@ import com.learnova.elearning.common.exception.ErrorCode;
 import com.learnova.elearning.module.course.entity.Course;
 import com.learnova.elearning.module.course.entity.CourseSection;
 import com.learnova.elearning.module.course.entity.Lesson;
+import com.learnova.elearning.module.course.entity.LearningOutcome;
+import com.learnova.elearning.module.course.entity.Assessment;
 import com.learnova.elearning.module.course.entity.enums.CourseStatus;
 import com.learnova.elearning.module.course.repository.CourseRepository;
 import com.learnova.elearning.module.course.repository.CourseSectionRepository;
 import com.learnova.elearning.module.course.repository.LessonRepository;
+import com.learnova.elearning.module.course.repository.LearningOutcomeRepository;
+import com.learnova.elearning.module.course.repository.AssessmentRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 
@@ -23,6 +27,8 @@ public class CourseOwnershipGuard {
     private final CourseRepository courseRepository;
     private final CourseSectionRepository sectionRepository;
     private final LessonRepository lessonRepository;
+    private final LearningOutcomeRepository outcomeRepository;
+    private final AssessmentRepository assessmentRepository;
 
     /** Course tồn tại và thuộc về user hiện tại. */
     public Course requireOwnedCourse(Long courseId, Long userId) {
@@ -62,6 +68,26 @@ public class CourseOwnershipGuard {
                         return new AppException(ErrorCode.LESSON_NOT_IN_COURSE);
                     }
                     return new AppException(ErrorCode.LESSON_NOT_FOUND);
+                });
+    }
+
+    public LearningOutcome requireOutcomeInCourse(Long outcomeId, Long courseId) {
+        return outcomeRepository.findByIdAndCourse_Id(outcomeId, courseId)
+                .orElseThrow(() -> {
+                    if (outcomeRepository.findById(outcomeId).isPresent()) {
+                        return new AppException(ErrorCode.OUTCOME_NOT_IN_COURSE);
+                    }
+                    return new AppException(ErrorCode.LEARNING_OUTCOME_NOT_FOUND);
+                });
+    }
+
+    public Assessment requireAssessmentInCourse(Long assessmentId, Long courseId) {
+        return assessmentRepository.findWithDetailsByIdAndCourse_Id(assessmentId, courseId)
+                .orElseThrow(() -> {
+                    if (assessmentRepository.findById(assessmentId).isPresent()) {
+                        return new AppException(ErrorCode.ASSESSMENT_NOT_IN_COURSE);
+                    }
+                    return new AppException(ErrorCode.ASSESSMENT_NOT_FOUND);
                 });
     }
 }

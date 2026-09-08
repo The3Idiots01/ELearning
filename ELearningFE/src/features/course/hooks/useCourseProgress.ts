@@ -2,8 +2,12 @@ import { useMemo } from 'react';
 import type { Curriculum } from '../../../types/course';
 
 export interface CourseProgressSummary {
+  totalUnits: number;
+  completedUnits: number;
   totalLessons: number;
   completedLessons: number;
+  totalAssessments: number;
+  completedAssessments: number;
   percent: number;
 }
 
@@ -21,16 +25,32 @@ export function useCourseProgress(
   return useMemo(() => {
     let totalLessons = 0;
     let completedLessons = 0;
+    let totalAssessments = 0;
+    let completedAssessments = 0;
     curriculum?.sections.forEach((section) => {
       section.lessons.forEach((lesson) => {
         totalLessons++;
         if (lesson.completed) completedLessons++;
       });
+      (section.assessments || []).forEach((assessment) => {
+        totalAssessments++;
+        if (assessment.completed) completedAssessments++;
+      });
     });
 
-    const localPercent = totalLessons > 0 ? Math.round((completedLessons / totalLessons) * 100) : 0;
+    const totalUnits = totalLessons + totalAssessments;
+    const completedUnits = completedLessons + completedAssessments;
+    const localPercent = totalUnits > 0 ? Math.round((completedUnits / totalUnits) * 100) : 0;
     const percent = serverPercent != null ? Math.round(serverPercent) : localPercent;
 
-    return { totalLessons, completedLessons, percent };
+    return {
+      totalUnits,
+      completedUnits,
+      totalLessons,
+      completedLessons,
+      totalAssessments,
+      completedAssessments,
+      percent
+    };
   }, [curriculum, serverPercent]);
 }

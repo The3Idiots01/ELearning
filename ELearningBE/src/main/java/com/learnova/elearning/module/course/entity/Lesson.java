@@ -9,9 +9,12 @@ import org.hibernate.annotations.SQLRestriction;
 import org.hibernate.annotations.UpdateTimestamp;
 
 import java.time.Instant;
+import java.util.LinkedHashSet;
+import java.util.Set;
 
 /**
- * Curriculum item trong một section (video / article / file / quiz).
+ * Learning activity plan trong một section. Content type có thể null cho tới
+ * khi instructor gắn content thật.
  * Video/file lưu bằng storage_key — không lưu URL public (BR-12).
  * Thứ tự hiển thị chỉ dựa vào position (một nguồn sự thật duy nhất).
  */
@@ -37,8 +40,17 @@ public class Lesson {
     private String title;
 
     @Enumerated(EnumType.STRING)
-    @Column(name = "content_type", nullable = false, length = 20)
+    @Column(name = "content_type", length = 20)
     private LessonContentType contentType;
+
+    @ManyToMany(fetch = FetchType.LAZY)
+    @JoinTable(
+            name = "lesson_outcomes",
+            joinColumns = @JoinColumn(name = "lesson_id"),
+            inverseJoinColumns = @JoinColumn(name = "outcome_id")
+    )
+    @Builder.Default
+    private Set<LearningOutcome> outcomes = new LinkedHashSet<>();
 
     @Column(name = "storage_key", length = 500)
     private String storageKey;

@@ -17,6 +17,7 @@ import java.util.List;
 public class QuizAttemptResponse {
     private Long id;
     private Long quizId;
+    private Long assessmentId;
     private BigDecimal score;
     private BigDecimal passingScore;
     private Boolean isPassed;

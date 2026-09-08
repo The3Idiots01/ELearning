@@ -22,7 +22,7 @@ public interface EnrollmentRepository extends JpaRepository<Enrollment, Long> {
 
     /**
      * Tính lại {@code progress} / {@code status} / {@code completed_at} của một
-     * enrollment từ trạng thái hoàn thành thật của các lesson — §5.7
+     * enrollment từ trạng thái hoàn thành thật của lessons và assessments — §9
      * design_us15_us17.md. {@code status} và {@code completed_at} là MỘT
      * CHIỀU: câu lệnh chỉ nâng lên {@code COMPLETED}, không bao giờ hạ xuống
      * {@code ACTIVE} dù % tụt vì course có thêm lesson mới. Chỉ gọi khi một
@@ -36,20 +36,50 @@ public interface EnrollmentRepository extends JpaRepository<Enrollment, Long> {
     @Modifying(clearAutomatically = true, flushAutomatically = true)
     @Query(value = """
             UPDATE enrollments e
-            SET progress = c.pct,
-                status = CASE WHEN c.pct >= 100 OR e.status = 'COMPLETED'
-                              THEN 'COMPLETED' ELSE 'ACTIVE' END,
+            SET progress = CASE WHEN c.total_units = 0 THEN 0
+                                ELSE ROUND(100.0 * c.completed_units / c.total_units, 2) END,
+                status = CASE WHEN (c.total_units > 0 AND c.completed_units = c.total_units)
+                                   OR e.status = 'COMPLETED'
+                              THEN 'COMPLETED'
+                              WHEN e.status = 'CANCELLED' THEN 'CANCELLED'
+                              ELSE 'ACTIVE' END,
                 completed_at = COALESCE(e.completed_at,
-                                        CASE WHEN c.pct >= 100 THEN now() END)
+                                        CASE WHEN c.total_units > 0
+                                                  AND c.completed_units = c.total_units
+                                             THEN now() END)
             FROM (
-                SELECT ROUND(
-                         100.0 * COUNT(*) FILTER (WHERE lp.completed_at IS NOT NULL)
-                         / NULLIF(COUNT(*), 0), 2) AS pct
-                FROM lessons l
-                JOIN course_sections s ON s.id = l.section_id
-                LEFT JOIN lesson_progress lp
-                       ON lp.lesson_id = l.id AND lp.enrollment_id = :enrollmentId
-                WHERE s.course_id = :courseId AND l.deleted_at IS NULL
+                SELECT
+                    (SELECT COUNT(*)
+                       FROM lessons l
+                       JOIN course_sections s ON s.id = l.section_id
+                      WHERE s.course_id = :courseId AND l.deleted_at IS NULL)
+                    +
+                    (SELECT COUNT(*)
+                       FROM assessments a
+                       JOIN course_sections s ON s.id = a.section_id
+                      WHERE s.course_id = :courseId
+                        AND a.section_id IS NOT NULL
+                        AND a.deleted_at IS NULL) AS total_units,
+                    (SELECT COUNT(*)
+                       FROM lessons l
+                       JOIN course_sections s ON s.id = l.section_id
+                       JOIN lesson_progress lp
+                         ON lp.lesson_id = l.id
+                        AND lp.enrollment_id = :enrollmentId
+                      WHERE s.course_id = :courseId
+                        AND l.deleted_at IS NULL
+                        AND lp.completed_at IS NOT NULL)
+                    +
+                    (SELECT COUNT(*)
+                       FROM assessments a
+                       JOIN course_sections s ON s.id = a.section_id
+                       JOIN assessment_progress ap
+                         ON ap.assessment_id = a.id
+                        AND ap.enrollment_id = :enrollmentId
+                      WHERE s.course_id = :courseId
+                        AND a.section_id IS NOT NULL
+                        AND a.deleted_at IS NULL
+                        AND ap.completed_at IS NOT NULL) AS completed_units
             ) c
             WHERE e.id = :enrollmentId
             """, nativeQuery = true)

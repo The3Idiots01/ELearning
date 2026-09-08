@@ -33,6 +33,7 @@ class CurriculumServiceTest {
     @Mock private LessonResourceRepository resourceRepository;
     @Mock private com.learnova.elearning.integration.storage.StorageService storageService;
     @Mock private LessonResponseAssembler lessonAssembler;
+    @Mock private AssessmentService assessmentService;
 
     @InjectMocks
     private CurriculumService curriculumService;
@@ -100,5 +101,22 @@ class CurriculumServiceTest {
         assertThat(moving.getSection()).isSameAs(sectionB);
         assertThat(moving.getPosition()).isZero();
         assertThat(bExisting.getPosition()).isEqualTo(1);
+    }
+
+    @Test
+    @DisplayName("Delete section: unassign assessment plans before soft deleting the section")
+    void deleteSection_unassignsAssessments() {
+        Course course = Course.builder().id(1L).status(CourseStatus.DRAFT).build();
+        CourseSection section = CourseSection.builder().id(5L).course(course).position(0).build();
+        when(ownershipGuard.requireEditableCourse(1L, 10L)).thenReturn(course);
+        when(ownershipGuard.requireSectionInCourse(5L, 1L)).thenReturn(section);
+        when(lessonRepository.findBySection_IdOrderByPositionAsc(5L)).thenReturn(List.of());
+        when(sectionRepository.findByCourse_IdOrderByPositionAsc(1L)).thenReturn(List.of());
+
+        curriculumService.deleteSection(1L, 5L, 10L);
+
+        verify(assessmentService).unassignFromSection(5L);
+        assertThat(section.getDeletedAt()).isNotNull();
+        verify(sectionRepository).save(section);
     }
 }

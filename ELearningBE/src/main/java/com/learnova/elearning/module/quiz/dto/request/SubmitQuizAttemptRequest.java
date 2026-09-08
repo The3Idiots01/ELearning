@@ -1,6 +1,7 @@
 package com.learnova.elearning.module.quiz.dto.request;
 
 import jakarta.validation.Valid;
+import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotEmpty;
 import jakarta.validation.constraints.NotNull;
 import lombok.*;
@@ -30,6 +31,6 @@ public class SubmitQuizAttemptRequest {
          * Danh sách các mã option mà học viên đã chọn (ví dụ: ["opt_1", "opt_3"]).
          */
         @NotEmpty(message = "Phương án chọn không được để trống")
-        private List<String> selectedOptionIds;
+        private List<@NotBlank String> selectedOptionIds;
     }
 }

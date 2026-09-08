@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import type { CourseDetail, Curriculum } from '../../../../types/course';
+import type { CourseDetail, Curriculum, LearningOutcome, Assessment } from '../../../../types/course';
 import { curriculumApi } from '../../api/curriculumApi';
 import { instructorCourseApi } from '../../api/instructorCourseApi';
 import { useToast } from '../../../../app/context/ToastContext';
@@ -7,6 +7,10 @@ import { SectionItem } from '../../components/SectionItem';
 import { PublishCheckModal } from '../../components/PublishCheckModal';
 import { StatusBadge } from '../../../../components/common/Badge';
 import { formatDuration } from '../../../../lib/formatters';
+import { outcomeApi } from '../../api/outcomeApi';
+import { AssessmentPlanPanel } from '../../components/AssessmentPlanPanel';
+import { AlignmentMatrix } from '../../components/AlignmentMatrix';
+import { AuthoringStepNav } from '../../components/AuthoringStepNav';
 
 interface CurriculumEditorPageProps {
   courseId: number;
@@ -24,6 +28,8 @@ export const CurriculumEditorPage: React.FC<CurriculumEditorPageProps> = ({
   const [course, setCourse] = useState<CourseDetail | null>(null);
   const [curriculum, setCurriculum] = useState<Curriculum | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [outcomes, setOutcomes] = useState<LearningOutcome[]>([]);
+  const [assessments, setAssessments] = useState<Assessment[]>([]);
 
   // Add Section Form
   const [showAddSectionForm, setShowAddSectionForm] = useState(false);
@@ -37,8 +43,12 @@ export const CurriculumEditorPage: React.FC<CurriculumEditorPageProps> = ({
   // Silent update that updates state without blocking UI with full spinner
   const refreshCurriculumSilent = async () => {
     try {
-      const curriculumData = await curriculumApi.getCurriculum(courseId);
+      const [curriculumData, assessmentData] = await Promise.all([
+        curriculumApi.getCurriculum(courseId),
+        curriculumApi.listAssessments(courseId)
+      ]);
       setCurriculum(curriculumData);
+      setAssessments(assessmentData);
     } catch (err: any) {
       showError(err.message || 'Lỗi khi cập nhật dữ liệu giáo trình.');
     }
@@ -47,12 +57,16 @@ export const CurriculumEditorPage: React.FC<CurriculumEditorPageProps> = ({
   const fetchCurriculumData = async () => {
     setIsLoading(true);
     try {
-      const [courseData, curriculumData] = await Promise.all([
+      const [courseData, curriculumData, outcomeData, assessmentData] = await Promise.all([
         instructorCourseApi.getDetail(courseId),
-        curriculumApi.getCurriculum(courseId)
+        curriculumApi.getCurriculum(courseId),
+        outcomeApi.list(courseId),
+        curriculumApi.listAssessments(courseId)
       ]);
       setCourse(courseData);
       setCurriculum(curriculumData);
+      setOutcomes(outcomeData);
+      setAssessments(assessmentData);
     } catch (err: any) {
       showError(err.message || 'Lỗi khi tải dữ liệu giáo trình.');
     } finally {
@@ -114,6 +128,7 @@ export const CurriculumEditorPage: React.FC<CurriculumEditorPageProps> = ({
       totalDuration += l.durationSeconds || 0;
     });
   });
+  const totalAssessments = assessments.length;
 
   if (isLoading || !course) {
     return (
@@ -174,6 +189,7 @@ export const CurriculumEditorPage: React.FC<CurriculumEditorPageProps> = ({
 
       {/* Main Content Body */}
       <div className="p-6 sm:p-8 max-w-5xl mx-auto w-full space-y-6">
+        <AuthoringStepNav courseId={course.id} active="assessment" />
         {/* Curriculum Stats Banner */}
         <div className="bg-surface-container-lowest p-5 rounded-3xl border border-outline-variant/70 shadow-xs flex flex-col sm:flex-row items-center justify-between gap-4">
           <div className="flex items-center gap-6">
@@ -184,6 +200,13 @@ export const CurriculumEditorPage: React.FC<CurriculumEditorPageProps> = ({
               <strong className="text-lg font-black text-slate-900 font-display">
                 {curriculum?.sections.length || 0} chương
               </strong>
+            </div>
+
+            <div className="h-8 w-px bg-slate-200" />
+
+            <div>
+              <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Đánh giá</span>
+              <strong className="text-lg font-black text-amber-600 font-display">{totalAssessments} quiz</strong>
             </div>
 
             <div className="h-8 w-px bg-slate-200" />
@@ -218,6 +241,18 @@ export const CurriculumEditorPage: React.FC<CurriculumEditorPageProps> = ({
             <span>Thêm chương học mới</span>
           </button>
         </div>
+
+        <div id="assessment-plan">
+          <AssessmentPlanPanel
+            courseId={courseId}
+            sections={curriculum!.sections}
+            outcomes={outcomes}
+            assessments={assessments}
+            onChanged={refreshCurriculumSilent}
+          />
+        </div>
+
+        <div id="alignment"><AlignmentMatrix courseId={courseId} outcomes={outcomes} curriculum={curriculum!} /></div>
 
         {/* Add Section Inline Form */}
         {showAddSectionForm && (
@@ -292,7 +327,7 @@ export const CurriculumEditorPage: React.FC<CurriculumEditorPageProps> = ({
         )}
 
         {/* Sections Hierarchy List */}
-        <div className="space-y-6">
+        <div id="curriculum" className="space-y-6">
           {!curriculum?.sections || curriculum.sections.length === 0 ? (
             <div className="text-center py-16 bg-surface-container-lowest rounded-3xl border-2 border-dashed border-outline-variant/80 p-8 space-y-4">
               <span className="material-symbols-outlined text-[56px] text-outline">
@@ -326,6 +361,7 @@ export const CurriculumEditorPage: React.FC<CurriculumEditorPageProps> = ({
                 onMoveSectionDown={() =>
                   sIdx < curriculum.sections.length - 1 && handleReorderSections(sIdx, sIdx + 1)
                 }
+                outcomes={outcomes}
               />
             ))
           )}

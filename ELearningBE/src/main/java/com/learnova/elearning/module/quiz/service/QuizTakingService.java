@@ -1,110 +1,312 @@
 package com.learnova.elearning.module.quiz.service;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.learnova.elearning.common.exception.AppException;
+import com.learnova.elearning.common.exception.ErrorCode;
+import com.learnova.elearning.module.enrollment.entity.Enrollment;
+import com.learnova.elearning.module.enrollment.repository.AssessmentProgressRepository;
 import com.learnova.elearning.module.enrollment.repository.EnrollmentRepository;
-import com.learnova.elearning.module.enrollment.repository.LessonProgressRepository;
+import com.learnova.elearning.module.quiz.dto.QuizAttemptSnapshot;
+import com.learnova.elearning.module.quiz.dto.QuizOptionDto;
 import com.learnova.elearning.module.quiz.dto.request.SubmitQuizAttemptRequest;
+import com.learnova.elearning.module.quiz.dto.request.SubmitQuizAttemptRequest.QuestionAnswerItem;
+import com.learnova.elearning.module.quiz.dto.response.QuestionTakingResponse;
 import com.learnova.elearning.module.quiz.dto.response.QuizAttemptResponse;
+import com.learnova.elearning.module.quiz.dto.response.QuizAttemptResponse.QuestionResultItem;
 import com.learnova.elearning.module.quiz.dto.response.QuizTakingResponse;
+import com.learnova.elearning.module.quiz.entity.Quiz;
+import com.learnova.elearning.module.quiz.entity.QuizAttempt;
+import com.learnova.elearning.module.quiz.entity.QuizQuestion;
+import com.learnova.elearning.module.quiz.entity.enums.QuestionType;
 import com.learnova.elearning.module.quiz.repository.QuizAttemptRepository;
 import com.learnova.elearning.module.quiz.repository.QuizQuestionRepository;
 import com.learnova.elearning.module.quiz.repository.QuizRepository;
-import com.learnova.elearning.module.user.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.math.BigDecimal;
+import java.math.RoundingMode;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.stream.Collectors;
 
-/**
- * Service xử lý nghiệp vụ Làm bài kiểm tra & Chấm điểm tự động dành cho Học viên (US-20).
- *
- * LƯU Ý: Hiện tại chỉ định nghĩa chữ ký hàm và mô tả workflow nghiệp vụ bằng comment.
- * Chưa lập trình logic thực thi bên trong theo yêu cầu của dự án.
- */
+/** Learner quiz delivery, server-side grading, attempt history, and completion. */
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class QuizTakingService {
+
+    private static final BigDecimal DEFAULT_PASSING_SCORE = new BigDecimal("80.00");
 
     private final QuizRepository quizRepository;
     private final QuizQuestionRepository quizQuestionRepository;
     private final QuizAttemptRepository quizAttemptRepository;
     private final EnrollmentRepository enrollmentRepository;
-    private final LessonProgressRepository lessonProgressRepository;
-    private final UserRepository userRepository;
+    private final AssessmentProgressRepository assessmentProgressRepository;
+    private final ObjectMapper objectMapper;
 
-    /**
-     * 1. Lấy đề thi Quiz cho học viên làm bài.
-     *
-     * WORKFLOW:
-     * - B1: Kiểm tra học viên đã đăng ký khóa học này chưa (enrollmentRepository.findByStudent_IdAndCourse_Id).
-     *       + Nếu chưa đăng ký: throw AppException(ErrorCode.ENROLLMENT_NOT_FOUND) hoặc UNAUTHORIZED.
-     * - B2: Tìm Quiz theo lessonId và courseId (nếu không có -> throw QUIZ_NOT_FOUND).
-     * - B3: Đếm số lần học viên đã nộp bài:
-     *       + attemptsUsed = quizAttemptRepository.countByQuiz_IdAndLearner_Id(quizId, studentId).
-     *       + attemptsRemaining = maxAttempts != null ? max(0, maxAttempts - attemptsUsed) : null.
-     * - B4: Kiểm tra học viên đã từng có bài thi ĐẠT (isPassed == true) hay chưa.
-     * - B5: Truy vấn danh sách câu hỏi của Quiz từ quizQuestionRepository.
-     * - B6: Chuyển đổi sang QuestionTakingResponse:
-     *       + [QUAN TRỌNG - BR-16]: Bóc tách options_json sang List<StudentOptionItem> CHỈ gồm {id, text}.
-     *       + Tuyệt đối KHÔNG trả về cờ isCorrect hay explanation trong response này để bảo mật đề thi.
-     * - B7: Đóng gói toàn bộ thông tin vào QuizTakingResponse và trả về cho client.
-     */
     @Transactional(readOnly = true)
-    public QuizTakingResponse getQuizForTaking(Long courseId, Long lessonId, Long studentId) {
-        // [WORKFLOW] Chưa triển khai logic - Xem workflow mô tả chi tiết phía trên
-        throw new UnsupportedOperationException("Chưa triển khai logic: getQuizForTaking. Xem workflow mô tả trong comment.");
+    public QuizTakingResponse getQuizForTaking(Long courseId, Long assessmentId, Long studentId) {
+        requireEnrollment(courseId, studentId);
+        Quiz quiz = requireQuiz(courseId, assessmentId);
+        int attemptsUsed = quizAttemptRepository.countByQuiz_IdAndLearner_Id(quiz.getId(), studentId);
+        Integer remaining = remainingAttempts(quiz.getMaxAttempts(), attemptsUsed);
+
+        List<QuestionTakingResponse> questions = quizQuestionRepository
+                .findByQuiz_IdOrderByPositionAsc(quiz.getId()).stream()
+                .map(this::toTakingQuestion)
+                .toList();
+
+        return QuizTakingResponse.builder()
+                .id(quiz.getId())
+                .assessmentId(assessmentId)
+                .title(quiz.getAssessment().getTitle())
+                .passingScore(passingScore(quiz))
+                .maxAttempts(quiz.getMaxAttempts())
+                .attemptsUsed(attemptsUsed)
+                .attemptsRemaining(remaining)
+                .hasPassed(quizAttemptRepository.existsByQuiz_IdAndLearner_IdAndIsPassedTrue(
+                        quiz.getId(), studentId))
+                .questions(questions)
+                .build();
     }
 
-    /**
-     * 2. Học viên nộp bài làm Quiz -> Server chấm điểm tự động & ghi nhận kết quả.
-     *
-     * WORKFLOW:
-     * - B1: Kiểm tra Enrollment của học viên trong Course.
-     * - B2: Tìm Quiz theo lessonId.
-     * - B3: Kiểm tra giới hạn số lần làm bài (maxAttempts):
-     *       + Lấy attemptsUsed hiện tại.
-     *       + Nếu maxAttempts != null && attemptsUsed >= maxAttempts -> throw QUIZ_MAX_ATTEMPTS_REACHED.
-     * - B4: Tải danh sách toàn bộ câu hỏi và đáp án đúng từ DB qua quizQuestionRepository.
-     * - B5: Thuật toán chấm điểm tự động phía Server (Server-side Grading):
-     *       + Khởi tạo totalEarnedPoints = 0, correctQuestionsCount = 0.
-     *       + Với mỗi câu hỏi trong đề:
-     *         * Lấy tập hợp đáp án đúng từ options_json (correctOptionIds).
-     *         * Lấy tập hợp đáp án học viên đã chọn trong request (selectedOptionIds).
-     *         * Kiểm tra:
-     *           - Nếu questionType == SINGLE_CHOICE: đúng khi selectedOptionIds có 1 phần tử và khớp đáp án đúng.
-     *           - Nếu questionType == MULTIPLE_CHOICE: đúng khi tập hợp lựa chọn khớp hoàn toàn với đáp án đúng.
-     *         * Nếu đúng: cộng điểm points của câu hỏi vào totalEarnedPoints, tăng correctQuestionsCount.
-     *         * Tạo QuestionResultItem ghi lại kết quả chi tiết từng câu (đáp án của trò, đáp án đúng, giải thích).
-     * - B6: Tính điểm tổng kết:
-     *       + scorePercentage = (totalEarnedPoints / totalMaxPoints) * 100 (làm tròn 2 chữ số thập phân).
-     *       + isPassed = scorePercentage >= quiz.getPassingScore().
-     * - B7: Khởi tạo và lưu thực thể QuizAttempt vào DB (lưu snapshot bài làm + điểm số).
-     * - B8: Xử lý tiến độ học tập (BR-29):
-     *       + Nếu isPassed == true:
-     *         * Kiểm tra xem đã có bản ghi trong lesson_progress cho lesson này chưa.
-     *         * Nếu chưa có: tạo mới bản ghi LessonProgress với completed_at = now() để đánh dấu hoàn thành lesson.
-     *         * Kích hoạt cập nhật lại tỷ lệ hoàn thành khóa học trên bảng enrollments (progress %).
-     * - B9: Map kết quả chấm thi sang QuizAttemptResponse và trả về cho học viên xem điểm.
-     */
     @Transactional
-    public QuizAttemptResponse submitAttempt(Long courseId, Long lessonId, SubmitQuizAttemptRequest request, Long studentId) {
-        // [WORKFLOW] Chưa triển khai logic - Xem workflow mô tả chi tiết phía trên
-        throw new UnsupportedOperationException("Chưa triển khai logic: submitAttempt. Xem workflow mô tả trong comment.");
+    public QuizAttemptResponse submitAttempt(Long courseId, Long assessmentId,
+                                             SubmitQuizAttemptRequest request, Long studentId) {
+        Enrollment enrollment = requireEnrollment(courseId, studentId);
+        // Lock the quiz row so concurrent submissions cannot both pass the max-attempt check.
+        Quiz quiz = quizRepository.findForUpdateByAssessmentAndCourse(assessmentId, courseId)
+                .orElseThrow(() -> new AppException(ErrorCode.QUIZ_NOT_FOUND));
+        int attemptsUsed = quizAttemptRepository.countByQuiz_IdAndLearner_Id(quiz.getId(), studentId);
+        if (quiz.getMaxAttempts() != null && attemptsUsed >= quiz.getMaxAttempts()) {
+            throw new AppException(ErrorCode.QUIZ_MAX_ATTEMPTS_REACHED);
+        }
+
+        List<QuizQuestion> questions = quizQuestionRepository.findByQuiz_IdOrderByPositionAsc(quiz.getId());
+        if (questions.isEmpty()) {
+            throw new AppException(ErrorCode.QUIZ_WITHOUT_QUESTION);
+        }
+        Map<Long, List<String>> answers = validateAndIndexAnswers(request.getAnswers(), questions);
+        GradingResult grading = grade(questions, answers);
+        BigDecimal threshold = passingScore(quiz);
+        boolean passed = grading.score().compareTo(threshold) >= 0;
+
+        QuizAttemptSnapshot snapshot = QuizAttemptSnapshot.builder()
+                .version(1)
+                .passingScore(threshold)
+                .totalQuestions(questions.size())
+                .correctQuestions(grading.correctQuestions())
+                .questionResults(grading.results())
+                .build();
+        QuizAttempt attempt = QuizAttempt.builder()
+                .quiz(quiz)
+                .learner(enrollment.getStudent())
+                .answersJson(serializeSnapshot(snapshot))
+                .score(grading.score())
+                .isPassed(passed)
+                .build();
+        QuizAttempt saved = quizAttemptRepository.save(attempt);
+
+        if (passed) {
+            int newlyCompleted = assessmentProgressRepository.markCompletedByQuiz(
+                    enrollment.getId(), assessmentId);
+            // A passed retry is intentionally a no-op for progress. Roll up only
+            // when the assessment changes from incomplete to completed.
+            if (newlyCompleted > 0) {
+                enrollmentRepository.recalculateCourseProgress(enrollment.getId(), courseId);
+            }
+        }
+        return toAttemptResponse(saved, quiz, snapshot);
     }
 
-    /**
-     * 3. Lấy lịch sử các lần nộp bài của học viên đối với bài Quiz này.
-     *
-     * WORKFLOW:
-     * - B1: Kiểm tra Enrollment của học viên.
-     * - B2: Tìm Quiz theo lessonId.
-     * - B3: Truy vấn danh sách QuizAttempt của học viên theo quizId, sắp xếp theo submittedAt giảm dần.
-     * - B4: Map danh sách entity QuizAttempt sang List<QuizAttemptResponse> (tóm tắt điểm số, trạng thái Đạt/Trượt, thời gian nộp).
-     * - B5: Trả về danh sách lịch sử cho học viên.
-     */
     @Transactional(readOnly = true)
-    public List<QuizAttemptResponse> getAttemptHistory(Long courseId, Long lessonId, Long studentId) {
-        // [WORKFLOW] Chưa triển khai logic - Xem workflow mô tả chi tiết phía trên
-        throw new UnsupportedOperationException("Chưa triển khai logic: getAttemptHistory. Xem workflow mô tả trong comment.");
+    public List<QuizAttemptResponse> getAttemptHistory(Long courseId, Long assessmentId, Long studentId) {
+        requireEnrollment(courseId, studentId);
+        Quiz quiz = requireQuiz(courseId, assessmentId);
+        return quizAttemptRepository.findByQuiz_IdAndLearner_IdOrderBySubmittedAtDesc(quiz.getId(), studentId)
+                .stream()
+                .map(attempt -> toAttemptResponse(attempt, quiz, deserializeSnapshot(attempt.getAnswersJson())))
+                .toList();
     }
+
+    private Enrollment requireEnrollment(Long courseId, Long studentId) {
+        return enrollmentRepository.findByStudent_IdAndCourse_Id(studentId, courseId)
+                .orElseThrow(() -> new AppException(ErrorCode.ENROLLMENT_NOT_FOUND));
+    }
+
+    private Quiz requireQuiz(Long courseId, Long assessmentId) {
+        return quizRepository.findByAssessment_IdAndAssessment_Course_Id(assessmentId, courseId)
+                .orElseThrow(() -> new AppException(ErrorCode.QUIZ_NOT_FOUND));
+    }
+
+    private QuestionTakingResponse toTakingQuestion(QuizQuestion question) {
+        List<QuestionTakingResponse.StudentOptionItem> safeOptions = deserializeOptions(question.getOptionsJson())
+                .stream()
+                .map(option -> QuestionTakingResponse.StudentOptionItem.builder()
+                        .id(option.getId())
+                        .text(option.getText())
+                        .build())
+                .toList();
+        return QuestionTakingResponse.builder()
+                .id(question.getId())
+                .questionText(question.getQuestionText())
+                .questionType(question.getQuestionType())
+                .points(question.getPoints())
+                .position(question.getPosition())
+                .options(safeOptions)
+                .build();
+    }
+
+    private Map<Long, List<String>> validateAndIndexAnswers(List<QuestionAnswerItem> submitted,
+                                                             List<QuizQuestion> questions) {
+        Set<Long> validQuestionIds = questions.stream().map(QuizQuestion::getId).collect(Collectors.toSet());
+        Map<Long, List<String>> answers = new HashMap<>();
+        for (QuestionAnswerItem answer : submitted) {
+            if (!validQuestionIds.contains(answer.getQuestionId())
+                    || answers.putIfAbsent(answer.getQuestionId(), List.copyOf(answer.getSelectedOptionIds())) != null) {
+                throw new AppException(ErrorCode.INVALID_REQUEST,
+                        "Answers contain an unknown or duplicated question");
+            }
+        }
+
+        Map<Long, QuizQuestion> byId = questions.stream()
+                .collect(Collectors.toMap(QuizQuestion::getId, question -> question));
+        for (Map.Entry<Long, List<String>> entry : answers.entrySet()) {
+            List<String> selected = entry.getValue();
+            if (selected.stream().anyMatch(id -> id == null || id.isBlank())
+                    || new HashSet<>(selected).size() != selected.size()) {
+                throw new AppException(ErrorCode.INVALID_REQUEST,
+                        "Selected option IDs must be non-blank and unique");
+            }
+            Set<String> validOptionIds = deserializeOptions(byId.get(entry.getKey()).getOptionsJson())
+                    .stream().map(QuizOptionDto::getId).collect(Collectors.toSet());
+            if (!validOptionIds.containsAll(selected)) {
+                throw new AppException(ErrorCode.INVALID_REQUEST,
+                        "Selected option does not belong to the question");
+            }
+        }
+        return answers;
+    }
+
+    private GradingResult grade(List<QuizQuestion> questions, Map<Long, List<String>> answers) {
+        BigDecimal earned = BigDecimal.ZERO;
+        BigDecimal total = BigDecimal.ZERO;
+        int correctQuestions = 0;
+        List<QuestionResultItem> results = new ArrayList<>();
+
+        for (QuizQuestion question : questions) {
+            List<QuizOptionDto> options = deserializeOptions(question.getOptionsJson());
+            Set<String> correctIds = options.stream()
+                    .filter(option -> Boolean.TRUE.equals(option.getIsCorrect()))
+                    .map(QuizOptionDto::getId)
+                    .collect(Collectors.toCollection(LinkedHashSet::new));
+            List<String> selectedList = answers.getOrDefault(question.getId(), List.of());
+            Set<String> selectedIds = new LinkedHashSet<>(selectedList);
+            boolean correct = question.getQuestionType() == QuestionType.SINGLE_CHOICE
+                    ? selectedIds.size() == 1 && selectedIds.equals(correctIds)
+                    : !correctIds.isEmpty() && selectedIds.equals(correctIds);
+            BigDecimal points = question.getPoints() != null ? question.getPoints() : BigDecimal.ZERO;
+            total = total.add(points);
+            if (correct) {
+                earned = earned.add(points);
+                correctQuestions++;
+            }
+
+            String explanation = options.stream()
+                    .filter(option -> Boolean.TRUE.equals(option.getIsCorrect()))
+                    .map(QuizOptionDto::getExplanation)
+                    .filter(value -> value != null && !value.isBlank())
+                    .distinct()
+                    .collect(Collectors.joining("\n"));
+            results.add(QuestionResultItem.builder()
+                    .questionId(question.getId())
+                    .isCorrect(correct)
+                    .earnedPoints(correct ? points : BigDecimal.ZERO)
+                    .totalPoints(points)
+                    .selectedOptionIds(List.copyOf(selectedList))
+                    .correctOptionIds(List.copyOf(correctIds))
+                    .explanation(explanation.isBlank() ? null : explanation)
+                    .build());
+        }
+
+        BigDecimal score = total.signum() == 0
+                ? BigDecimal.ZERO.setScale(2)
+                : earned.multiply(BigDecimal.valueOf(100)).divide(total, 2, RoundingMode.HALF_UP);
+        return new GradingResult(score, correctQuestions, results);
+    }
+
+    private QuizAttemptResponse toAttemptResponse(QuizAttempt attempt, Quiz quiz, QuizAttemptSnapshot snapshot) {
+        QuizAttemptSnapshot safe = snapshot != null ? snapshot : QuizAttemptSnapshot.builder()
+                .passingScore(passingScore(quiz))
+                .totalQuestions(0)
+                .correctQuestions(0)
+                .questionResults(List.of())
+                .build();
+        return QuizAttemptResponse.builder()
+                .id(attempt.getId())
+                .quizId(quiz.getId())
+                .assessmentId(quiz.getAssessment().getId())
+                .score(attempt.getScore())
+                .passingScore(safe.getPassingScore() != null ? safe.getPassingScore() : passingScore(quiz))
+                .isPassed(attempt.getIsPassed())
+                .totalQuestions(safe.getTotalQuestions())
+                .correctQuestions(safe.getCorrectQuestions())
+                .submittedAt(attempt.getSubmittedAt())
+                .questionResults(safe.getQuestionResults() != null ? safe.getQuestionResults() : List.of())
+                .build();
+    }
+
+    private Integer remainingAttempts(Integer maxAttempts, int attemptsUsed) {
+        return maxAttempts == null ? null : Math.max(0, maxAttempts - attemptsUsed);
+    }
+
+    private BigDecimal passingScore(Quiz quiz) {
+        return quiz.getPassingScore() != null ? quiz.getPassingScore() : DEFAULT_PASSING_SCORE;
+    }
+
+    private List<QuizOptionDto> deserializeOptions(String json) {
+        try {
+            return objectMapper.readValue(json, new TypeReference<List<QuizOptionDto>>() {});
+        } catch (JsonProcessingException exception) {
+            log.error("Cannot deserialize options for grading", exception);
+            throw new AppException(ErrorCode.UNCATEGORIZED_EXCEPTION, "Dữ liệu đáp án quiz không hợp lệ");
+        }
+    }
+
+    private String serializeSnapshot(QuizAttemptSnapshot snapshot) {
+        try {
+            return objectMapper.writeValueAsString(snapshot);
+        } catch (JsonProcessingException exception) {
+            log.error("Cannot serialize quiz attempt snapshot", exception);
+            throw new AppException(ErrorCode.UNCATEGORIZED_EXCEPTION, "Không thể lưu kết quả bài làm");
+        }
+    }
+
+    private QuizAttemptSnapshot deserializeSnapshot(String json) {
+        try {
+            return objectMapper.readValue(json, QuizAttemptSnapshot.class);
+        } catch (JsonProcessingException exception) {
+            // Attempts created before Task 06 stored only raw answer arrays.
+            try {
+                objectMapper.readValue(json, new TypeReference<List<Map<String, Object>>>() {});
+                return null;
+            } catch (JsonProcessingException ignored) {
+                log.warn("Cannot read attempt snapshot; returning summary only");
+                return null;
+            }
+        }
+    }
+
+    private record GradingResult(BigDecimal score, int correctQuestions,
+                                 List<QuestionResultItem> results) {}
 }

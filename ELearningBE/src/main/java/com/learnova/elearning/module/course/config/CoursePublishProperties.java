@@ -15,7 +15,7 @@ import org.springframework.stereotype.Component;
 public class CoursePublishProperties {
 
     private int minDescriptionLength = 200;
-    private int minObjectives = 4;
+    private int minObjectives = 2;
     private int minRequirements = 1;
     private int minAudiences = 1;
 }

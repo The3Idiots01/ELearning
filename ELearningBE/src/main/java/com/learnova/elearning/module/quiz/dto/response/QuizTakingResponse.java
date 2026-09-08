@@ -15,7 +15,7 @@ import java.util.List;
 @Builder
 public class QuizTakingResponse {
     private Long id;
-    private Long lessonId;
+    private Long assessmentId;
     private String title;
     private BigDecimal passingScore;
     private Integer maxAttempts;

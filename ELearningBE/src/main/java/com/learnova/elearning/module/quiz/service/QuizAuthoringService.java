@@ -5,9 +5,8 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.learnova.elearning.common.exception.AppException;
 import com.learnova.elearning.common.exception.ErrorCode;
-import com.learnova.elearning.module.course.entity.Lesson;
-import com.learnova.elearning.module.course.entity.enums.LessonContentType;
-import com.learnova.elearning.module.course.repository.LessonRepository;
+import com.learnova.elearning.module.course.entity.Assessment;
+import com.learnova.elearning.module.course.entity.enums.AssessmentType;
 import com.learnova.elearning.module.course.service.CourseOwnershipGuard;
 import com.learnova.elearning.module.quiz.dto.QuizOptionDto;
 import com.learnova.elearning.module.quiz.dto.request.ReorderQuestionsRequest;
@@ -27,14 +26,14 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
-/**
- * Service xử lý nghiệp vụ Soạn thảo bài Quiz dành cho Giảng viên (US-07).
- */
+/** Quiz authoring through a course assessment, independent from lesson plans. */
 @Service
 @RequiredArgsConstructor
 @Slf4j
@@ -42,273 +41,172 @@ public class QuizAuthoringService {
 
     private final QuizRepository quizRepository;
     private final QuizQuestionRepository quizQuestionRepository;
-    private final LessonRepository lessonRepository;
     private final CourseOwnershipGuard ownershipGuard;
     private final ObjectMapper objectMapper;
 
-    /**
-     * 1. Lấy thông tin chi tiết bài Quiz và danh sách câu hỏi kèm đáp án đúng.
-     */
     @Transactional(readOnly = true)
-    public QuizDetailResponse getQuizDetail(Long courseId, Long lessonId, Long lecturerId) {
+    public QuizDetailResponse getQuizDetail(Long courseId, Long assessmentId, Long lecturerId) {
         ownershipGuard.requireOwnedCourse(courseId, lecturerId);
-        Lesson lesson = ownershipGuard.requireLessonInCourse(lessonId, courseId);
-        validateLessonIsQuiz(lesson);
-
-        Quiz quiz = quizRepository.findByLesson_Id(lessonId)
-                .orElseThrow(() -> new AppException(ErrorCode.QUIZ_NOT_FOUND));
-
-        List<QuizQuestion> questions = quizQuestionRepository.findByQuiz_IdOrderByPositionAsc(quiz.getId());
-        List<QuestionDetailResponse> questionResponses = questions.stream()
-                .map(this::toQuestionDetailResponse)
-                .toList();
-
-        BigDecimal totalPoints = questions.stream()
-                .map(q -> q.getPoints() != null ? q.getPoints() : BigDecimal.ZERO)
-                .reduce(BigDecimal.ZERO, BigDecimal::add);
-
-        return QuizDetailResponse.builder()
-                .id(quiz.getId())
-                .lessonId(lesson.getId())
-                .title(quiz.getTitle())
-                .passingScore(quiz.getPassingScore())
-                .maxAttempts(quiz.getMaxAttempts())
-                .totalPoints(totalPoints)
-                .questions(questionResponses)
-                .createdAt(quiz.getCreatedAt())
-                .updatedAt(quiz.getUpdatedAt())
-                .build();
+        Assessment assessment = requireQuizAssessment(courseId, assessmentId);
+        Quiz quiz = requireQuiz(courseId, assessmentId);
+        return toQuizDetailResponse(quiz, assessment);
     }
 
-    /**
-     * 2. Tạo mới hoặc cập nhật cấu hình chung của bài Quiz (tiêu đề, điểm đạt, số lần làm).
-     */
     @Transactional
-    public QuizDetailResponse upsertQuiz(Long courseId, Long lessonId, UpsertQuizRequest request, Long lecturerId) {
+    public QuizDetailResponse upsertQuiz(Long courseId, Long assessmentId,
+                                         UpsertQuizRequest request, Long lecturerId) {
         ownershipGuard.requireEditableCourse(courseId, lecturerId);
-        Lesson lesson = ownershipGuard.requireLessonInCourse(lessonId, courseId);
-        validateLessonIsQuiz(lesson);
-
-        Quiz quiz = quizRepository.findByLesson_Id(lessonId)
-                .orElseGet(() -> Quiz.builder()
-                        .lesson(lesson)
-                        .build());
-
-        quiz.setTitle(request.getTitle());
-        if (request.getPassingScore() != null) {
-            quiz.setPassingScore(request.getPassingScore());
-        }
+        Assessment assessment = requireQuizAssessment(courseId, assessmentId);
+        Quiz quiz = quizRepository.findByAssessment_Id(assessmentId)
+                .orElseGet(() -> Quiz.builder().assessment(assessment).build());
+        quiz.setPassingScore(request.getPassingScore());
         quiz.setMaxAttempts(request.getMaxAttempts());
-
-        Quiz saved = quizRepository.save(quiz);
-
-        List<QuizQuestion> questions = quizQuestionRepository.findByQuiz_IdOrderByPositionAsc(saved.getId());
-        List<QuestionDetailResponse> questionResponses = questions.stream()
-                .map(this::toQuestionDetailResponse)
-                .toList();
-
-        BigDecimal totalPoints = questions.stream()
-                .map(q -> q.getPoints() != null ? q.getPoints() : BigDecimal.ZERO)
-                .reduce(BigDecimal.ZERO, BigDecimal::add);
-
-        return QuizDetailResponse.builder()
-                .id(saved.getId())
-                .lessonId(lesson.getId())
-                .title(saved.getTitle())
-                .passingScore(saved.getPassingScore())
-                .maxAttempts(saved.getMaxAttempts())
-                .totalPoints(totalPoints)
-                .questions(questionResponses)
-                .createdAt(saved.getCreatedAt())
-                .updatedAt(saved.getUpdatedAt())
-                .build();
+        return toQuizDetailResponse(quizRepository.save(quiz), assessment);
     }
 
-    /**
-     * 3. Thêm một câu hỏi mới vào bài Quiz.
-     */
     @Transactional
-    public QuestionDetailResponse addQuestion(Long courseId, Long lessonId, UpsertQuestionRequest request, Long lecturerId) {
+    public QuestionDetailResponse addQuestion(Long courseId, Long assessmentId,
+                                              UpsertQuestionRequest request, Long lecturerId) {
         ownershipGuard.requireEditableCourse(courseId, lecturerId);
-        Lesson lesson = ownershipGuard.requireLessonInCourse(lessonId, courseId);
-        validateLessonIsQuiz(lesson);
+        Assessment assessment = requireQuizAssessment(courseId, assessmentId);
+        Quiz quiz = quizRepository.findByAssessment_Id(assessmentId)
+                .orElseGet(() -> quizRepository.save(Quiz.builder().assessment(assessment).build()));
 
-        Quiz quiz = quizRepository.findByLesson_Id(lessonId)
-                .orElseGet(() -> quizRepository.save(Quiz.builder()
-                        .lesson(lesson)
-                        .title(lesson.getTitle())
-                        .build()));
-
-        List<QuizOptionDto> normalizedOptions = validateAndNormalizeOptions(request.getOptions(), request.getQuestionType());
-        String optionsJson = serializeOptions(normalizedOptions);
-
-        int nextPosition = quizQuestionRepository.countByQuiz_Id(quiz.getId());
-
+        List<QuizOptionDto> options = validateAndNormalizeOptions(request.getOptions(), request.getQuestionType());
         QuizQuestion question = QuizQuestion.builder()
                 .quiz(quiz)
-                .questionText(request.getQuestionText())
+                .questionText(request.getQuestionText().trim())
                 .questionType(request.getQuestionType())
                 .points(request.getPoints())
-                .position(nextPosition)
-                .optionsJson(optionsJson)
+                .position(quizQuestionRepository.countByQuiz_Id(quiz.getId()))
+                .optionsJson(serializeOptions(options))
                 .build();
-
-        QuizQuestion saved = quizQuestionRepository.save(question);
-        return toQuestionDetailResponse(saved);
+        return toQuestionDetailResponse(quizQuestionRepository.save(question));
     }
 
-    /**
-     * 4. Cập nhật nội dung câu hỏi, loại câu hỏi hoặc danh sách đáp án.
-     */
     @Transactional
-    public QuestionDetailResponse updateQuestion(Long courseId, Long lessonId, Long questionId, UpsertQuestionRequest request, Long lecturerId) {
+    public QuestionDetailResponse updateQuestion(Long courseId, Long assessmentId, Long questionId,
+                                                 UpsertQuestionRequest request, Long lecturerId) {
         ownershipGuard.requireEditableCourse(courseId, lecturerId);
-        Lesson lesson = ownershipGuard.requireLessonInCourse(lessonId, courseId);
-        validateLessonIsQuiz(lesson);
-
-        Quiz quiz = quizRepository.findByLesson_Id(lessonId)
-                .orElseThrow(() -> new AppException(ErrorCode.QUIZ_NOT_FOUND));
-
+        Assessment assessment = requireQuizAssessment(courseId, assessmentId);
+        Quiz quiz = requireQuiz(courseId, assessmentId);
         QuizQuestion question = quizQuestionRepository.findByIdAndQuiz_Id(questionId, quiz.getId())
                 .orElseThrow(() -> new AppException(ErrorCode.QUIZ_QUESTION_NOT_FOUND));
 
-        List<QuizOptionDto> normalizedOptions = validateAndNormalizeOptions(request.getOptions(), request.getQuestionType());
-        String optionsJson = serializeOptions(normalizedOptions);
-
-        question.setQuestionText(request.getQuestionText());
+        question.setQuestionText(request.getQuestionText().trim());
         question.setQuestionType(request.getQuestionType());
         question.setPoints(request.getPoints());
-        question.setOptionsJson(optionsJson);
-
-        QuizQuestion saved = quizQuestionRepository.save(question);
-        return toQuestionDetailResponse(saved);
+        question.setOptionsJson(serializeOptions(
+                validateAndNormalizeOptions(request.getOptions(), request.getQuestionType())));
+        return toQuestionDetailResponse(quizQuestionRepository.save(question));
     }
 
-    /**
-     * 5. Xóa một câu hỏi khỏi bài Quiz.
-     */
     @Transactional
-    public void deleteQuestion(Long courseId, Long lessonId, Long questionId, Long lecturerId) {
+    public void deleteQuestion(Long courseId, Long assessmentId, Long questionId, Long lecturerId) {
         ownershipGuard.requireEditableCourse(courseId, lecturerId);
-        Lesson lesson = ownershipGuard.requireLessonInCourse(lessonId, courseId);
-        validateLessonIsQuiz(lesson);
-
-        Quiz quiz = quizRepository.findByLesson_Id(lessonId)
-                .orElseThrow(() -> new AppException(ErrorCode.QUIZ_NOT_FOUND));
-
+        requireQuizAssessment(courseId, assessmentId);
+        Quiz quiz = requireQuiz(courseId, assessmentId);
         QuizQuestion question = quizQuestionRepository.findByIdAndQuiz_Id(questionId, quiz.getId())
                 .orElseThrow(() -> new AppException(ErrorCode.QUIZ_QUESTION_NOT_FOUND));
 
         quizQuestionRepository.delete(question);
         quizQuestionRepository.flush();
+        normalizeQuestionPositions(quiz.getId());
+    }
 
-        // Đánh số lại thứ tự position cho các câu còn lại (0, 1, 2...)
-        List<QuizQuestion> remaining = quizQuestionRepository.findByQuiz_IdOrderByPositionAsc(quiz.getId());
+    @Transactional
+    public void reorderQuestions(Long courseId, Long assessmentId,
+                                 ReorderQuestionsRequest request, Long lecturerId) {
+        ownershipGuard.requireEditableCourse(courseId, lecturerId);
+        requireQuizAssessment(courseId, assessmentId);
+        Quiz quiz = requireQuiz(courseId, assessmentId);
+        List<QuizQuestion> existing = quizQuestionRepository.findByQuiz_IdOrderByPositionAsc(quiz.getId());
+        List<Long> submittedIds = request.getQuestionIds();
+        if (submittedIds == null || submittedIds.size() != existing.size()
+                || !new HashSet<>(submittedIds).equals(
+                        existing.stream().map(QuizQuestion::getId).collect(Collectors.toSet()))) {
+            throw new AppException(ErrorCode.ORDER_PAYLOAD_MISMATCH);
+        }
+
+        Map<Long, QuizQuestion> byId = existing.stream()
+                .collect(Collectors.toMap(QuizQuestion::getId, Function.identity()));
+        for (int i = 0; i < submittedIds.size(); i++) {
+            byId.get(submittedIds.get(i)).setPosition(i);
+        }
+        quizQuestionRepository.saveAll(existing);
+    }
+
+    private Assessment requireQuizAssessment(Long courseId, Long assessmentId) {
+        Assessment assessment = ownershipGuard.requireAssessmentInCourse(assessmentId, courseId);
+        if (assessment.getType() != AssessmentType.QUIZ) {
+            throw new AppException(ErrorCode.ASSESSMENT_TYPE_UNSUPPORTED);
+        }
+        return assessment;
+    }
+
+    private Quiz requireQuiz(Long courseId, Long assessmentId) {
+        return quizRepository.findByAssessment_IdAndAssessment_Course_Id(assessmentId, courseId)
+                .orElseThrow(() -> new AppException(ErrorCode.QUIZ_NOT_FOUND));
+    }
+
+    private void normalizeQuestionPositions(Long quizId) {
+        List<QuizQuestion> remaining = quizQuestionRepository.findByQuiz_IdOrderByPositionAsc(quizId);
         for (int i = 0; i < remaining.size(); i++) {
             remaining.get(i).setPosition(i);
         }
         quizQuestionRepository.saveAll(remaining);
     }
 
-    /**
-     * 6. Sắp xếp lại thứ tự (Reorder) các câu hỏi trong bài Quiz.
-     */
-    @Transactional
-    public void reorderQuestions(Long courseId, Long lessonId, ReorderQuestionsRequest request, Long lecturerId) {
-        ownershipGuard.requireEditableCourse(courseId, lecturerId);
-        Lesson lesson = ownershipGuard.requireLessonInCourse(lessonId, courseId);
-        validateLessonIsQuiz(lesson);
-
-        Quiz quiz = quizRepository.findByLesson_Id(lessonId)
-                .orElseThrow(() -> new AppException(ErrorCode.QUIZ_NOT_FOUND));
-
-        List<QuizQuestion> existing = quizQuestionRepository.findByQuiz_IdOrderByPositionAsc(quiz.getId());
-        List<Long> submittedIds = request.getQuestionIds();
-        if (submittedIds == null
-                || existing.size() != submittedIds.size()
-                || !new java.util.HashSet<>(submittedIds).equals(existing.stream().map(QuizQuestion::getId).collect(Collectors.toSet()))) {
-            throw new AppException(ErrorCode.ORDER_PAYLOAD_MISMATCH);
-        }
-
-        Map<Long, QuizQuestion> questionMap = existing.stream()
-                .collect(Collectors.toMap(QuizQuestion::getId, Function.identity()));
-
-        for (int i = 0; i < submittedIds.size(); i++) {
-            Long qId = submittedIds.get(i);
-            QuizQuestion q = questionMap.get(qId);
-            if (q == null) {
-                throw new AppException(ErrorCode.ORDER_PAYLOAD_MISMATCH);
-            }
-            q.setPosition(i);
-        }
-
-        quizQuestionRepository.saveAll(existing);
-    }
-
-    // --- Helper Methods ---
-
-    private void validateLessonIsQuiz(Lesson lesson) {
-        if (lesson.getContentType() != LessonContentType.QUIZ) {
-            throw new AppException(ErrorCode.LESSON_NOT_A_QUIZ);
-        }
-    }
-
-    private List<QuizOptionDto> validateAndNormalizeOptions(List<QuizOptionDto> options, QuestionType questionType) {
+    private List<QuizOptionDto> validateAndNormalizeOptions(List<QuizOptionDto> options,
+                                                            QuestionType questionType) {
         if (options == null || options.size() < 2) {
-            throw new AppException(ErrorCode.VALIDATION_ERROR, "Câu hỏi phải có ít nhất 2 đáp án lựa chọn");
+            throw new AppException(ErrorCode.VALIDATION_ERROR,
+                    "Câu hỏi phải có ít nhất 2 đáp án lựa chọn");
         }
-
-        long correctCount = options.stream()
-                .filter(opt -> Boolean.TRUE.equals(opt.getIsCorrect()))
-                .count();
-
+        long correctCount = options.stream().filter(option -> Boolean.TRUE.equals(option.getIsCorrect())).count();
         if (correctCount == 0) {
             throw new AppException(ErrorCode.QUIZ_QUESTION_INVALID_OPTIONS);
         }
-
         if (questionType == QuestionType.SINGLE_CHOICE && correctCount > 1) {
             throw new AppException(ErrorCode.QUIZ_SINGLE_CHOICE_MULTIPLE_CORRECT);
         }
 
-        java.util.Set<String> seenIds = new java.util.HashSet<>();
+        Set<String> seenIds = new HashSet<>();
         List<QuizOptionDto> normalized = new ArrayList<>();
         for (int i = 0; i < options.size(); i++) {
-            QuizOptionDto opt = options.get(i);
-            String rawId = (opt.getId() != null && !opt.getId().isBlank()) ? opt.getId().trim() : "opt_" + (i + 1);
-            String id = rawId;
-            if (seenIds.contains(id)) {
-                id = "opt_" + (i + 1);
+            QuizOptionDto option = options.get(i);
+            String candidate = option.getId() != null && !option.getId().isBlank()
+                    ? option.getId().trim() : "opt_" + (i + 1);
+            if (!seenIds.add(candidate)) {
+                throw new AppException(ErrorCode.QUIZ_QUESTION_INVALID_OPTIONS,
+                        "Option IDs must be unique");
             }
-            seenIds.add(id);
             normalized.add(QuizOptionDto.builder()
-                    .id(id)
-                    .text(opt.getText() != null ? opt.getText().trim() : "")
-                    .isCorrect(Boolean.TRUE.equals(opt.getIsCorrect()))
-                    .explanation(opt.getExplanation())
+                    .id(candidate)
+                    .text(option.getText().trim())
+                    .isCorrect(Boolean.TRUE.equals(option.getIsCorrect()))
+                    .explanation(trimToNull(option.getExplanation()))
                     .build());
         }
         return normalized;
     }
 
-    private String serializeOptions(List<QuizOptionDto> options) {
-        try {
-            return objectMapper.writeValueAsString(options);
-        } catch (JsonProcessingException e) {
-            log.error("Lỗi serialize options_json: {}", e.getMessage(), e);
-            throw new AppException(ErrorCode.UNCATEGORIZED_EXCEPTION, "Lỗi xử lý dữ liệu đáp án JSON");
-        }
-    }
-
-    private List<QuizOptionDto> deserializeOptions(String json) {
-        if (json == null || json.isBlank()) {
-            return List.of();
-        }
-        try {
-            return objectMapper.readValue(json, new TypeReference<List<QuizOptionDto>>() {});
-        } catch (JsonProcessingException e) {
-            log.error("Lỗi deserialize options_json: {}", e.getMessage(), e);
-            return List.of();
-        }
+    private QuizDetailResponse toQuizDetailResponse(Quiz quiz, Assessment assessment) {
+        List<QuizQuestion> questions = quizQuestionRepository.findByQuiz_IdOrderByPositionAsc(quiz.getId());
+        BigDecimal totalPoints = questions.stream()
+                .map(question -> question.getPoints() != null ? question.getPoints() : BigDecimal.ZERO)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+        return QuizDetailResponse.builder()
+                .id(quiz.getId())
+                .assessmentId(assessment.getId())
+                .title(assessment.getTitle())
+                .passingScore(quiz.getPassingScore())
+                .maxAttempts(quiz.getMaxAttempts())
+                .totalPoints(totalPoints)
+                .questions(questions.stream().map(this::toQuestionDetailResponse).toList())
+                .createdAt(quiz.getCreatedAt())
+                .updatedAt(quiz.getUpdatedAt())
+                .build();
     }
 
     private QuestionDetailResponse toQuestionDetailResponse(QuizQuestion question) {
@@ -323,5 +221,34 @@ public class QuizAuthoringService {
                 .createdAt(question.getCreatedAt())
                 .updatedAt(question.getUpdatedAt())
                 .build();
+    }
+
+    private String serializeOptions(List<QuizOptionDto> options) {
+        try {
+            return objectMapper.writeValueAsString(options);
+        } catch (JsonProcessingException exception) {
+            log.error("Cannot serialize quiz options", exception);
+            throw new AppException(ErrorCode.UNCATEGORIZED_EXCEPTION, "Lỗi xử lý dữ liệu đáp án JSON");
+        }
+    }
+
+    private List<QuizOptionDto> deserializeOptions(String json) {
+        if (json == null || json.isBlank()) {
+            return List.of();
+        }
+        try {
+            return objectMapper.readValue(json, new TypeReference<List<QuizOptionDto>>() {});
+        } catch (JsonProcessingException exception) {
+            log.error("Cannot deserialize quiz options", exception);
+            throw new AppException(ErrorCode.UNCATEGORIZED_EXCEPTION, "Dữ liệu đáp án quiz không hợp lệ");
+        }
+    }
+
+    private String trimToNull(String value) {
+        if (value == null) {
+            return null;
+        }
+        String trimmed = value.trim();
+        return trimmed.isEmpty() ? null : trimmed;
     }
 }

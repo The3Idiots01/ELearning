@@ -1,5 +1,5 @@
 import React, { useState, useRef } from 'react';
-import type { LessonContentType, Section } from '../../../types/course';
+import type { LessonContentType, LearningOutcome, Section } from '../../../types/course';
 import { curriculumApi } from '../api/curriculumApi';
 import { instructorCourseApi } from '../api/instructorCourseApi';
 import { apiClient } from '../../../lib/apiClient';
@@ -17,6 +17,7 @@ interface SectionItemProps {
   onCurriculumChanged: () => void;
   onMoveSectionUp?: () => void;
   onMoveSectionDown?: () => void;
+  outcomes?: LearningOutcome[];
 }
 
 export const SectionItem: React.FC<SectionItemProps> = ({
@@ -28,6 +29,7 @@ export const SectionItem: React.FC<SectionItemProps> = ({
   onCurriculumChanged,
   onMoveSectionUp,
   onMoveSectionDown
+  , outcomes = []
 }) => {
   const { showSuccess, showError } = useToast();
 
@@ -115,8 +117,7 @@ export const SectionItem: React.FC<SectionItemProps> = ({
     try {
       // 1. Create Lesson record
       const createdLesson = await curriculumApi.addLesson(courseId, section.id, {
-        title: newLessonTitle.trim(),
-        contentType: newLessonType
+        title: newLessonTitle.trim()
       });
 
       // Update preview flag if checked
@@ -161,6 +162,7 @@ export const SectionItem: React.FC<SectionItemProps> = ({
 
         setUploadStatusText('Đang gắn video vào bài giảng...');
         await curriculumApi.attachContent(courseId, createdLesson.id, {
+          contentType: 'VIDEO',
           storageKey: presign.storageKey,
           originalFileName: videoFile.name,
           fileSizeBytes: videoFile.size,
@@ -168,7 +170,8 @@ export const SectionItem: React.FC<SectionItemProps> = ({
         });
       } else if (newLessonType === 'ARTICLE' && articleContent.trim()) {
         setUploadStatusText('Đang lưu nội dung bài viết...');
-        await curriculumApi.updateLesson(courseId, createdLesson.id, {
+        await curriculumApi.attachContent(courseId, createdLesson.id, {
+          contentType: 'ARTICLE',
           contentText: articleContent.trim()
         });
       } else if (newLessonType === 'FILE' && docFile) {
@@ -200,6 +203,7 @@ export const SectionItem: React.FC<SectionItemProps> = ({
 
         setUploadStatusText('Đang gắn tệp vào bài giảng...');
         await curriculumApi.attachContent(courseId, createdLesson.id, {
+          contentType: 'FILE',
           storageKey: presign.storageKey,
           originalFileName: docFile.name,
           fileSizeBytes: docFile.size,
@@ -326,10 +330,24 @@ export const SectionItem: React.FC<SectionItemProps> = ({
                 onMoveDown={() =>
                   lIdx < section.lessons.length - 1 && handleReorderLessons(lIdx, lIdx + 1)
                 }
+                outcomes={outcomes}
               />
             ))
           )}
         </div>
+
+        {section.assessments?.length > 0 && (
+          <div className="space-y-2 border-t border-dashed border-amber-200 pt-3">
+            <div className="text-[10px] font-black uppercase tracking-wider text-amber-700">Assessment cuối chương</div>
+            {section.assessments.map((assessment) => (
+              <div key={assessment.id} className="flex items-center gap-3 rounded-xl border border-amber-200 bg-amber-50/60 px-3 py-2.5 text-xs">
+                <span className="material-symbols-outlined text-amber-500 text-[18px]">quiz</span>
+                <span className="flex-1 font-bold text-slate-800">{assessment.title}</span>
+                <span className="text-[10px] text-slate-500">{assessment.outcomeIds?.length || 0} outcomes</span>
+              </div>
+            ))}
+          </div>
+        )}
 
         {/* Add Lesson Action or Integrated All-in-One Form */}
         {!showAddLessonForm ? (
@@ -395,7 +413,6 @@ export const SectionItem: React.FC<SectionItemProps> = ({
                   <option value="VIDEO">📹 Video bài giảng (MP4)</option>
                   <option value="ARTICLE">📝 Bài viết lý thuyết (Text)</option>
                   <option value="FILE">📄 Tệp tài liệu (PDF, ZIP, DOCX)</option>
-                  <option value="QUIZ">❓ Bài trắc nghiệm (Quiz)</option>
                 </select>
               </div>
             </div>
@@ -492,13 +509,6 @@ export const SectionItem: React.FC<SectionItemProps> = ({
                     <span className="material-symbols-outlined text-[18px]">upload</span>
                     <span>{docFile ? 'Đổi tệp tài liệu' : 'Chọn tệp tài liệu để tải lên'}</span>
                   </button>
-                </div>
-              )}
-
-              {/* QUIZ SUBFORM */}
-              {newLessonType === 'QUIZ' && (
-                <div className="p-3 text-xs text-slate-500 bg-surface-container-low rounded-xl">
-                  Bài học dạng trắc nghiệm (Quiz) sẽ được khởi tạo và sẵn sàng để bạn thêm ngân hàng câu hỏi.
                 </div>
               )}
 
