@@ -3,10 +3,14 @@ package com.learnova.elearning.module.course.service;
 import com.learnova.elearning.common.exception.AppException;
 import com.learnova.elearning.common.exception.ErrorCode;
 import com.learnova.elearning.module.course.entity.Course;
+import com.learnova.elearning.module.course.entity.Assessment;
+import com.learnova.elearning.module.course.entity.LearningOutcome;
 import com.learnova.elearning.module.course.entity.enums.CourseStatus;
 import com.learnova.elearning.module.course.repository.CourseRepository;
 import com.learnova.elearning.module.course.repository.CourseSectionRepository;
 import com.learnova.elearning.module.course.repository.LessonRepository;
+import com.learnova.elearning.module.course.repository.AssessmentRepository;
+import com.learnova.elearning.module.course.repository.LearningOutcomeRepository;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -29,6 +33,10 @@ class CourseOwnershipGuardTest {
     private CourseSectionRepository sectionRepository;
     @Mock
     private LessonRepository lessonRepository;
+    @Mock
+    private LearningOutcomeRepository outcomeRepository;
+    @Mock
+    private AssessmentRepository assessmentRepository;
 
     @InjectMocks
     private CourseOwnershipGuard guard;
@@ -77,5 +85,29 @@ class CourseOwnershipGuardTest {
         assertThatThrownBy(() -> guard.requireEditableCourse(1L, 10L))
                 .isInstanceOf(AppException.class)
                 .extracting("errorCode").isEqualTo(ErrorCode.COURSE_LOCKED_BY_ADMIN);
+    }
+
+    @Test
+    @DisplayName("requireOutcomeInCourse: outcome thuộc course khác -> từ chối")
+    void requireOutcomeInCourse_wrongCourse() {
+        LearningOutcome outcome = LearningOutcome.builder().id(21L).build();
+        when(outcomeRepository.findByIdAndCourse_Id(21L, 1L)).thenReturn(Optional.empty());
+        when(outcomeRepository.findById(21L)).thenReturn(Optional.of(outcome));
+
+        assertThatThrownBy(() -> guard.requireOutcomeInCourse(21L, 1L))
+                .isInstanceOf(AppException.class)
+                .extracting("errorCode").isEqualTo(ErrorCode.OUTCOME_NOT_IN_COURSE);
+    }
+
+    @Test
+    @DisplayName("requireAssessmentInCourse: assessment thuộc course khác -> từ chối")
+    void requireAssessmentInCourse_wrongCourse() {
+        Assessment assessment = Assessment.builder().id(31L).build();
+        when(assessmentRepository.findWithDetailsByIdAndCourse_Id(31L, 1L)).thenReturn(Optional.empty());
+        when(assessmentRepository.findById(31L)).thenReturn(Optional.of(assessment));
+
+        assertThatThrownBy(() -> guard.requireAssessmentInCourse(31L, 1L))
+                .isInstanceOf(AppException.class)
+                .extracting("errorCode").isEqualTo(ErrorCode.ASSESSMENT_NOT_IN_COURSE);
     }
 }

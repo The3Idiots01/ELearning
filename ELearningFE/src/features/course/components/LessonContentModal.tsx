@@ -1,12 +1,11 @@
 import React, { useState, useRef } from 'react';
 import { Modal } from '../../../components/common/Modal';
-import type { Lesson, UploadPurpose } from '../../../types/course';
+import type { Lesson, LessonContentType, UploadPurpose } from '../../../types/course';
 import { instructorCourseApi } from '../api/instructorCourseApi';
 import { curriculumApi } from '../api/curriculumApi';
 import { apiClient } from '../../../lib/apiClient';
 import { useToast } from '../../../app/context/ToastContext';
 import { formatDuration, formatFileSize } from '../../../lib/formatters';
-import { QuizAuthoringView } from './QuizAuthoringView';
 
 interface LessonContentModalProps {
   isOpen: boolean;
@@ -30,6 +29,9 @@ export const LessonContentModal: React.FC<LessonContentModalProps> = ({
 
   // Article text state
   const [contentText, setContentText] = useState(lesson.contentText || '');
+  const [selectedContentType, setSelectedContentType] = useState<LessonContentType | undefined>(
+    lesson.contentType
+  );
   const [isSavingText, setIsSavingText] = useState(false);
 
   // Upload states
@@ -47,9 +49,14 @@ export const LessonContentModal: React.FC<LessonContentModalProps> = ({
   // 1. SAVE ARTICLE CONTENT (TEXT)
   // ---------------------------------------------------------------------------
   const handleSaveArticleText = async () => {
+    if (selectedContentType !== 'ARTICLE') {
+      showError('Hãy chọn loại nội dung ARTICLE trước khi lưu bài viết.');
+      return;
+    }
     setIsSavingText(true);
     try {
-      await curriculumApi.updateLesson(courseId, lesson.id, {
+      await curriculumApi.attachContent(courseId, lesson.id, {
+        contentType: selectedContentType,
         contentText: contentText.trim()
       });
       showSuccess('Đã lưu nội dung bài viết thành công!');
@@ -68,13 +75,19 @@ export const LessonContentModal: React.FC<LessonContentModalProps> = ({
     const file = e.target.files?.[0];
     if (!file) return;
 
+    const contentType = selectedContentType;
+    if (contentType !== 'VIDEO' && contentType !== 'FILE') {
+      showError('Hãy chọn VIDEO hoặc FILE trước khi tải nội dung.');
+      return;
+    }
+
     let purpose: UploadPurpose = 'LESSON_VIDEO';
-    if (lesson.contentType === 'FILE') {
+    if (contentType === 'FILE') {
       purpose = 'LESSON_FILE';
     }
 
     // Validate video limits
-    if (lesson.contentType === 'VIDEO') {
+    if (contentType === 'VIDEO') {
       if (!file.type.includes('mp4')) {
         showError('Video bài giảng phải có định dạng MP4 (BR-05).');
         return;
@@ -96,7 +109,7 @@ export const LessonContentModal: React.FC<LessonContentModalProps> = ({
         courseId,
         lessonId: lesson.id,
         fileName: file.name,
-        contentType: file.type || (lesson.contentType === 'VIDEO' ? 'video/mp4' : 'application/pdf'),
+        contentType: file.type || (contentType === 'VIDEO' ? 'video/mp4' : 'application/pdf'),
         sizeBytes: file.size
       });
 
@@ -107,7 +120,7 @@ export const LessonContentModal: React.FC<LessonContentModalProps> = ({
       await apiClient.uploadDirect(
         presign.uploadUrl,
         file,
-        file.type || (lesson.contentType === 'VIDEO' ? 'video/mp4' : 'application/pdf'),
+        file.type || (contentType === 'VIDEO' ? 'video/mp4' : 'application/pdf'),
         (percent) => {
           setUploadProgress(30 + Math.round(percent * 0.5));
         }
@@ -119,18 +132,19 @@ export const LessonContentModal: React.FC<LessonContentModalProps> = ({
       // 3. Attach content metadata to lesson. durationSeconds không còn gửi cho
       // VIDEO — server tự đo thật ở job nền (§7.5), không tin giá trị client khai.
       await curriculumApi.attachContent(courseId, lesson.id, {
+        contentType,
         storageKey: presign.storageKey,
         originalFileName: file.name,
         fileSizeBytes: file.size,
-        mimeType: file.type || (lesson.contentType === 'VIDEO' ? 'video/mp4' : 'application/pdf')
+        mimeType: file.type || (contentType === 'VIDEO' ? 'video/mp4' : 'application/pdf')
       });
 
       setUploadProgress(100);
       setUploadStatusText('Hoàn tất tải lên thành công!');
-      if (lesson.contentType === 'VIDEO') {
+      if (contentType === 'VIDEO') {
         showSuccess('Đã tải lên video! Hệ thống đang xử lý ở nền, quay lại sau ít phút để xem trạng thái.');
       } else {
-        showSuccess(`Đã tải lên và gắn nội dung ${lesson.contentType} thành công!`);
+        showSuccess(`Đã tải lên và gắn nội dung ${contentType} thành công!`);
       }
       onContentUpdated();
     } catch (err: any) {
@@ -208,45 +222,51 @@ export const LessonContentModal: React.FC<LessonContentModalProps> = ({
     }
   };
 
-  if (lesson.contentType === 'QUIZ') {
-    return (
-      <Modal
-        isOpen={isOpen}
-        onClose={onClose}
-        title={`Soạn bài trắc nghiệm: ${lesson.title}`}
-        subtitle="Cấu hình bài thi và quản lý ngân hàng câu hỏi trắc nghiệm"
-        maxWidth="4xl"
-        icon="quiz"
-      >
-        <QuizAuthoringView
-          courseId={courseId}
-          lesson={lesson}
-          onContentUpdated={onContentUpdated}
-        />
-      </Modal>
-    );
-  }
-
   return (
     <Modal
       isOpen={isOpen}
       onClose={onClose}
       title={`Soạn nội dung: ${lesson.title}`}
-      subtitle={`Định dạng bài học: ${lesson.contentType}${
-        lesson.contentType === 'VIDEO' || lesson.contentType === 'FILE'
+      subtitle={`Định dạng bài học: ${selectedContentType || 'chưa chọn'}${
+        selectedContentType === 'VIDEO' || selectedContentType === 'FILE'
           ? ` • Trạng thái: ${lesson.uploadStatus || 'EMPTY'}`
           : ''
       }`}
       maxWidth="2xl"
       icon={
-        lesson.contentType === 'VIDEO'
+        selectedContentType === 'VIDEO'
           ? 'play_circle'
-          : lesson.contentType === 'ARTICLE'
+          : selectedContentType === 'ARTICLE'
           ? 'article'
           : 'description'
       }
     >
       <div className="space-y-6">
+        {!selectedContentType && (
+          <div className="rounded-2xl border border-primary/30 bg-primary/5 p-4 space-y-2">
+            <label className="block text-xs font-bold uppercase tracking-wider text-slate-800">
+              Chọn loại nội dung chính
+            </label>
+            <select
+              value=""
+              onChange={(event) =>
+                setSelectedContentType(event.target.value as LessonContentType)
+              }
+              className="w-full px-3.5 py-2.5 bg-white border border-outline-variant/70 rounded-xl text-xs text-on-surface font-bold focus:border-primary focus:outline-none"
+            >
+              <option value="" disabled>
+                Chọn định dạng bài học...
+              </option>
+              <option value="VIDEO">📹 Video bài giảng (MP4)</option>
+              <option value="ARTICLE">📝 Bài viết lý thuyết (Text)</option>
+              <option value="FILE">📄 Tệp tài liệu (PDF, ZIP, DOCX)</option>
+            </select>
+            <p className="text-[11px] text-slate-500 m-0">
+              Lesson plan được tạo trước; sau khi chọn loại, bạn có thể gắn nội dung ở bước tiếp theo.
+            </p>
+          </div>
+        )}
+
         {/* Tab Headers */}
         <div className="flex border-b border-slate-200 gap-6 text-xs font-bold">
           <button
@@ -259,7 +279,7 @@ export const LessonContentModal: React.FC<LessonContentModalProps> = ({
             }`}
           >
             <span className="material-symbols-outlined text-[18px]">edit_note</span>
-            <span>Nội dung chính ({lesson.contentType})</span>
+            <span>Nội dung chính ({selectedContentType || 'chưa chọn'})</span>
           </button>
 
           <button
@@ -280,7 +300,7 @@ export const LessonContentModal: React.FC<LessonContentModalProps> = ({
         {activeTab === 'content' && (
           <div className="space-y-5">
             {/* FORMAT: VIDEO */}
-            {lesson.contentType === 'VIDEO' && (
+            {selectedContentType === 'VIDEO' && (
               <div className="space-y-4">
                 <div className="bg-surface-container-low p-4 rounded-2xl border border-outline-variant/60 space-y-3">
                   <div className="flex items-center justify-between">
@@ -375,7 +395,7 @@ export const LessonContentModal: React.FC<LessonContentModalProps> = ({
             )}
 
             {/* FORMAT: ARTICLE (TEXT) */}
-            {lesson.contentType === 'ARTICLE' && (
+            {selectedContentType === 'ARTICLE' && (
               <div className="space-y-4">
                 <div className="space-y-1.5">
                   <label className="block text-xs font-bold text-slate-800 uppercase tracking-wider">
@@ -412,7 +432,7 @@ export const LessonContentModal: React.FC<LessonContentModalProps> = ({
             )}
 
             {/* FORMAT: FILE (DOCUMENT) */}
-            {lesson.contentType === 'FILE' && (
+            {selectedContentType === 'FILE' && (
               <div className="space-y-4">
                 <div className="bg-surface-container-low p-4 rounded-2xl border border-outline-variant/60 space-y-3">
                   <span className="text-xs font-bold uppercase tracking-wider text-slate-800">

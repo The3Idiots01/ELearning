@@ -1,11 +1,12 @@
 import React, { useState, useEffect } from 'react';
-import type { CourseDetail, Curriculum, Lesson, ProgressSnapshot } from '../../../../types/course';
+import type { Assessment, CourseDetail, Curriculum, Lesson, ProgressSnapshot } from '../../../../types/course';
 import { formatDuration } from '../../../../lib/formatters';
 import { DocumentViewer } from '../../components/DocumentViewer';
 import { LessonVideoPlayer } from '../../components/LessonVideoPlayer';
 import { playbackApi } from '../../api/playbackApi';
 import { ApiError } from '../../../../lib/apiClient';
 import { useCourseProgress } from '../../hooks/useCourseProgress';
+import { QuizTakingView } from '../../components/QuizTakingView';
 
 interface LearningWorkspacePageProps {
   courseId: number;
@@ -15,6 +16,7 @@ interface LearningWorkspacePageProps {
   courseProgressPercent?: number | null;
   onCompleteLesson: (lessonId: number) => Promise<boolean>;
   onLessonProgress: (snapshot: ProgressSnapshot) => void;
+  onAssessmentCompleted?: () => void;
   onBack: () => void;
 }
 
@@ -26,9 +28,11 @@ export const LearningWorkspacePage: React.FC<LearningWorkspacePageProps> = ({
   courseProgressPercent,
   onCompleteLesson,
   onLessonProgress,
+  onAssessmentCompleted,
   onBack
 }) => {
   const [activeLesson, setActiveLesson] = useState<Lesson | null>(null);
+  const [activeAssessment, setActiveAssessment] = useState<Assessment | null>(null);
   const [isCompleting, setIsCompleting] = useState(false);
   const [expandedSections, setExpandedSections] = useState<Record<number, boolean>>({});
   const [playbackUrl, setPlaybackUrl] = useState<string | null>(null);
@@ -82,7 +86,7 @@ export const LearningWorkspacePage: React.FC<LearningWorkspacePageProps> = ({
       });
       setExpandedSections(initialExpand);
 
-      if (!activeLesson) {
+      if (!activeLesson && !activeAssessment) {
         for (const sec of curriculum.sections) {
           if (sec.lessons.length > 0) {
             setActiveLesson(sec.lessons[0]);
@@ -91,9 +95,9 @@ export const LearningWorkspacePage: React.FC<LearningWorkspacePageProps> = ({
         }
       }
     }
-  }, [curriculum]);
+  }, [curriculum, activeAssessment, activeLesson]);
 
-  const { totalLessons, completedLessons: completedCount, percent: overallProgress } = useCourseProgress(
+  const { totalUnits, completedUnits, percent: overallProgress } = useCourseProgress(
     curriculum,
     courseProgressPercent
   );
@@ -187,7 +191,13 @@ export const LearningWorkspacePage: React.FC<LearningWorkspacePageProps> = ({
         <main className="flex-1 flex flex-col bg-slate-950 overflow-y-auto min-h-0">
           
           {/* Media / Document Player Box */}
-          {!activeLesson ? (
+          {activeAssessment ? (
+            <QuizTakingView
+              courseId={courseId}
+              assessmentId={activeAssessment.id}
+              onSubmitted={onAssessmentCompleted}
+            />
+          ) : !activeLesson ? (
             <div className="w-full bg-black aspect-video max-h-[60vh] flex items-center justify-center relative border-b border-slate-800 shrink-0">
               <div className="text-center p-8 text-slate-400">
                 <span className="material-symbols-outlined text-[48px] mb-2">touch_app</span>
@@ -333,7 +343,7 @@ export const LearningWorkspacePage: React.FC<LearningWorkspacePageProps> = ({
               <span>Nội dung khóa học</span>
             </h3>
             <span className="text-[10px] font-bold text-slate-400 bg-slate-800 px-2.5 py-1 rounded-full border border-slate-700">
-              {completedCount}/{totalLessons} bài
+              {completedUnits}/{totalUnits} mục
             </span>
           </div>
 
@@ -361,7 +371,10 @@ export const LearningWorkspacePage: React.FC<LearningWorkspacePageProps> = ({
                         return (
                           <button
                             key={les.id}
-                            onClick={() => setActiveLesson(les)}
+                            onClick={() => {
+                              setActiveAssessment(null);
+                              setActiveLesson(les);
+                            }}
                             className={`w-full p-3.5 flex items-center justify-between text-left text-xs transition-all cursor-pointer ${
                               isSelected
                                 ? 'bg-primary/20 text-white font-bold border-l-4 border-primary-container'
@@ -396,6 +409,30 @@ export const LearningWorkspacePage: React.FC<LearningWorkspacePageProps> = ({
                           </button>
                         );
                       })}
+                      {(section.assessments || []).map((assessment) => (
+                        <button
+                          key={`assessment-${assessment.id}`}
+                          onClick={() => {
+                            setActiveLesson(null);
+                            setActiveAssessment(assessment);
+                          }}
+                          className={`w-full p-3.5 flex items-center justify-between text-left text-xs border-t border-slate-800/80 cursor-pointer ${activeAssessment?.id === assessment.id ? 'bg-amber-500/10 text-white border-l-4 border-amber-400' : 'text-slate-300 hover:bg-slate-800/40'}`}
+                        >
+                          <div className="flex items-center gap-3 overflow-hidden">
+                            <span className="material-symbols-outlined text-[18px] shrink-0 text-amber-400">
+                              quiz
+                            </span>
+                            <span className="truncate">Bài kiểm tra: {assessment.title}</span>
+                          </div>
+                          {assessment.completed ? (
+                            <span className="material-symbols-outlined text-emerald-400 text-[18px] shrink-0">
+                              check_circle
+                            </span>
+                          ) : (
+                            <span className="text-[10px] text-slate-500 font-bold shrink-0">Quiz</span>
+                          )}
+                        </button>
+                      ))}
                     </div>
                   )}
                 </div>

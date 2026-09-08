@@ -19,7 +19,7 @@ import java.util.List;
  * Controller dành cho Học viên lấy đề thi, làm bài và nộp bài kiểm tra (US-20).
  */
 @RestController
-@RequestMapping("/api/v1/learner/courses/{courseId}/lessons/{lessonId}/quiz")
+@RequestMapping("/api/v1/learner/courses/{courseId}/assessments/{assessmentId}/quiz")
 @RequiredArgsConstructor
 public class LearnerQuizController {
 
@@ -28,21 +28,21 @@ public class LearnerQuizController {
     @GetMapping
     public ResponseEntity<ApiResponse<QuizTakingResponse>> getQuizForTaking(
             @PathVariable Long courseId,
-            @PathVariable Long lessonId,
+            @PathVariable Long assessmentId,
             @AuthenticationPrincipal CustomUserDetails user
     ) {
-        QuizTakingResponse response = quizTakingService.getQuizForTaking(courseId, lessonId, user.getId());
+        QuizTakingResponse response = quizTakingService.getQuizForTaking(courseId, assessmentId, user.getId());
         return ResponseEntity.ok(ApiResponse.success("Lấy đề thi bài quiz thành công", response));
     }
 
     @PostMapping("/attempts")
     public ResponseEntity<ApiResponse<QuizAttemptResponse>> submitAttempt(
             @PathVariable Long courseId,
-            @PathVariable Long lessonId,
+            @PathVariable Long assessmentId,
             @Valid @RequestBody SubmitQuizAttemptRequest request,
             @AuthenticationPrincipal CustomUserDetails user
     ) {
-        QuizAttemptResponse response = quizTakingService.submitAttempt(courseId, lessonId, request, user.getId());
+        QuizAttemptResponse response = quizTakingService.submitAttempt(courseId, assessmentId, request, user.getId());
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(ApiResponse.success("Nộp bài thi thành công", response));
     }
@@ -50,10 +50,10 @@ public class LearnerQuizController {
     @GetMapping("/attempts")
     public ResponseEntity<ApiResponse<List<QuizAttemptResponse>>> getAttemptHistory(
             @PathVariable Long courseId,
-            @PathVariable Long lessonId,
+            @PathVariable Long assessmentId,
             @AuthenticationPrincipal CustomUserDetails user
     ) {
-        List<QuizAttemptResponse> response = quizTakingService.getAttemptHistory(courseId, lessonId, user.getId());
+        List<QuizAttemptResponse> response = quizTakingService.getAttemptHistory(courseId, assessmentId, user.getId());
         return ResponseEntity.ok(ApiResponse.success("Lấy lịch sử làm bài thành công", response));
     }
 }

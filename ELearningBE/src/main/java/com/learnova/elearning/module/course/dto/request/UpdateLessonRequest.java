@@ -3,8 +3,10 @@ package com.learnova.elearning.module.course.dto.request;
 import jakarta.validation.constraints.Size;
 import lombok.Data;
 
+import java.util.List;
+
 /**
- * Partial update một lesson. contentText chỉ áp dụng cho lesson ARTICLE.
+ * Partial update lesson plan và mapping outcome.
  */
 @Data
 public class UpdateLessonRequest {
@@ -14,5 +16,5 @@ public class UpdateLessonRequest {
 
     private Boolean isPreview;
 
-    private String contentText;
+    private List<Long> outcomeIds;
 }

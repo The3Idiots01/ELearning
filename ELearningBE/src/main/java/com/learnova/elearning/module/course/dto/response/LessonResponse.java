@@ -22,6 +22,8 @@ public class LessonResponse {
     private Integer position;
     private Boolean completed;
 
+    private List<Long> outcomeIds;
+
     private String contentText;
 
     /** true nếu learner có thể xin PlaybackTicket cho lesson này ngay bây giờ — §7.1 (G1). */

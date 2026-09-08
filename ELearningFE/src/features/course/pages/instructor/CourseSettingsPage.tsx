@@ -1,13 +1,16 @@
 import React, { useState, useEffect } from 'react';
-import type { CourseDetail, CourseLevel } from '../../../../types/course';
+import type { CourseDetail, CourseLevel, LearningOutcome } from '../../../../types/course';
 import type { Category } from '../../../../types/category';
 import { instructorCourseApi } from '../../api/instructorCourseApi';
 import { useToast } from '../../../../app/context/ToastContext';
 import { BulletsEditor } from '../../components/BulletsEditor';
+import { LearningOutcomesEditor } from '../../components/LearningOutcomesEditor';
+import { outcomeApi } from '../../api/outcomeApi';
 import { ThumbnailUploader } from '../../components/ThumbnailUploader';
 import { PublishCheckModal } from '../../components/PublishCheckModal';
 import { StatusBadge } from '../../../../components/common/Badge';
 import { formatCurrencyVND } from '../../../../lib/formatters';
+import { AuthoringStepNav } from '../../components/AuthoringStepNav';
 
 interface CourseSettingsPageProps {
   courseId: number;
@@ -41,7 +44,7 @@ export const CourseSettingsPage: React.FC<CourseSettingsPageProps> = ({
   const [isFree, setIsFree] = useState<boolean>(true);
 
   // Form State: 3 Bullets
-  const [learningObjectives, setLearningObjectives] = useState<string[]>(['', '', '', '']);
+  const [outcomes, setOutcomes] = useState<LearningOutcome[]>([]);
   const [requirements, setRequirements] = useState<string[]>(['']);
   const [targetAudiences, setTargetAudiences] = useState<string[]>(['']);
 
@@ -64,11 +67,7 @@ export const CourseSettingsPage: React.FC<CourseSettingsPageProps> = ({
       setPrice(data.price || 0);
       setIsFree(!data.price || data.price === 0);
 
-      setLearningObjectives(
-        data.learningObjectives && data.learningObjectives.length > 0
-          ? data.learningObjectives
-          : ['', '', '', '']
-      );
+      setOutcomes(await outcomeApi.list(courseId));
       setRequirements(
         data.requirements && data.requirements.length > 0
           ? data.requirements
@@ -114,12 +113,10 @@ export const CourseSettingsPage: React.FC<CourseSettingsPageProps> = ({
       await instructorCourseApi.updatePrice(courseId, { price: numericPrice });
 
       // 3. Update Bullets (PUT)
-      const cleanObjectives = learningObjectives.filter((o) => o.trim().length > 0);
       const cleanReqs = requirements.filter((r) => r.trim().length > 0);
       const cleanAuds = targetAudiences.filter((a) => a.trim().length > 0);
 
       await instructorCourseApi.updateBullets(courseId, {
-        learningObjectives: cleanObjectives,
         requirements: cleanReqs,
         targetAudiences: cleanAuds
       });
@@ -192,6 +189,7 @@ export const CourseSettingsPage: React.FC<CourseSettingsPageProps> = ({
 
       {/* Main Settings Form Body */}
       <form onSubmit={handleSaveAll} className="p-6 sm:p-8 max-w-5xl mx-auto w-full space-y-8">
+        <AuthoringStepNav courseId={course.id} active="info" />
         {/* 1. Landing Page Information (US-05) */}
         <div className="bg-surface-container-lowest p-6 sm:p-8 rounded-3xl border border-outline-variant/70 shadow-xs space-y-6">
           <div>
@@ -390,7 +388,12 @@ export const CourseSettingsPage: React.FC<CourseSettingsPageProps> = ({
           </div>
         </div>
 
-        {/* 3. Three Highlight Bullets (US-05) */}
+        {/* 3. Learning outcomes */}
+        <div id="outcomes">
+          <LearningOutcomesEditor courseId={course.id} outcomes={outcomes} onChanged={setOutcomes} />
+        </div>
+
+        {/* 4. Three Highlight Bullets (US-05) */}
         <div className="bg-surface-container-lowest p-6 sm:p-8 rounded-3xl border border-outline-variant/70 shadow-xs space-y-6">
           <div>
             <h3 className="text-base font-extrabold text-slate-900 m-0 font-display flex items-center gap-2">
@@ -403,8 +406,6 @@ export const CourseSettingsPage: React.FC<CourseSettingsPageProps> = ({
           </div>
 
           <BulletsEditor
-            learningObjectives={learningObjectives}
-            onChangeLearningObjectives={setLearningObjectives}
             requirements={requirements}
             onChangeRequirements={setRequirements}
             targetAudiences={targetAudiences}

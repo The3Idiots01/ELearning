@@ -10,9 +10,9 @@ export const quizApi = {
   /**
    * 1. Lấy thông tin bài Quiz và danh sách câu hỏi kèm đáp án đúng (dành cho giảng viên).
    */
-  getQuiz: async (courseId: number, lessonId: number): Promise<QuizDetail> => {
+  getQuiz: async (courseId: number, assessmentId: number): Promise<QuizDetail> => {
     return apiClient.get<QuizDetail>(
-      `/api/v1/lecturer/courses/${courseId}/lessons/${lessonId}/quiz`
+      `/api/v1/lecturer/courses/${courseId}/assessments/${assessmentId}/quiz`
     );
   },
 
@@ -21,11 +21,11 @@ export const quizApi = {
    */
   upsertQuiz: async (
     courseId: number,
-    lessonId: number,
+    assessmentId: number,
     data: UpsertQuizRequest
   ): Promise<QuizDetail> => {
     return apiClient.put<QuizDetail>(
-      `/api/v1/lecturer/courses/${courseId}/lessons/${lessonId}/quiz`,
+      `/api/v1/lecturer/courses/${courseId}/assessments/${assessmentId}/quiz`,
       data
     );
   },
@@ -35,11 +35,11 @@ export const quizApi = {
    */
   addQuestion: async (
     courseId: number,
-    lessonId: number,
+    assessmentId: number,
     data: UpsertQuestionRequest
   ): Promise<QuizQuestion> => {
     return apiClient.post<QuizQuestion>(
-      `/api/v1/lecturer/courses/${courseId}/lessons/${lessonId}/quiz/questions`,
+      `/api/v1/lecturer/courses/${courseId}/assessments/${assessmentId}/quiz/questions`,
       data
     );
   },
@@ -49,12 +49,12 @@ export const quizApi = {
    */
   updateQuestion: async (
     courseId: number,
-    lessonId: number,
+    assessmentId: number,
     questionId: number,
     data: UpsertQuestionRequest
   ): Promise<QuizQuestion> => {
     return apiClient.put<QuizQuestion>(
-      `/api/v1/lecturer/courses/${courseId}/lessons/${lessonId}/quiz/questions/${questionId}`,
+      `/api/v1/lecturer/courses/${courseId}/assessments/${assessmentId}/quiz/questions/${questionId}`,
       data
     );
   },
@@ -64,11 +64,11 @@ export const quizApi = {
    */
   deleteQuestion: async (
     courseId: number,
-    lessonId: number,
+    assessmentId: number,
     questionId: number
   ): Promise<void> => {
     return apiClient.delete<void>(
-      `/api/v1/lecturer/courses/${courseId}/lessons/${lessonId}/quiz/questions/${questionId}`
+      `/api/v1/lecturer/courses/${courseId}/assessments/${assessmentId}/quiz/questions/${questionId}`
     );
   },
 
@@ -77,11 +77,11 @@ export const quizApi = {
    */
   reorderQuestions: async (
     courseId: number,
-    lessonId: number,
+    assessmentId: number,
     questionIds: number[]
   ): Promise<void> => {
     return apiClient.patch<void>(
-      `/api/v1/lecturer/courses/${courseId}/lessons/${lessonId}/quiz/questions/reorder`,
+      `/api/v1/lecturer/courses/${courseId}/assessments/${assessmentId}/quiz/questions/reorder`,
       { questionIds }
     );
   }

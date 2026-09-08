@@ -1,12 +1,8 @@
 package com.learnova.elearning.module.course.entity.enums;
 
-/**
- * Loại nội dung của một curriculum item. QUIZ là item giữ chỗ trong section,
- * nội dung chi tiết nằm ở bảng quizzes (1–1 qua lesson_id).
- */
+/** Loại nội dung chính của một lesson. Null được dùng cho lesson plan chưa gắn content. */
 public enum LessonContentType {
     VIDEO,
     ARTICLE,
-    FILE,
-    QUIZ
+    FILE
 }

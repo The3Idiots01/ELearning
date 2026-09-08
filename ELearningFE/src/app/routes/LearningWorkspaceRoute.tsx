@@ -92,6 +92,15 @@ export function LearningWorkspaceRoute() {
     }
   };
 
+  const handleAssessmentCompleted = async () => {
+    try {
+      const refreshed = await studentCourseApi.getCurriculum(courseIdNum);
+      setCurriculum(refreshed);
+    } catch (err: any) {
+      showError(err.message || 'Không thể làm mới tiến độ sau khi nộp quiz.');
+    }
+  };
+
   if (!courseIdNum) return null;
 
   return (
@@ -103,6 +112,7 @@ export function LearningWorkspaceRoute() {
       courseProgressPercent={courseProgressPercent}
       onCompleteLesson={handleCompleteLesson}
       onLessonProgress={handleLessonProgress}
+      onAssessmentCompleted={() => void handleAssessmentCompleted()}
       onBack={() => navigate('/my-courses')}
     />
   );

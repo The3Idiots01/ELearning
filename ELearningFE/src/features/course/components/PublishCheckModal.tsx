@@ -75,6 +75,18 @@ export const PublishCheckModal: React.FC<PublishCheckModalProps> = ({
     return 'Tiêu chí chưa đạt';
   };
 
+  const openIssue = (issue: PublishIssue | string) => {
+    if (typeof issue === 'object' && issue?.path) {
+      onClose();
+      navigate(issue.path);
+      return;
+    }
+    if (typeof issue === 'object' && issue?.field?.includes('outcomes')) {
+      onClose();
+      navigate(`/instructor/courses/${courseId}/settings#outcomes`);
+    }
+  };
+
   return (
     <Modal
       isOpen={isOpen}
@@ -167,14 +179,14 @@ export const PublishCheckModal: React.FC<PublishCheckModalProps> = ({
               {checkResult.issues && checkResult.issues.length > 0 ? (
                 <div className="space-y-2 bg-surface-container-low p-4 rounded-2xl border border-outline-variant/60">
                   {checkResult.issues.map((issue, idx) => (
-                    <div key={idx} className="flex items-start gap-2.5 text-xs text-slate-700">
+                    <button type="button" key={idx} onClick={() => openIssue(issue)} className="w-full flex items-start gap-2.5 text-left text-xs text-slate-700 hover:bg-rose-50 rounded-lg p-1 cursor-pointer">
                       <span className="material-symbols-outlined text-rose-500 text-[16px] shrink-0 mt-0.5">
                         cancel
                       </span>
                       <span className="leading-snug font-medium text-rose-900">
                         {getIssueMessage(issue)}
                       </span>
-                    </div>
+                    </button>
                   ))}
                 </div>
               ) : (
@@ -189,7 +201,7 @@ export const PublishCheckModal: React.FC<PublishCheckModalProps> = ({
                   </div>
                   <div className="flex items-center gap-2 text-emerald-700 font-semibold">
                     <span className="material-symbols-outlined text-[16px]">done</span>
-                    <span>Đủ mục tiêu (≥4), yêu cầu (≥1) và đối tượng học viên (≥1)</span>
+                    <span>Đủ learning outcome (≥2), yêu cầu (≥1) và đối tượng học viên (≥1)</span>
                   </div>
                   <div className="flex items-center gap-2 text-emerald-700 font-semibold">
                     <span className="material-symbols-outlined text-[16px]">done</span>

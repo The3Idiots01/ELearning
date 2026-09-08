@@ -42,47 +42,75 @@ public class LessonContentService {
     private final LessonResponseAssembler lessonAssembler;
     private final ApplicationEventPublisher events;
 
-    // ---- Lesson content (VIDEO / FILE) ------------------------------------
+    // ---- Lesson content (VIDEO / ARTICLE / FILE) --------------------------
 
     @Transactional
     public LessonResponse attachContent(Long courseId, Long lessonId,
                                         AttachLessonContentRequest request, Long userId) {
-        ownershipGuard.requireEditableCourse(courseId, userId);
+        Course course = ownershipGuard.requireEditableCourse(courseId, userId);
         Lesson lesson = ownershipGuard.requireLessonInCourse(lessonId, courseId);
-        UploadPurpose purpose = purposeForContent(lesson.getContentType());
-
-        String key = request.getStorageKey();
-        // Key phải thuộc đúng lesson này
-        if (!key.startsWith(keyFactory.lessonPrefix(courseId, lessonId))) {
-            throw new AppException(ErrorCode.UPLOAD_METADATA_MISMATCH,
-                    "storageKey does not belong to this lesson");
+        // The HTTP contract requires contentType. The fallback keeps direct
+        // callers from the pre-Task-07 service compatible during rollout.
+        LessonContentType targetType = request.getContentType() != null
+                ? request.getContentType() : lesson.getContentType();
+        if (targetType == null) {
+            throw new AppException(ErrorCode.VALIDATION_ERROR, "contentType is required");
         }
 
-        ObjectMetadata meta = storageService.head(key)
-                .orElseThrow(() -> new AppException(ErrorCode.UPLOAD_OBJECT_NOT_FOUND));
-
-        verifyMetadata(meta, request.getFileSizeBytes(), request.getMimeType(), purpose);
-
-        String effectiveType = meta.contentType() != null ? meta.contentType() : request.getMimeType();
         String oldKey = lesson.getStorageKey();
+        String key = null;
+        ObjectMetadata meta = null;
 
-        lesson.setStorageKey(key);
-        lesson.setOriginalFileName(request.getOriginalFileName());
-        lesson.setFileSizeBytes(meta.sizeBytes());
-        lesson.setMimeType(effectiveType);
-        lesson.setDurationSeconds(0);
+        if (targetType == LessonContentType.ARTICLE) {
+            if (request.getContentText() == null) {
+                throw new AppException(ErrorCode.VALIDATION_ERROR, "contentText is required for ARTICLE");
+            }
+            lesson.setContentText(request.getContentText().trim());
+            lesson.setUploadStatus(lesson.getContentText().isBlank()
+                    ? LessonUploadStatus.EMPTY : LessonUploadStatus.READY);
+        } else {
+            UploadPurpose purpose = purposeForContent(targetType);
+            key = request.getStorageKey();
+            if (key == null || key.isBlank()) {
+                throw new AppException(ErrorCode.FIELD_REQUIRED, "storageKey is required for " + targetType);
+            }
+            if (!key.startsWith(keyFactory.lessonPrefix(courseId, lessonId))) {
+                throw new AppException(ErrorCode.UPLOAD_METADATA_MISMATCH,
+                        "storageKey does not belong to this lesson");
+            }
 
-        boolean isVideo = purpose == UploadPurpose.LESSON_VIDEO;
-        // duration client khai bị bỏ hẳn — không tin client (§7.5). VIDEO chuyển
-        // PROCESSING, job nền (VideoMetadataProcessor) đo duration thật rồi mới READY.
-        lesson.setUploadStatus(isVideo ? LessonUploadStatus.PROCESSING : LessonUploadStatus.READY);
+            meta = storageService.head(key)
+                    .orElseThrow(() -> new AppException(ErrorCode.UPLOAD_OBJECT_NOT_FOUND));
+            verifyMetadata(meta, request.getFileSizeBytes(), request.getMimeType(), purpose);
+
+            String effectiveType = meta.contentType() != null ? meta.contentType() : request.getMimeType();
+            lesson.setStorageKey(key);
+            lesson.setOriginalFileName(request.getOriginalFileName());
+            lesson.setFileSizeBytes(meta.sizeBytes());
+            lesson.setMimeType(effectiveType);
+            lesson.setContentText(null);
+            lesson.setDurationSeconds(0);
+
+            boolean isVideo = targetType == LessonContentType.VIDEO;
+            // VIDEO chuyển PROCESSING, job nền đo duration thật rồi mới READY.
+            lesson.setUploadStatus(isVideo ? LessonUploadStatus.PROCESSING : LessonUploadStatus.READY);
+        }
+
+        if (targetType == LessonContentType.ARTICLE) {
+            lesson.setStorageKey(null);
+            lesson.setOriginalFileName(null);
+            lesson.setFileSizeBytes(null);
+            lesson.setMimeType("text/plain");
+            lesson.setDurationSeconds(0);
+        }
+        lesson.setContentType(targetType);
 
         Lesson saved = lessonRepository.save(lesson);
 
-        if (oldKey != null && !oldKey.equals(key)) {
+        if (oldKey != null && !oldKey.equals(key) && course.getPublishedAt() == null) {
             storageService.delete(oldKey);
         }
-        if (isVideo) {
+        if (targetType == LessonContentType.VIDEO) {
             events.publishEvent(new LessonContentAttachedEvent(saved.getId(), key));
         }
         return lessonAssembler.assembleOne(saved);
@@ -92,13 +120,14 @@ public class LessonContentService {
     public LessonResponse removeContent(Long courseId, Long lessonId, Long userId) {
         Course course = ownershipGuard.requireEditableCourse(courseId, userId);
         Lesson lesson = ownershipGuard.requireLessonInCourse(lessonId, courseId);
-        purposeForContent(lesson.getContentType()); // chặn ARTICLE/QUIZ
 
         String key = lesson.getStorageKey();
+        lesson.setContentType(null);
         lesson.setStorageKey(null);
         lesson.setOriginalFileName(null);
         lesson.setFileSizeBytes(null);
         lesson.setMimeType(null);
+        lesson.setContentText(null);
         lesson.setDurationSeconds(0);
         lesson.setUploadStatus(LessonUploadStatus.EMPTY);
         Lesson saved = lessonRepository.save(lesson);
@@ -165,10 +194,14 @@ public class LessonContentService {
     // ---- Helpers ----------------------------------------------------------
 
     private UploadPurpose purposeForContent(LessonContentType contentType) {
+        if (contentType == null) {
+            throw new AppException(ErrorCode.LESSON_CONTENT_TYPE_MISMATCH,
+                    "Lesson chưa chọn loại nội dung");
+        }
         return switch (contentType) {
             case VIDEO -> UploadPurpose.LESSON_VIDEO;
             case FILE -> UploadPurpose.LESSON_FILE;
-            default -> throw new AppException(ErrorCode.LESSON_CONTENT_TYPE_MISMATCH,
+            case ARTICLE -> throw new AppException(ErrorCode.LESSON_CONTENT_TYPE_MISMATCH,
                     "Chỉ lesson VIDEO/FILE mới gắn được file");
         };
     }

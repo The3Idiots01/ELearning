@@ -9,7 +9,7 @@ import org.springframework.stereotype.Component;
 
 /**
  * VIDEO hoàn thành theo vị trí xa nhất đã tới, KHÔNG theo coverage (§5.1,
- * §5.7). Các contentType khác (ARTICLE, FILE, QUIZ) chỉ hoàn thành thủ công /
+ * §5.7). Các contentType khác (ARTICLE, FILE) chỉ hoàn thành thủ công /
  * qua module khác — policy này luôn trả {@code false} cho chúng.
  */
 @Component

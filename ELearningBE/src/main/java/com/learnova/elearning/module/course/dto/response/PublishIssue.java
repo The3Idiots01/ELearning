@@ -7,5 +7,7 @@ import lombok.Builder;
 public record PublishIssue(
         String code,
         String field,
-        String message
+        String message,
+        Long recordId,
+        String path
 ) {}

@@ -3,14 +3,22 @@ package com.learnova.elearning.module.course.service;
 import com.learnova.elearning.module.course.config.CoursePublishProperties;
 import com.learnova.elearning.module.course.dto.response.PublishIssue;
 import com.learnova.elearning.module.course.entity.Course;
+import com.learnova.elearning.module.course.entity.Assessment;
+import com.learnova.elearning.module.course.entity.LearningOutcome;
 import com.learnova.elearning.module.course.entity.Lesson;
+import com.learnova.elearning.module.course.entity.enums.AssessmentType;
 import com.learnova.elearning.module.course.entity.enums.BulletType;
-import com.learnova.elearning.module.course.entity.enums.LessonContentType;
 import com.learnova.elearning.module.course.entity.enums.LessonUploadStatus;
 import com.learnova.elearning.module.course.repository.CourseBulletRepository;
 import com.learnova.elearning.module.course.repository.CourseSectionRepository;
+import com.learnova.elearning.module.course.repository.LearningOutcomeRepository;
 import com.learnova.elearning.module.course.repository.LessonRepository;
+import com.learnova.elearning.module.course.repository.AssessmentRepository;
 import lombok.RequiredArgsConstructor;
+import com.learnova.elearning.module.quiz.entity.Quiz;
+import com.learnova.elearning.module.quiz.repository.QuizRepository;
+import com.learnova.elearning.module.quiz.repository.QuizQuestionRepository;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
 import java.math.BigDecimal;
@@ -31,6 +39,30 @@ public class CoursePublishValidator {
     private final CourseSectionRepository sectionRepository;
     private final LessonRepository lessonRepository;
     private final CoursePublishProperties props;
+
+    /**
+     * Injected separately so existing unit tests that construct this validator
+     * with the pre-outcome constructor remain source-compatible.
+     */
+    private LearningOutcomeRepository outcomeRepository;
+
+    private AssessmentRepository assessmentRepository;
+    private QuizRepository quizRepository;
+    private QuizQuestionRepository quizQuestionRepository;
+
+    @Autowired
+    void setOutcomeRepository(LearningOutcomeRepository outcomeRepository) {
+        this.outcomeRepository = outcomeRepository;
+    }
+
+    @Autowired
+    void setAlignmentRepositories(AssessmentRepository assessmentRepository,
+                                   QuizRepository quizRepository,
+                                   QuizQuestionRepository quizQuestionRepository) {
+        this.assessmentRepository = assessmentRepository;
+        this.quizRepository = quizRepository;
+        this.quizQuestionRepository = quizQuestionRepository;
+    }
 
     public List<PublishIssue> validate(Course course) {
         List<PublishIssue> issues = new ArrayList<>();
@@ -57,9 +89,11 @@ public class CoursePublishValidator {
         }
 
         // --- Ba khối mô tả ---
-        long objectives = bulletRepository.countByCourse_IdAndBulletType(courseId, BulletType.LEARNING_OBJECTIVE);
+        long objectives = outcomeRepository == null
+                ? bulletRepository.countByCourse_IdAndBulletType(courseId, BulletType.LEARNING_OBJECTIVE)
+                : outcomeRepository.countByCourse_Id(courseId);
         if (objectives < props.getMinObjectives()) {
-            issues.add(issue("OBJECTIVES_NOT_ENOUGH", "learningObjectives",
+            issues.add(issue("OUTCOMES_NOT_ENOUGH", "outcomes",
                     "Cần ít nhất " + props.getMinObjectives() + " mục học viên sẽ học được (hiện có " + objectives + ")"));
         }
         long requirements = bulletRepository.countByCourse_IdAndBulletType(courseId, BulletType.REQUIREMENT);
@@ -87,26 +121,92 @@ public class CoursePublishValidator {
         }
         for (Lesson lesson : lessons) {
             if (!isLessonComplete(lesson)) {
-                String code = lesson.getContentType() == LessonContentType.QUIZ
-                        ? "QUIZ_INCOMPLETE" : "LESSON_CONTENT_INCOMPLETE";
-                issues.add(issue(code, "lesson:" + lesson.getId(),
-                        "Bài học \"" + lesson.getTitle() + "\" chưa có nội dung hoàn chỉnh"));
+                issues.add(issue("LESSON_CONTENT_INCOMPLETE", "lesson:" + lesson.getId(),
+                        "Bài học \"" + lesson.getTitle() + "\" chưa có nội dung hoàn chỉnh",
+                        lesson.getId(), curriculumPath(courseId, "lesson-" + lesson.getId())));
             }
         }
+
+        validateAlignment(courseId, lessons, issues);
 
         return issues;
     }
 
+    private void validateAlignment(Long courseId, List<Lesson> lessons, List<PublishIssue> issues) {
+        if (outcomeRepository == null || assessmentRepository == null) {
+            return;
+        }
+
+        List<LearningOutcome> outcomes = outcomeRepository.findByCourse_IdOrderByPositionAsc(courseId);
+        List<Assessment> assessments = assessmentRepository.findByCourse_Id(courseId);
+
+        for (LearningOutcome outcome : outcomes) {
+            boolean usedByLesson = lessons.stream().anyMatch(lesson -> hasOutcome(lesson.getOutcomes(), outcome.getId()));
+            boolean usedByAssessment = assessments.stream().anyMatch(assessment -> hasOutcome(assessment.getOutcomes(), outcome.getId()));
+            if (!usedByLesson) {
+                issues.add(issue("OUTCOME_WITHOUT_LESSON", "outcome:" + outcome.getId(),
+                        "Kết quả đầu ra chưa được gắn với bài học", outcome.getId(), curriculumPath(courseId, "outcome-" + outcome.getId())));
+            }
+            if (!usedByAssessment) {
+                issues.add(issue("OUTCOME_WITHOUT_ASSESSMENT", "outcome:" + outcome.getId(),
+                        "Kết quả đầu ra chưa được gắn với đánh giá", outcome.getId(), curriculumPath(courseId, "outcome-" + outcome.getId())));
+            }
+        }
+
+        for (Lesson lesson : lessons) {
+            if (lesson.getOutcomes() == null || lesson.getOutcomes().isEmpty()) {
+                issues.add(issue("LESSON_WITHOUT_OUTCOME", "lesson:" + lesson.getId(),
+                        "Bài học chưa được gắn với kết quả đầu ra", lesson.getId(), curriculumPath(courseId, "lesson-" + lesson.getId())));
+            }
+        }
+
+        for (Assessment assessment : assessments) {
+            String path = curriculumPath(courseId, "assessment-" + assessment.getId());
+            if (assessment.getOutcomes() == null || assessment.getOutcomes().isEmpty()) {
+                issues.add(issue("ASSESSMENT_WITHOUT_OUTCOME", "assessment:" + assessment.getId(),
+                        "Đánh giá chưa được gắn với kết quả đầu ra", assessment.getId(), path));
+            }
+            if (assessment.getSection() == null) {
+                issues.add(issue("ASSESSMENT_NOT_PLACED", "assessment:" + assessment.getId(),
+                        "Đánh giá chưa được đặt vào chương học", assessment.getId(), path));
+            }
+            if (assessment.getType() == AssessmentType.QUIZ) {
+                validateQuiz(courseId, assessment, path, issues);
+            }
+        }
+    }
+
+    private void validateQuiz(Long courseId, Assessment assessment, String path, List<PublishIssue> issues) {
+        if (quizRepository == null || quizQuestionRepository == null) {
+            return;
+        }
+        Quiz quiz = quizRepository.findByAssessment_IdAndAssessment_Course_Id(assessment.getId(), courseId).orElse(null);
+        if (quiz == null || quiz.getPassingScore() == null
+                || quiz.getPassingScore().signum() < 0
+                || quiz.getPassingScore().compareTo(BigDecimal.valueOf(100)) > 0
+                || (quiz.getMaxAttempts() != null && quiz.getMaxAttempts() < 1)) {
+            issues.add(issue("QUIZ_CONFIG_INCOMPLETE", "assessment:" + assessment.getId(),
+                    "Quiz chưa có cấu hình hợp lệ (điểm đạt 0–100 và số lần làm phải từ 1)", assessment.getId(), path));
+            return;
+        }
+
+        if (quizQuestionRepository.findByQuiz_IdOrderByPositionAsc(quiz.getId()).isEmpty()) {
+            issues.add(issue("QUIZ_WITHOUT_QUESTION", "assessment:" + assessment.getId(),
+                    "Quiz cần ít nhất 1 câu hỏi", assessment.getId(), path));
+            return;
+        }
+    }
+
     /**
-     * "Có nội dung thật": VIDEO/FILE đã upload xong (READY); ARTICLE có nội dung text;
-     * QUIZ hiện chưa hoàn chỉnh được (module quiz thuộc Sprint 2 — sẽ thay bằng kiểm
-     * tra số câu hỏi/đáp án khi có bảng quizzes).
+     * "Có nội dung thật": VIDEO/FILE đã upload xong (READY); ARTICLE có nội dung text.
      */
     private boolean isLessonComplete(Lesson lesson) {
+        if (lesson.getContentType() == null) {
+            return false;
+        }
         return switch (lesson.getContentType()) {
             case VIDEO, FILE -> lesson.getUploadStatus() == LessonUploadStatus.READY;
             case ARTICLE -> !isBlank(lesson.getContentText());
-            case QUIZ -> false;
         };
     }
 
@@ -114,7 +214,19 @@ public class CoursePublishValidator {
         return value == null || value.isBlank();
     }
 
+    private boolean hasOutcome(java.util.Set<LearningOutcome> outcomes, Long outcomeId) {
+        return outcomes != null && outcomes.stream().anyMatch(outcome -> outcomeId != null && outcomeId.equals(outcome.getId()));
+    }
+
+    private String curriculumPath(Long courseId, String anchor) {
+        return "/instructor/courses/" + courseId + "/curriculum#" + anchor;
+    }
+
     private PublishIssue issue(String code, String field, String message) {
-        return PublishIssue.builder().code(code).field(field).message(message).build();
+        return issue(code, field, message, null, null);
+    }
+
+    private PublishIssue issue(String code, String field, String message, Long recordId, String path) {
+        return PublishIssue.builder().code(code).field(field).message(message).recordId(recordId).path(path).build();
     }
 }

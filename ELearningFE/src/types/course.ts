@@ -2,7 +2,7 @@ import type { Category } from './category';
 
 export type CourseLevel = 'ALL' | 'BEGINNER' | 'INTERMEDIATE' | 'ADVANCED';
 export type CourseStatus = 'DRAFT' | 'PUBLISHED' | 'UNPUBLISHED' | 'SUSPENDED';
-export type LessonContentType = 'VIDEO' | 'ARTICLE' | 'FILE' | 'QUIZ';
+export type LessonContentType = 'VIDEO' | 'ARTICLE' | 'FILE';
 export type LessonUploadStatus = 'EMPTY' | 'PENDING' | 'PROCESSING' | 'READY' | 'FAILED';
 
 export interface LessonResource {
@@ -18,7 +18,7 @@ export interface LessonResource {
 export interface Lesson {
   id: number;
   title: string;
-  contentType: LessonContentType;
+  contentType?: LessonContentType;
   uploadStatus?: LessonUploadStatus;
   durationSeconds?: number;
   isPreview?: boolean;
@@ -33,6 +33,24 @@ export interface Lesson {
   mimeType?: string;
   resources?: LessonResource[];
   completed?: boolean;
+  outcomeIds?: number[];
+}
+
+export interface Assessment {
+  id: number;
+  type: 'QUIZ';
+  title: string;
+  instructions?: string;
+  sectionId?: number | null;
+  position: number;
+  outcomeIds?: number[];
+  completed?: boolean;
+}
+
+export interface LearningOutcome {
+  id: number;
+  statement: string;
+  position: number;
 }
 
 export interface Section {
@@ -41,13 +59,18 @@ export interface Section {
   description?: string;
   position: number;
   totalLessons?: number;
+  completedLessons?: number;
+  totalAssessments?: number;
+  completedAssessments?: number;
   totalDurationSeconds?: number;
   lessons: Lesson[];
+  assessments: Assessment[];
 }
 
 export interface Curriculum {
   courseId: number;
   sections: Section[];
+  unplacedAssessments?: Assessment[];
 }
 
 export interface CourseSummary {
@@ -98,9 +121,9 @@ export interface UpdatePriceRequest {
 }
 
 export interface UpdateBulletsRequest {
-  learningObjectives: string[];
   requirements: string[];
   targetAudiences: string[];
+  version?: number;
 }
 
 export interface UpdateThumbnailRequest {
@@ -119,20 +142,22 @@ export interface UpdateSectionRequest {
 
 export interface CreateLessonRequest {
   title: string;
-  contentType: LessonContentType;
+  outcomeIds?: number[];
 }
 
 export interface UpdateLessonRequest {
   title?: string;
   isPreview?: boolean;
-  contentText?: string;
+  outcomeIds?: number[];
 }
 
 export interface AttachLessonContentRequest {
-  storageKey: string;
-  originalFileName: string;
-  fileSizeBytes: number;
-  mimeType: string;
+  contentType: LessonContentType;
+  storageKey?: string;
+  originalFileName?: string;
+  fileSizeBytes?: number;
+  mimeType?: string;
+  contentText?: string;
   durationSeconds?: number;
 }
 
@@ -172,6 +197,8 @@ export interface PublishIssue {
   code: string;
   field: string;
   message: string;
+  recordId?: number | null;
+  path?: string | null;
 }
 
 export interface PublishCheckResponse {
@@ -222,6 +249,11 @@ export interface ProgressSnapshot {
   completionSource?: CompletionSource | null;
   courseProgressPercent?: number | null;
   enrollmentStatus?: string;
+}
+
+export interface AssessmentProgress {
+  assessmentId: number;
+  completed: boolean;
 }
 
 export interface EnrolledCourse {

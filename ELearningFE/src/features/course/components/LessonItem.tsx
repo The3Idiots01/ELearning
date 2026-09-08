@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import type { Lesson, Section } from '../../../types/course';
+import type { Lesson, LearningOutcome, Section } from '../../../types/course';
 import { curriculumApi } from '../api/curriculumApi';
 import { useToast } from '../../../app/context/ToastContext';
 import { formatDuration, formatFileSize } from '../../../lib/formatters';
@@ -17,6 +17,7 @@ interface LessonItemProps {
   onCurriculumChanged: () => void;
   onMoveUp?: () => void;
   onMoveDown?: () => void;
+  outcomes?: LearningOutcome[];
 }
 
 export const LessonItem: React.FC<LessonItemProps> = ({
@@ -29,6 +30,7 @@ export const LessonItem: React.FC<LessonItemProps> = ({
   onCurriculumChanged,
   onMoveUp,
   onMoveDown
+  , outcomes = []
 }) => {
   const { showSuccess, showError } = useToast();
 
@@ -44,6 +46,8 @@ export const LessonItem: React.FC<LessonItemProps> = ({
 
   // Move to section modal
   const [isMoveModalOpen, setIsMoveModalOpen] = useState(false);
+  const [isOutcomePickerOpen, setIsOutcomePickerOpen] = useState(false);
+  const [selectedOutcomeIds, setSelectedOutcomeIds] = useState<number[]>(lesson.outcomeIds || []);
   const [targetSectionId, setTargetSectionId] = useState<number>(
     allSections.find((s) => s.id !== sectionId)?.id || sectionId
   );
@@ -75,6 +79,17 @@ export const LessonItem: React.FC<LessonItemProps> = ({
       onCurriculumChanged();
     } catch (err: any) {
       showError(err.message || 'Lỗi khi thay đổi chế độ xem thử.');
+    }
+  };
+
+  const saveOutcomes = async () => {
+    try {
+      await curriculumApi.updateLesson(courseId, lesson.id, { outcomeIds: selectedOutcomeIds });
+      setIsOutcomePickerOpen(false);
+      showSuccess('Đã cập nhật liên kết learning outcome cho bài học.');
+      onCurriculumChanged();
+    } catch (err: any) {
+      showError(err.message || 'Không thể cập nhật learning outcome.');
     }
   };
 
@@ -112,8 +127,6 @@ export const LessonItem: React.FC<LessonItemProps> = ({
         return 'article';
       case 'FILE':
         return 'description';
-      case 'QUIZ':
-        return 'quiz';
       default:
         return 'description';
     }
@@ -172,7 +185,7 @@ export const LessonItem: React.FC<LessonItemProps> = ({
 
             <div className="flex items-center gap-2 text-[11px] text-slate-500 flex-wrap">
               <span className="font-semibold uppercase tracking-wider text-[10px] text-primary">
-                {lesson.contentType}
+                {lesson.contentType || 'PLAN'}
               </span>
 
               {lesson.contentType === 'VIDEO' && (
@@ -200,6 +213,7 @@ export const LessonItem: React.FC<LessonItemProps> = ({
               ) : (
                 <span className="text-amber-600 font-semibold">• Chưa có nội dung</span>
               )}
+              {selectedOutcomeIds.length > 0 && <span className="text-indigo-600 font-semibold">• {selectedOutcomeIds.length} outcome</span>}
             </div>
           </div>
         </div>
@@ -218,6 +232,14 @@ export const LessonItem: React.FC<LessonItemProps> = ({
             title="Cho phép học viên học thử bài này mà không cần mua"
           >
             {lesson.isPreview ? 'Học thử: BẬT' : 'Học thử: TẮT'}
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setIsOutcomePickerOpen((open) => !open)}
+            className="px-2.5 py-1 rounded-lg text-[10px] font-extrabold uppercase tracking-wider border border-indigo-200 bg-indigo-50 text-indigo-700 cursor-pointer"
+          >
+            Outcome
           </button>
 
           {/* Edit Content Button */}
@@ -253,6 +275,16 @@ export const LessonItem: React.FC<LessonItemProps> = ({
           </button>
         </div>
       </div>
+
+      {isOutcomePickerOpen && (
+        <div className="mt-2 rounded-xl border border-indigo-200 bg-indigo-50 p-3 space-y-2">
+          <div className="text-[11px] font-black uppercase tracking-wider text-indigo-800">Gắn learning outcomes</div>
+          {outcomes.length === 0 ? <p className="text-xs text-slate-500 m-0">Chưa có outcome. Hãy tạo outcome ở phần Cài đặt khóa học.</p> : outcomes.map((outcome) => (
+            <label key={outcome.id} className="flex items-center gap-2 text-xs text-slate-700"><input type="checkbox" checked={selectedOutcomeIds.includes(outcome.id)} onChange={() => setSelectedOutcomeIds((current) => current.includes(outcome.id) ? current.filter((id) => id !== outcome.id) : [...current, outcome.id])} />{outcome.statement}</label>
+          ))}
+          <button type="button" onClick={() => void saveOutcomes()} className="rounded-lg bg-indigo-600 px-3 py-2 text-xs font-bold text-white">Lưu liên kết</button>
+        </div>
+      )}
 
       {/* Edit Title Modal */}
       {isEditingTitle && (

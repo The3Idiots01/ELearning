@@ -10,9 +10,11 @@ import com.learnova.elearning.module.course.dto.request.CreateCourseRequest;
 import com.learnova.elearning.module.course.dto.request.UpdatePriceRequest;
 import com.learnova.elearning.module.course.dto.request.UpdateThumbnailRequest;
 import com.learnova.elearning.module.course.entity.Course;
+import com.learnova.elearning.module.course.entity.LearningOutcome;
 import com.learnova.elearning.module.course.entity.enums.CourseStatus;
 import com.learnova.elearning.module.course.repository.CourseBulletRepository;
 import com.learnova.elearning.module.course.repository.CourseRepository;
+import com.learnova.elearning.module.course.repository.LearningOutcomeRepository;
 import com.learnova.elearning.module.enrollment.repository.EnrollmentRepository;
 import com.learnova.elearning.module.user.entity.User;
 import com.learnova.elearning.module.user.repository.UserRepository;
@@ -39,6 +41,7 @@ class CourseServiceTest {
 
     @Mock private CourseRepository courseRepository;
     @Mock private CourseBulletRepository bulletRepository;
+    @Mock private LearningOutcomeRepository outcomeRepository;
     @Mock private CategoryService categoryService;
     @Mock private CourseOwnershipGuard ownershipGuard;
     @Mock private UserRepository userRepository;
@@ -151,9 +154,13 @@ class CourseServiceTest {
                 .publishedAt(Instant.now()).build();
         when(courseRepository.findByIdAndStatus(1L, CourseStatus.PUBLISHED)).thenReturn(Optional.of(published));
         when(bulletRepository.findByCourse_IdOrderByBulletTypeAscPositionAsc(any())).thenReturn(List.of());
+        when(outcomeRepository.findByCourse_IdOrderByPositionAsc(1L)).thenReturn(List.of(
+                LearningOutcome.builder().id(21L).statement("Build a REST API").position(0).build(),
+                LearningOutcome.builder().id(22L).statement("Use JPA safely").position(1).build()));
 
         var res = courseService.getPublicDetail(1L);
         assertThat(res.getTitle()).isEqualTo("Java");
         assertThat(res.getStatus()).isEqualTo(CourseStatus.PUBLISHED);
+        assertThat(res.getLearningObjectives()).containsExactly("Build a REST API", "Use JPA safely");
     }
 }
