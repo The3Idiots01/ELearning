@@ -7,6 +7,7 @@ import { playbackApi } from '../../api/playbackApi';
 import { ApiError } from '../../../../lib/apiClient';
 import { useCourseProgress } from '../../hooks/useCourseProgress';
 import { QuizTakingView } from '../../components/QuizTakingView';
+import { LessonQaSection } from '../../components/LessonQaSection';
 
 interface LearningWorkspacePageProps {
   courseId: number;
@@ -33,6 +34,7 @@ export const LearningWorkspacePage: React.FC<LearningWorkspacePageProps> = ({
 }) => {
   const [activeLesson, setActiveLesson] = useState<Lesson | null>(null);
   const [activeAssessment, setActiveAssessment] = useState<Assessment | null>(null);
+  const [activeTab, setActiveTab] = useState<'overview' | 'qa'>('overview');
   const [isCompleting, setIsCompleting] = useState(false);
   const [expandedSections, setExpandedSections] = useState<Record<number, boolean>>({});
   const [playbackUrl, setPlaybackUrl] = useState<string | null>(null);
@@ -299,34 +301,78 @@ export const LearningWorkspacePage: React.FC<LearningWorkspacePageProps> = ({
                 </div>
               </div>
 
-              {/* Lesson Supplementary Resources */}
-              {activeLesson.resources && activeLesson.resources.length > 0 && (
-                <div className="bg-slate-900 rounded-2xl p-5 border border-slate-800 space-y-3">
-                  <h4 className="text-xs font-extrabold text-slate-300 uppercase tracking-wider m-0 flex items-center gap-2">
-                    <span className="material-symbols-outlined text-primary-container text-[18px]">
-                      attach_file
-                    </span>
-                    <span>Tài liệu đính kèm ({activeLesson.resources.length})</span>
-                  </h4>
-                  <div className="divide-y divide-slate-800">
-                    {activeLesson.resources.map((res) => (
-                      <div key={res.id} className="py-2.5 flex items-center justify-between text-xs">
-                        <span className="text-slate-300 font-medium truncate max-w-sm">{res.title}</span>
-                        {res.downloadUrl && (
-                          <a
-                            href={res.downloadUrl}
-                            target="_blank"
-                            rel="noreferrer"
-                            className="text-primary-container hover:underline font-bold flex items-center gap-1"
-                          >
-                            <span>Tải về</span>
-                            <span className="material-symbols-outlined text-[14px]">download</span>
-                          </a>
-                        )}
+              {/* Tab Navigation */}
+              <div className="flex items-center gap-6 border-b border-slate-800 text-xs font-bold">
+                <button
+                  onClick={() => setActiveTab('overview')}
+                  className={`pb-3 flex items-center gap-2 border-b-2 transition-colors cursor-pointer ${
+                    activeTab === 'overview'
+                      ? 'border-primary text-primary-container font-extrabold'
+                      : 'border-transparent text-slate-400 hover:text-slate-200'
+                  }`}
+                >
+                  <span className="material-symbols-outlined text-[18px]">info</span>
+                  <span>Tổng quan & Tài liệu</span>
+                </button>
+
+                <button
+                  onClick={() => setActiveTab('qa')}
+                  className={`pb-3 flex items-center gap-2 border-b-2 transition-colors cursor-pointer ${
+                    activeTab === 'qa'
+                      ? 'border-primary text-primary-container font-extrabold'
+                      : 'border-transparent text-slate-400 hover:text-slate-200'
+                  }`}
+                >
+                  <span className="material-symbols-outlined text-[18px]">forum</span>
+                  <span>Hỏi đáp (Q&A)</span>
+                </button>
+              </div>
+
+              {/* Tab Content */}
+              {activeTab === 'overview' ? (
+                <div className="space-y-6">
+                  {/* Lesson Supplementary Resources */}
+                  {activeLesson.resources && activeLesson.resources.length > 0 ? (
+                    <div className="bg-slate-900 rounded-2xl p-5 border border-slate-800 space-y-3">
+                      <h4 className="text-xs font-extrabold text-slate-300 uppercase tracking-wider m-0 flex items-center gap-2">
+                        <span className="material-symbols-outlined text-primary-container text-[18px]">
+                          attach_file
+                        </span>
+                        <span>Tài liệu đính kèm ({activeLesson.resources.length})</span>
+                      </h4>
+                      <div className="divide-y divide-slate-800">
+                        {activeLesson.resources.map((res) => (
+                          <div key={res.id} className="py-2.5 flex items-center justify-between text-xs">
+                            <span className="text-slate-300 font-medium truncate max-w-sm">{res.title}</span>
+                            {res.downloadUrl && (
+                              <a
+                                href={res.downloadUrl}
+                                target="_blank"
+                                rel="noreferrer"
+                                className="text-primary-container hover:underline font-bold flex items-center gap-1"
+                              >
+                                <span>Tải về</span>
+                                <span className="material-symbols-outlined text-[14px]">download</span>
+                              </a>
+                            )}
+                          </div>
+                        ))}
                       </div>
-                    ))}
-                  </div>
+                    </div>
+                  ) : (
+                    <div className="bg-slate-900/40 rounded-2xl p-6 border border-slate-800/80 text-center">
+                      <p className="text-xs text-slate-400 m-0">
+                        Bài học này không có tài liệu đính kèm. Bạn có thắc mắc về bài học? Hãy chuyển sang tab <strong className="text-slate-200">Hỏi đáp (Q&A)</strong> để thảo luận cùng giảng viên và các bạn học viên!
+                      </p>
+                    </div>
+                  )}
                 </div>
+              ) : (
+                <LessonQaSection
+                  courseId={courseId}
+                  lessonId={activeLesson.id}
+                  lessonTitle={activeLesson.title}
+                />
               )}
             </div>
           )}

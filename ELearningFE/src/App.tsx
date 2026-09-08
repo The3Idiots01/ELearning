@@ -24,6 +24,7 @@ import { InstructorCoursesRoute } from './app/routes/InstructorCoursesRoute';
 import { CourseSettingsRoute } from './app/routes/CourseSettingsRoute';
 import { CurriculumEditorRoute } from './app/routes/CurriculumEditorRoute';
 import { RevenueRoute } from './app/routes/RevenueRoute';
+import { InstructorQaRoute } from './app/routes/InstructorQaRoute';
 
 export function App() {
   const { appMode } = useAuth();
@@ -87,6 +88,7 @@ export function App() {
           <Route path="/instructor/revenue" element={<RevenueRoute />} />
           <Route path="/instructor/courses/:courseId/settings" element={<CourseSettingsRoute />} />
           <Route path="/instructor/courses/:courseId/curriculum" element={<CurriculumEditorRoute />} />
+          <Route path="/instructor/courses/:courseId/qa" element={<InstructorQaRoute />} />
         </Route>
 
         <Route path="/" element={<Navigate to={defaultPath} replace />} />

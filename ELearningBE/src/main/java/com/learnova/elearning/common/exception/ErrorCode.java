@@ -104,7 +104,12 @@ public enum ErrorCode {
     LESSON_NOT_A_QUIZ(1306, "Lesson is not configured as a quiz", HttpStatus.BAD_REQUEST),
     QUIZ_QUESTION_INVALID_OPTIONS(1307, "Question must have at least one correct option", HttpStatus.BAD_REQUEST),
     QUIZ_SINGLE_CHOICE_MULTIPLE_CORRECT(1308, "Single choice question cannot have more than one correct option", HttpStatus.BAD_REQUEST),
-    QUIZ_WITHOUT_QUESTION(1310, "Quiz must contain at least one question", HttpStatus.BAD_REQUEST);
+    QUIZ_WITHOUT_QUESTION(1310, "Quiz must contain at least one question", HttpStatus.BAD_REQUEST),
+
+    // Q&A Domain (1321 - 1325)
+    QUESTION_NOT_FOUND(1321, "Question not found", HttpStatus.NOT_FOUND),
+    NOT_ENROLLED(1322, "Only enrolled students or course lecturer can participate in Q&A", HttpStatus.FORBIDDEN),
+    QUESTION_ACCESS_DENIED(1323, "You do not have permission to modify this thread", HttpStatus.FORBIDDEN);
 
     private final int code;
     private final String message;

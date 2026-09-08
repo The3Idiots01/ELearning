@@ -11,6 +11,7 @@ export function InstructorCoursesRoute() {
       categories={categories}
       onEditCourse={(courseId) => navigate(`/instructor/courses/${courseId}/settings`)}
       onEditCurriculum={(courseId) => navigate(`/instructor/courses/${courseId}/curriculum`)}
+      onOpenQa={(courseId) => navigate(`/instructor/courses/${courseId}/qa`)}
     />
   );
 }
