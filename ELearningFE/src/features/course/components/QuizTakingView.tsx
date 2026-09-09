@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 import React, { useEffect, useState } from 'react';
 import { useToast } from '../../../app/context/ToastContext';
 import { learnerQuizApi } from '../api/learnerQuizApi';
@@ -255,9 +254,8 @@ export const QuizTakingView: React.FC<QuizTakingViewProps> = ({
                   Lượt Còn Lại Hôm Nay
                 </span>
                 <span
-                  className={`text-base font-extrabold font-mono ${
-                    isOutOfAttempts ? 'text-rose-400' : 'text-emerald-400'
-                  }`}
+                  className={`text-base font-extrabold font-mono ${isOutOfAttempts ? 'text-rose-400' : 'text-emerald-400'
+                    }`}
                 >
                   {quizInfo.attemptsRemaining !== null
                     ? `${quizInfo.attemptsRemaining} lượt`
@@ -271,11 +269,10 @@ export const QuizTakingView: React.FC<QuizTakingViewProps> = ({
               <button
                 onClick={handleStartQuiz}
                 disabled={isOutOfAttempts || quizInfo.questions.length === 0}
-                className={`px-8 py-3.5 rounded-2xl text-sm font-extrabold transition-all flex items-center justify-center gap-2 cursor-pointer shadow-lg active:scale-95 ${
-                  isOutOfAttempts || quizInfo.questions.length === 0
+                className={`px-8 py-3.5 rounded-2xl text-sm font-extrabold transition-all flex items-center justify-center gap-2 cursor-pointer shadow-lg active:scale-95 ${isOutOfAttempts || quizInfo.questions.length === 0
                     ? 'bg-slate-800 text-slate-500 cursor-not-allowed'
                     : 'bg-indigo-600 hover:bg-indigo-500 text-white shadow-indigo-950/50 hover:shadow-indigo-600/30'
-                }`}
+                  }`}
               >
                 <span className="material-symbols-outlined text-[20px]">
                   {quizInfo.hasPassed ? 'replay' : 'play_arrow'}
@@ -284,12 +281,12 @@ export const QuizTakingView: React.FC<QuizTakingViewProps> = ({
                   {quizInfo.questions.length === 0
                     ? 'Chưa có câu hỏi'
                     : isOutOfAttempts
-                    ? 'Hết lượt hôm nay'
-                    : quizInfo.hasPassed
-                    ? 'Làm lại bài thi (Cải thiện điểm)'
-                    : quizInfo.attemptsUsed > 0
-                    ? 'Thử lại bài thi'
-                    : 'Bắt đầu làm bài thi'}
+                      ? 'Hết lượt hôm nay'
+                      : quizInfo.hasPassed
+                        ? 'Làm lại bài thi (Cải thiện điểm)'
+                        : quizInfo.attemptsUsed > 0
+                          ? 'Thử lại bài thi'
+                          : 'Bắt đầu làm bài thi'}
                 </span>
               </button>
 
@@ -340,11 +337,10 @@ export const QuizTakingView: React.FC<QuizTakingViewProps> = ({
                         </td>
                         <td className="py-3 px-3">
                           <span
-                            className={`px-2.5 py-0.5 rounded-md text-[10px] font-bold inline-flex items-center gap-1 ${
-                              attempt.isPassed
+                            className={`px-2.5 py-0.5 rounded-md text-[10px] font-bold inline-flex items-center gap-1 ${attempt.isPassed
                                 ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30'
                                 : 'bg-rose-500/20 text-rose-300 border border-rose-500/30'
-                            }`}
+                              }`}
                           >
                             <span className="material-symbols-outlined text-[12px]">
                               {attempt.isPassed ? 'check' : 'close'}
@@ -455,23 +451,20 @@ export const QuizTakingView: React.FC<QuizTakingViewProps> = ({
                         <div
                           key={opt.id}
                           onClick={() => handleOptionToggle(question, opt.id)}
-                          className={`p-3.5 sm:p-4 rounded-2xl border transition-all cursor-pointer flex items-start gap-3 select-none ${
-                            isSelected
+                          className={`p-3.5 sm:p-4 rounded-2xl border transition-all cursor-pointer flex items-start gap-3 select-none ${isSelected
                               ? 'bg-indigo-600/15 border-indigo-500/80 shadow-sm text-white'
                               : 'bg-slate-950/60 border-slate-800 hover:border-slate-700 hover:bg-slate-900/60 text-slate-300'
-                          }`}
+                            }`}
                         >
                           {/* Radio / Checkbox Indicator */}
                           <div
-                            className={`w-6 h-6 shrink-0 mt-0.5 flex items-center justify-center font-mono text-xs font-extrabold transition-colors ${
-                              question.questionType === 'SINGLE_CHOICE'
+                            className={`w-6 h-6 shrink-0 mt-0.5 flex items-center justify-center font-mono text-xs font-extrabold transition-colors ${question.questionType === 'SINGLE_CHOICE'
                                 ? 'rounded-full'
                                 : 'rounded-lg'
-                            } ${
-                              isSelected
+                              } ${isSelected
                                 ? 'bg-indigo-600 text-white shadow-sm'
                                 : 'bg-slate-800 text-slate-400 border border-slate-700'
-                            }`}
+                              }`}
                           >
                             {isSelected ? (
                               <span className="material-symbols-outlined text-[14px]">
@@ -535,19 +528,17 @@ export const QuizTakingView: React.FC<QuizTakingViewProps> = ({
         <div className="max-w-4xl mx-auto space-y-6">
           {/* Result Hero Banner */}
           <div
-            className={`p-6 sm:p-8 rounded-3xl border shadow-2xl relative overflow-hidden ${
-              isPassed
+            className={`p-6 sm:p-8 rounded-3xl border shadow-2xl relative overflow-hidden ${isPassed
                 ? 'bg-gradient-to-br from-emerald-950/40 via-slate-900 to-slate-900 border-emerald-600/40'
                 : 'bg-gradient-to-br from-amber-950/40 via-slate-900 to-slate-900 border-amber-600/40'
-            }`}
+              }`}
           >
             <div className="flex flex-col sm:flex-row items-center justify-between gap-6 text-center sm:text-left">
               <div>
                 <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-extrabold uppercase tracking-wider mb-2 bg-black/40">
                   <span
-                    className={`material-symbols-outlined text-[16px] ${
-                      isPassed ? 'text-emerald-400' : 'text-amber-400'
-                    }`}
+                    className={`material-symbols-outlined text-[16px] ${isPassed ? 'text-emerald-400' : 'text-amber-400'
+                      }`}
                   >
                     {isPassed ? 'check_circle' : 'cancel'}
                   </span>
@@ -574,9 +565,8 @@ export const QuizTakingView: React.FC<QuizTakingViewProps> = ({
                   Điểm số đạt được
                 </span>
                 <span
-                  className={`text-4xl sm:text-5xl font-black font-mono my-1 ${
-                    isPassed ? 'text-emerald-400' : 'text-amber-400'
-                  }`}
+                  className={`text-4xl sm:text-5xl font-black font-mono my-1 ${isPassed ? 'text-emerald-400' : 'text-amber-400'
+                    }`}
                 >
                   {lastResult.score}%
                 </span>
@@ -625,28 +615,25 @@ export const QuizTakingView: React.FC<QuizTakingViewProps> = ({
                 return (
                   <div
                     key={question.id}
-                    className={`p-6 rounded-3xl border space-y-4 shadow-sm ${
-                      isCorrect
+                    className={`p-6 rounded-3xl border space-y-4 shadow-sm ${isCorrect
                         ? 'bg-slate-900/60 border-emerald-900/40'
                         : 'bg-slate-900/60 border-rose-900/40'
-                    }`}
+                      }`}
                   >
                     {/* Review Question Header */}
                     <div className="flex items-center justify-between gap-3">
                       <div className="flex items-center gap-2">
                         <span
-                          className={`font-mono text-xs font-extrabold px-3 py-1 rounded-lg ${
-                            isCorrect
+                          className={`font-mono text-xs font-extrabold px-3 py-1 rounded-lg ${isCorrect
                               ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30'
                               : 'bg-rose-500/20 text-rose-300 border border-rose-500/30'
-                          }`}
+                            }`}
                         >
                           Câu {qIdx + 1}
                         </span>
                         <span
-                          className={`text-xs font-bold flex items-center gap-1 ${
-                            isCorrect ? 'text-emerald-400' : 'text-rose-400'
-                          }`}
+                          className={`text-xs font-bold flex items-center gap-1 ${isCorrect ? 'text-emerald-400' : 'text-rose-400'
+                            }`}
                         >
                           <span className="material-symbols-outlined text-[16px]">
                             {isCorrect ? 'check_circle' : 'cancel'}
@@ -734,195 +721,4 @@ export const QuizTakingView: React.FC<QuizTakingViewProps> = ({
   }
 
   return null;
-=======
-import React, { useEffect, useMemo, useState } from 'react';
-import { ApiError } from '../../../lib/apiClient';
-import type { QuizAnswer, QuizAttempt, StudentQuiz } from '../../../types/quiz';
-import { studentQuizApi } from '../api/studentQuizApi';
-
-interface QuizTakingViewProps {
-  courseId: number;
-  assessmentId: number;
-  onSubmitted?: () => void;
-}
-
-export const QuizTakingView: React.FC<QuizTakingViewProps> = ({
-  courseId,
-  assessmentId,
-  onSubmitted
-}) => {
-  const [quiz, setQuiz] = useState<StudentQuiz | null>(null);
-  const [history, setHistory] = useState<QuizAttempt[]>([]);
-  const [answers, setAnswers] = useState<Record<number, string[]>>({});
-  const [result, setResult] = useState<QuizAttempt | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [submitting, setSubmitting] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-
-  useEffect(() => {
-    let cancelled = false;
-    setLoading(true);
-    setError(null);
-    Promise.all([
-      studentQuizApi.getQuiz(courseId, assessmentId),
-      studentQuizApi.getHistory(courseId, assessmentId)
-    ])
-      .then(([loadedQuiz, loadedHistory]) => {
-        if (cancelled) return;
-        setQuiz(loadedQuiz);
-        setHistory(loadedHistory);
-        setAnswers({});
-        setResult(null);
-      })
-      .catch((err) => {
-        if (cancelled) return;
-        setError(err instanceof ApiError ? err.message : 'Không thể tải bài kiểm tra.');
-      })
-      .finally(() => {
-        if (!cancelled) setLoading(false);
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [assessmentId, courseId]);
-
-  const answeredCount = useMemo(() => Object.keys(answers).filter((id) => answers[Number(id)]?.length).length, [answers]);
-
-  const toggleOption = (questionId: number, optionId: string, multiple: boolean) => {
-    setAnswers((current) => {
-      const selected = current[questionId] || [];
-      if (multiple) {
-        return {
-          ...current,
-          [questionId]: selected.includes(optionId)
-            ? selected.filter((id) => id !== optionId)
-            : [...selected, optionId]
-        };
-      }
-      return { ...current, [questionId]: [optionId] };
-    });
-  };
-
-  const submit = async () => {
-    if (!quiz || submitting || quiz.attemptsRemaining === 0) return;
-    if (answeredCount !== quiz.questions.length) {
-      setError('Vui lòng trả lời tất cả câu hỏi trước khi nộp bài.');
-      return;
-    }
-    setSubmitting(true);
-    setError(null);
-    try {
-      const payload: QuizAnswer[] = quiz.questions.map((question) => ({
-        questionId: question.id,
-        selectedOptionIds: answers[question.id] || []
-      }));
-      const submitted = await studentQuizApi.submitAttempt(courseId, assessmentId, payload);
-      setResult(submitted);
-      const refreshed = await studentQuizApi.getQuiz(courseId, assessmentId);
-      setQuiz(refreshed);
-      setHistory(await studentQuizApi.getHistory(courseId, assessmentId));
-      onSubmitted?.();
-    } catch (err) {
-      setError(err instanceof ApiError ? err.message : 'Không thể nộp bài.');
-    } finally {
-      setSubmitting(false);
-    }
-  };
-
-  if (loading) {
-    return <div className="p-10 text-slate-400">Đang tải bài kiểm tra...</div>;
-  }
-  if (error && !quiz) {
-    return <div className="m-6 rounded-xl border border-rose-500/30 bg-rose-500/10 p-5 text-sm text-rose-200">{error}</div>;
-  }
-  if (!quiz) return null;
-
-  return (
-    <div className="max-w-4xl mx-auto w-full p-6 sm:p-10 space-y-6">
-      <div className="border-b border-slate-800 pb-5">
-        <div className="flex items-center justify-between gap-4">
-          <div>
-            <span className="text-[10px] uppercase tracking-widest text-amber-400 font-black">Bài kiểm tra</span>
-            <h2 className="text-2xl font-black text-white mt-2">{quiz.title}</h2>
-          </div>
-          <div className="text-right text-xs text-slate-400">
-            <div>Đạt: <strong className="text-emerald-400">{quiz.passingScore}%</strong></div>
-            <div>Còn lại: <strong className="text-white">{quiz.attemptsRemaining ?? 'Không giới hạn'}</strong></div>
-          </div>
-        </div>
-      </div>
-
-      {quiz.hasPassed && !result && (
-        <div className="rounded-xl border border-emerald-500/30 bg-emerald-500/10 p-4 text-sm text-emerald-200">Bạn đã vượt qua bài kiểm tra này.</div>
-      )}
-      {error && <div className="rounded-xl border border-rose-500/30 bg-rose-500/10 p-4 text-sm text-rose-200">{error}</div>}
-      {result && (
-        <div className={`rounded-2xl border p-5 ${result.isPassed ? 'border-emerald-500/30 bg-emerald-500/10' : 'border-amber-500/30 bg-amber-500/10'}`}>
-          <div className="text-lg font-black text-white">Kết quả: {Number(result.score).toFixed(2)}%</div>
-          <p className="text-sm text-slate-200 mt-1">{result.isPassed ? 'Chúc mừng, bạn đã đạt!' : 'Bạn chưa đạt. Hãy xem lại bài học và thử lại.'}</p>
-          {result.questionResults && result.questionResults.length > 0 && (
-            <div className="mt-4 space-y-2">
-              {result.questionResults.map((item, index) => (
-                <div key={item.questionId} className="flex items-center justify-between rounded-lg bg-black/10 px-3 py-2 text-xs text-slate-200">
-                  <span>Câu {index + 1}</span>
-                  <span className={item.isCorrect ? 'text-emerald-300 font-bold' : 'text-rose-200 font-bold'}>{item.isCorrect ? 'Đúng' : 'Chưa đúng'} · {Number(item.earnedPoints).toFixed(2)}/{Number(item.totalPoints).toFixed(2)}</span>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-      )}
-
-      <div className="space-y-4">
-        {quiz.questions.map((question, index) => {
-          const multiple = question.questionType === 'MULTIPLE_CHOICE';
-          const selected = answers[question.id] || [];
-          return (
-            <section key={question.id} className="rounded-2xl border border-slate-800 bg-slate-900 p-5">
-              <h3 className="text-sm font-bold text-white leading-relaxed">{index + 1}. {question.questionText}</h3>
-              <div className="mt-4 space-y-2">
-                {question.options.map((option) => (
-                  <label key={option.id} className={`flex items-center gap-3 rounded-xl border px-4 py-3 text-sm cursor-pointer transition-colors ${selected.includes(option.id) ? 'border-indigo-400 bg-indigo-500/10 text-white' : 'border-slate-700 text-slate-300 hover:border-slate-500'}`}>
-                    <input
-                      type={multiple ? 'checkbox' : 'radio'}
-                      name={`question-${question.id}`}
-                      checked={selected.includes(option.id)}
-                      onChange={() => toggleOption(question.id, option.id, multiple)}
-                    />
-                    <span>{option.text}</span>
-                  </label>
-                ))}
-              </div>
-            </section>
-          );
-        })}
-      </div>
-
-      <div className="flex items-center justify-between gap-4">
-        <span className="text-xs text-slate-400">Đã trả lời {answeredCount}/{quiz.questions.length} câu</span>
-        <button
-          onClick={submit}
-          disabled={submitting || quiz.attemptsRemaining === 0 || quiz.hasPassed}
-          className="rounded-xl bg-indigo-600 px-6 py-3 text-sm font-black text-white hover:bg-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed"
-        >
-          {submitting ? 'Đang chấm...' : 'Nộp bài'}
-        </button>
-      </div>
-
-      {history.length > 0 && (
-        <div className="border-t border-slate-800 pt-5">
-          <h3 className="text-xs font-black uppercase tracking-wider text-slate-400">Lịch sử làm bài</h3>
-          <div className="mt-3 space-y-2">
-            {history.map((attempt) => (
-              <div key={attempt.id} className="flex justify-between rounded-xl bg-slate-900 px-4 py-3 text-xs text-slate-300">
-                <span>{new Date(attempt.submittedAt).toLocaleString('vi-VN')}</span>
-                <span className={attempt.isPassed ? 'text-emerald-400 font-bold' : 'text-rose-300 font-bold'}>{Number(attempt.score).toFixed(2)}%</span>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-    </div>
-  );
->>>>>>> 6f14ee806c34ad2a8955f6783458598d6afa214a
 };
