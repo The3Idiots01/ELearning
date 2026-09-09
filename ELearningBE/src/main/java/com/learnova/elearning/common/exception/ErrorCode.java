@@ -109,7 +109,16 @@ public enum ErrorCode {
     // Q&A Domain (1321 - 1325)
     QUESTION_NOT_FOUND(1321, "Question not found", HttpStatus.NOT_FOUND),
     NOT_ENROLLED(1322, "Only enrolled students or course lecturer can participate in Q&A", HttpStatus.FORBIDDEN),
-    QUESTION_ACCESS_DENIED(1323, "You do not have permission to modify this thread", HttpStatus.FORBIDDEN);
+    QUESTION_ACCESS_DENIED(1323, "You do not have permission to modify this thread", HttpStatus.FORBIDDEN),
+    QA_CONTENT_VIOLATION(1324, "Nội dung câu hỏi hoặc câu trả lời chứa từ ngữ không phù hợp hoặc vi phạm tiêu chuẩn cộng đồng. Vui lòng chỉnh sửa lại.", HttpStatus.BAD_REQUEST),
+
+    // Course Review Domain (1331 - 1336)
+    REVIEW_NOT_FOUND(1331, "Review not found", HttpStatus.NOT_FOUND),
+    REVIEW_ACCESS_DENIED(1332, "You do not have permission to modify this review", HttpStatus.FORBIDDEN),
+    REVIEW_NOT_ENROLLED(1333, "Chỉ học viên đã đăng ký khóa học mới có thể đánh giá", HttpStatus.FORBIDDEN),
+    REVIEW_CONTENT_VIOLATION(1334, "Nội dung đánh giá chứa từ ngữ chưa phù hợp hoặc vi phạm tiêu chuẩn cộng đồng. Vui lòng chỉnh sửa lại.", HttpStatus.BAD_REQUEST),
+    REVIEW_INVALID_RATING(1335, "Số sao đánh giá phải từ 1 đến 5", HttpStatus.BAD_REQUEST),
+    REVIEW_PROGRESS_INSUFFICIENT(1336, "Bạn cần hoàn thành ít nhất 20% khóa học để có thể gửi đánh giá", HttpStatus.FORBIDDEN);
 
     private final int code;
     private final String message;
