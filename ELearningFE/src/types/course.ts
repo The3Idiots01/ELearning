@@ -84,6 +84,7 @@ export interface CourseSummary {
   price: number;
   status: CourseStatus;
   ratingAvg?: number;
+  ratingCount?: number;
   totalStudents?: number;
   categoryId?: number;
   categoryName?: string;

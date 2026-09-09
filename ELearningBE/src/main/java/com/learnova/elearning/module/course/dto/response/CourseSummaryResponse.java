@@ -23,5 +23,6 @@ public class CourseSummaryResponse {
     private String categoryName;
     private Integer totalStudents;
     private BigDecimal ratingAvg;
+    private Integer ratingCount;
     private Instant updatedAt;
 }

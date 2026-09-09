@@ -5,6 +5,7 @@ import { formatCurrencyVND } from '../../../../lib/formatters';
 import { DocumentViewer } from '../../components/DocumentViewer';
 import { playbackApi } from '../../api/playbackApi';
 import { ApiError } from '../../../../lib/apiClient';
+import { CourseReviewsSection } from '../../components/reviews/CourseReviewsSection';
 
 interface CourseDetailPageProps {
   course: CourseDetail | null;
@@ -147,10 +148,22 @@ export const CourseDetailPage: React.FC<CourseDetailPageProps> = ({
                   </span>
                   <span>Chất lượng kiểm duyệt</span>
                 </div>
-                {course.ratingAvg && (
-                  <div className="flex items-center gap-1 text-amber-400 font-bold">
-                    <span className="material-symbols-outlined text-[16px]">star</span>
+                {course.ratingAvg !== undefined && course.ratingAvg > 0 ? (
+                  <div className="flex items-center gap-1.5 text-amber-400 font-bold">
+                    <span className="material-symbols-outlined text-[16px]" style={{ fontVariationSettings: "'FILL' 1" }}>
+                      star
+                    </span>
                     <span>{course.ratingAvg}</span>
+                    {course.ratingCount !== undefined && course.ratingCount > 0 && (
+                      <span className="text-slate-400 font-normal text-[11px]">
+                        ({course.ratingCount.toLocaleString()} đánh giá)
+                      </span>
+                    )}
+                  </div>
+                ) : (
+                  <div className="flex items-center gap-1 text-slate-400">
+                    <span className="material-symbols-outlined text-[16px]">star</span>
+                    <span>Chưa có đánh giá</span>
                   </div>
                 )}
               </div>
@@ -378,6 +391,14 @@ export const CourseDetailPage: React.FC<CourseDetailPageProps> = ({
                 </div>
               )}
             </div>
+
+            {/* Section Đánh giá & Nhận xét Khóa học (Course Reviews) */}
+            <CourseReviewsSection
+              courseId={course.id}
+              courseTitle={course.title}
+              isEnrolled={isEnrolled}
+              onEnrollRequired={() => setShowEnrollConfirm(true)}
+            />
 
           </div>
 
