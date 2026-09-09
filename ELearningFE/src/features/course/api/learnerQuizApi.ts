@@ -11,10 +11,10 @@ export const learnerQuizApi = {
    */
   getQuizForTaking: async (
     courseId: number,
-    lessonId: number
+    assessmentId: number
   ): Promise<QuizTakingInfo> => {
     return apiClient.get<QuizTakingInfo>(
-      `/api/v1/learner/courses/${courseId}/lessons/${lessonId}/quiz`
+      `/api/v1/learner/courses/${courseId}/assessments/${assessmentId}/quiz`
     );
   },
 
@@ -23,11 +23,11 @@ export const learnerQuizApi = {
    */
   submitAttempt: async (
     courseId: number,
-    lessonId: number,
+    assessmentId: number,
     payload: SubmitQuizAttemptPayload
   ): Promise<QuizAttemptResult> => {
     return apiClient.post<QuizAttemptResult>(
-      `/api/v1/learner/courses/${courseId}/lessons/${lessonId}/quiz/attempts`,
+      `/api/v1/learner/courses/${courseId}/assessments/${assessmentId}/quiz/attempts`,
       payload
     );
   },
@@ -37,10 +37,10 @@ export const learnerQuizApi = {
    */
   getAttemptHistory: async (
     courseId: number,
-    lessonId: number
+    assessmentId: number
   ): Promise<QuizAttemptResult[]> => {
     return apiClient.get<QuizAttemptResult[]>(
-      `/api/v1/learner/courses/${courseId}/lessons/${lessonId}/quiz/attempts`
+      `/api/v1/learner/courses/${courseId}/assessments/${assessmentId}/quiz/attempts`
     );
   }
 };

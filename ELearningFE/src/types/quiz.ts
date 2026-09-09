@@ -120,7 +120,8 @@ export interface QuestionTakingItem {
 
 export interface QuizTakingInfo {
   id: number;
-  lessonId: number;
+  assessmentId?: number;
+  lessonId?: number;
   title: string;
   passingScore: number;
   maxAttempts?: number | null;

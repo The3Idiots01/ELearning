@@ -10,7 +10,9 @@ import type {
 
 interface QuizTakingViewProps {
   courseId: number;
-  lesson: Lesson;
+  assessmentId?: number;
+  lesson?: Lesson;
+  onSubmitted?: () => void;
   onLessonCompleted?: () => void;
 }
 
@@ -18,10 +20,13 @@ type ViewMode = 'INTRO' | 'TAKING' | 'RESULT';
 
 export const QuizTakingView: React.FC<QuizTakingViewProps> = ({
   courseId,
+  assessmentId,
   lesson,
+  onSubmitted,
   onLessonCompleted
 }) => {
   const { showSuccess, showError } = useToast();
+  const targetId = assessmentId ?? lesson?.id ?? 0;
 
   const [mode, setMode] = useState<ViewMode>('INTRO');
   const [isLoading, setIsLoading] = useState<boolean>(true);
@@ -35,11 +40,12 @@ export const QuizTakingView: React.FC<QuizTakingViewProps> = ({
 
   // Load quiz info & history
   const loadQuizData = async () => {
+    if (!targetId) return;
     setIsLoading(true);
     try {
       const [info, hist] = await Promise.all([
-        learnerQuizApi.getQuizForTaking(courseId, lesson.id),
-        learnerQuizApi.getAttemptHistory(courseId, lesson.id)
+        learnerQuizApi.getQuizForTaking(courseId, targetId),
+        learnerQuizApi.getAttemptHistory(courseId, targetId)
       ]);
       setQuizInfo(info);
       setHistory(hist);
@@ -52,7 +58,7 @@ export const QuizTakingView: React.FC<QuizTakingViewProps> = ({
 
   useEffect(() => {
     loadQuizData();
-  }, [courseId, lesson.id]);
+  }, [courseId, targetId]);
 
   const handleStartQuiz = () => {
     if (!quizInfo || quizInfo.questions.length === 0) {
@@ -121,7 +127,7 @@ export const QuizTakingView: React.FC<QuizTakingViewProps> = ({
 
       const result = await learnerQuizApi.submitAttempt(
         courseId,
-        lesson.id,
+        targetId,
         payload
       );
       setLastResult(result);
@@ -130,13 +136,14 @@ export const QuizTakingView: React.FC<QuizTakingViewProps> = ({
       if (result.isPassed) {
         showSuccess(`Chúc mừng! Bạn đã đạt ${result.score}% và hoàn thành bài kiểm tra!`);
         onLessonCompleted?.();
+        onSubmitted?.();
       } else {
         showError(`Bạn đạt ${result.score}%. Chưa đạt điểm chuẩn (${result.passingScore}%).`);
       }
 
       // Refresh quiz data in background
-      learnerQuizApi.getQuizForTaking(courseId, lesson.id).then(setQuizInfo);
-      learnerQuizApi.getAttemptHistory(courseId, lesson.id).then(setHistory);
+      learnerQuizApi.getQuizForTaking(courseId, targetId).then(setQuizInfo);
+      learnerQuizApi.getAttemptHistory(courseId, targetId).then(setHistory);
     } catch (err: any) {
       showError(err.message || 'Lỗi khi nộp bài thi.');
     } finally {
