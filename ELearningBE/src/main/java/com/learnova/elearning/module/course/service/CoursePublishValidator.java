@@ -207,6 +207,7 @@ public class CoursePublishValidator {
         return switch (lesson.getContentType()) {
             case VIDEO, FILE -> lesson.getUploadStatus() == LessonUploadStatus.READY;
             case ARTICLE -> !isBlank(lesson.getContentText());
+            case QUIZ -> true;
         };
     }
 

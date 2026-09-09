@@ -201,7 +201,7 @@ public class LessonContentService {
         return switch (contentType) {
             case VIDEO -> UploadPurpose.LESSON_VIDEO;
             case FILE -> UploadPurpose.LESSON_FILE;
-            case ARTICLE -> throw new AppException(ErrorCode.LESSON_CONTENT_TYPE_MISMATCH,
+            case ARTICLE, QUIZ -> throw new AppException(ErrorCode.LESSON_CONTENT_TYPE_MISMATCH,
                     "Chỉ lesson VIDEO/FILE mới gắn được file");
         };
     }
