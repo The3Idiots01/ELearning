@@ -19,6 +19,8 @@ export function CourseDetailRoute() {
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [isEnrolling, setIsEnrolling] = useState<boolean>(false);
 
+  const [isLocallyEnrolled, setIsLocallyEnrolled] = useState<boolean>(false);
+
   useEffect(() => {
     if (!courseIdNum) return;
     let cancelled = false;
@@ -49,12 +51,26 @@ export function CourseDetailRoute() {
     setIsEnrolling(true);
     try {
       const res = await paymentApi.createCheckout(id);
-      if (res.isEnrolled) {
+      const isSuccessEnrolled =
+        Boolean(res?.isEnrolled) ||
+        Boolean(res?.enrolled) ||
+        res?.status === 'PAID' ||
+        Boolean(res?.isFree) ||
+        Boolean(res?.free) ||
+        (!res?.checkoutUrl && Boolean(res?.courseId));
+
+      if (isSuccessEnrolled) {
+        setIsLocallyEnrolled(true);
         showSuccess('🎉 Chúc mừng bạn đã đăng ký khóa học thành công!');
         await fetchEnrolledCourses();
         navigate(`/learning/${id}`);
-      } else if (res.checkoutUrl) {
+      } else if (res?.checkoutUrl) {
         window.location.href = res.checkoutUrl;
+      } else {
+        setIsLocallyEnrolled(true);
+        showSuccess('🎉 Đăng ký khóa học thành công!');
+        await fetchEnrolledCourses();
+        navigate(`/learning/${id}`);
       }
     } catch (err: any) {
       if (
@@ -63,6 +79,7 @@ export function CourseDetailRoute() {
         err?.message?.toLowerCase()?.includes('already enrolled') ||
         err?.message?.toLowerCase()?.includes('duplicate')
       ) {
+        setIsLocallyEnrolled(true);
         showSuccess('🎉 Bạn đã sở hữu khóa học này rồi! Đang chuyển vào phòng học...');
         await fetchEnrolledCourses();
         navigate(`/learning/${id}`);
@@ -78,7 +95,7 @@ export function CourseDetailRoute() {
     <CourseDetailPage
       course={course}
       curriculum={curriculum}
-      isEnrolled={enrolledCourseIds.has(courseIdNum)}
+      isEnrolled={isLocallyEnrolled || enrolledCourseIds.has(courseIdNum)}
       isLoading={isLoading}
       isEnrolling={isEnrolling}
       onEnroll={handleEnroll}

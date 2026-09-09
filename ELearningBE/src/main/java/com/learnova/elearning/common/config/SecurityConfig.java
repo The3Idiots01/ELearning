@@ -65,6 +65,7 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.GET, "/api/v1/courses/enrolled").authenticated()
                         .requestMatchers(HttpMethod.GET, "/api/v1/courses/*/progress/**").authenticated()
                         .requestMatchers(HttpMethod.GET, "/api/v1/courses/*/lessons/*/progress/**").authenticated()
+                        .requestMatchers("/api/v1/courses/*/reviews/my-review").authenticated()
 
                         .requestMatchers(HttpMethod.GET, "/api/v1/content/stream").permitAll()
                         .requestMatchers(HttpMethod.POST, "/api/v1/courses/*/lessons/*/progress/heartbeat").permitAll()

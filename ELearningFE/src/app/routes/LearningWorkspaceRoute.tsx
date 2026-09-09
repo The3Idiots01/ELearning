@@ -113,7 +113,7 @@ export function LearningWorkspaceRoute() {
       onCompleteLesson={handleCompleteLesson}
       onLessonProgress={handleLessonProgress}
       onAssessmentCompleted={() => void handleAssessmentCompleted()}
-      onBack={() => navigate('/my-courses')}
+      onBack={() => navigate(`/courses/${courseIdNum}`)}
     />
   );
 }

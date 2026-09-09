@@ -8,6 +8,8 @@ export interface CheckoutResponse {
   status: 'PENDING' | 'PAID' | 'CANCELLED' | 'FAILED';
   isFree?: boolean;
   isEnrolled?: boolean;
+  free?: boolean;
+  enrolled?: boolean;
 }
 
 export interface PaymentStatusResponse {

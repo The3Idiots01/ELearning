@@ -15,12 +15,14 @@ interface InstructorCoursesPageProps {
   categories: Category[];
   onEditCourse: (courseId: number) => void;
   onEditCurriculum: (courseId: number) => void;
+  onOpenQa?: (courseId: number) => void;
 }
 
 export const InstructorCoursesPage: React.FC<InstructorCoursesPageProps> = ({
   categories,
   onEditCourse,
-  onEditCurriculum
+  onEditCurriculum,
+  onOpenQa
 }) => {
   const { ensureInstructorToken } = useAuth();
   const { showSuccess, showError } = useToast();
@@ -314,6 +316,16 @@ export const InstructorCoursesPage: React.FC<InstructorCoursesPageProps> = ({
                       >
                         <span className="material-symbols-outlined text-[16px]">menu_book</span>
                         <span>Soạn bài</span>
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => onOpenQa?.(course.id)}
+                        className="flex-1 bg-indigo-50/80 hover:bg-indigo-600 hover:text-white text-indigo-700 font-bold text-xs py-2 px-2.5 rounded-xl transition-all flex items-center justify-center gap-1 cursor-pointer border border-indigo-200/60"
+                        title="Quản lý câu hỏi và giải đáp thắc mắc của học viên (US-21)"
+                      >
+                        <span className="material-symbols-outlined text-[16px]">forum</span>
+                        <span>Hỏi & Đáp</span>
                       </button>
                     </div>
 

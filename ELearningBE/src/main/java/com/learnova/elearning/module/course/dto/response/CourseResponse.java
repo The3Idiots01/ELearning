@@ -29,6 +29,7 @@ public class CourseResponse {
     private String categoryName;
 
     private BigDecimal ratingAvg;
+    private Integer ratingCount;
     private Integer totalStudents;
     private Long version;
 
