@@ -8,6 +8,7 @@ import com.learnova.elearning.module.course.dto.request.CreateSectionRequest;
 import com.learnova.elearning.module.course.dto.request.UpdateLessonRequest;
 import com.learnova.elearning.module.course.dto.request.UpdateSectionRequest;
 import com.learnova.elearning.module.course.dto.response.CurriculumResponse;
+import com.learnova.elearning.module.course.dto.response.AssessmentResponse;
 import com.learnova.elearning.module.course.dto.response.LessonResourceResponse;
 import com.learnova.elearning.module.course.dto.response.LessonResponse;
 import com.learnova.elearning.module.course.dto.response.SectionResponse;
@@ -15,18 +16,24 @@ import com.learnova.elearning.module.course.entity.Course;
 import com.learnova.elearning.module.course.entity.CourseSection;
 import com.learnova.elearning.module.course.entity.Lesson;
 import com.learnova.elearning.module.course.entity.LessonResource;
+import com.learnova.elearning.module.course.entity.Assessment;
+import com.learnova.elearning.module.course.entity.LearningOutcome;
 import com.learnova.elearning.module.course.entity.enums.LessonContentType;
 import com.learnova.elearning.module.course.entity.enums.LessonUploadStatus;
 import com.learnova.elearning.module.course.entity.enums.CourseStatus;
 import com.learnova.elearning.module.course.mapper.CurriculumMapper;
+import com.learnova.elearning.module.course.mapper.AssessmentMapper;
 import com.learnova.elearning.module.course.repository.CourseRepository;
 import com.learnova.elearning.module.course.repository.CourseSectionRepository;
 import com.learnova.elearning.module.course.repository.LessonRepository;
 import com.learnova.elearning.module.course.repository.LessonResourceRepository;
+import com.learnova.elearning.module.course.repository.AssessmentRepository;
+import com.learnova.elearning.module.course.repository.LearningOutcomeRepository;
 import com.learnova.elearning.module.enrollment.entity.Enrollment;
 import com.learnova.elearning.module.enrollment.entity.LessonProgress;
 import com.learnova.elearning.module.enrollment.repository.EnrollmentRepository;
 import com.learnova.elearning.module.enrollment.repository.LessonProgressRepository;
+import com.learnova.elearning.module.enrollment.repository.AssessmentProgressRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -36,6 +43,9 @@ import java.util.Optional;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.HashSet;
+import java.util.LinkedHashSet;
+import java.util.Comparator;
+import java.util.Set;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -58,6 +68,10 @@ public class CurriculumService {
     private final CourseRepository courseRepository;
     private final EnrollmentRepository enrollmentRepository;
     private final LessonProgressRepository progressRepository;
+    private final AssessmentService assessmentService;
+    private final AssessmentRepository assessmentRepository;
+    private final LearningOutcomeRepository outcomeRepository;
+    private final AssessmentProgressRepository assessmentProgressRepository;
 
     // ---- Read -------------------------------------------------------------
 
@@ -77,6 +91,7 @@ public class CurriculumService {
 
         boolean enrolled = false;
         Map<Long, LessonProgress> progressByLessonId = Map.of();
+        Set<Long> completedAssessmentIds = Set.of();
         if (studentId != null) {
             if (course.getLecturer().getId().equals(studentId)) {
                 enrolled = true;
@@ -87,13 +102,19 @@ public class CurriculumService {
                 progressByLessonId = progressRepository.findByEnrollment_Id(enrollment.get().getId())
                         .stream()
                         .collect(Collectors.toMap(lp -> lp.getLesson().getId(), lp -> lp));
+                completedAssessmentIds = assessmentProgressRepository.findByEnrollment_Id(enrollment.get().getId())
+                        .stream()
+                        .map(progress -> progress.getAssessment().getId())
+                        .collect(Collectors.toSet());
             }
         }
 
-        return buildPublicCurriculum(courseId, enrolled, progressByLessonId);
+        return buildPublicCurriculum(courseId, enrolled, progressByLessonId, completedAssessmentIds);
     }
 
-    private CurriculumResponse buildPublicCurriculum(Long courseId, boolean enrolled, Map<Long, LessonProgress> progressByLessonId) {
+    private CurriculumResponse buildPublicCurriculum(Long courseId, boolean enrolled,
+                                                     Map<Long, LessonProgress> progressByLessonId,
+                                                     Set<Long> completedAssessmentIds) {
         List<CourseSection> sections = sectionRepository.findByCourse_IdOrderByPositionAsc(courseId);
         List<Long> sectionIds = sections.stream().map(CourseSection::getId).toList();
 
@@ -105,6 +126,14 @@ public class CurriculumService {
         List<LessonResource> resources = lessonIds.isEmpty()
                 ? List.of()
                 : resourceRepository.findByLesson_IdInOrderByPositionAsc(lessonIds);
+
+        List<Assessment> assessments = (assessmentRepository == null ? List.<Assessment>of()
+                : assessmentRepository.findByCourse_Id(courseId)).stream()
+                .filter(assessment -> assessment.getSection() != null)
+                .sorted(Comparator.comparing((Assessment a) -> a.getSection().getPosition())
+                        .thenComparing(Assessment::getPosition)
+                        .thenComparing(Assessment::getId))
+                .toList();
 
         Map<Long, List<Lesson>> lessonsBySection = lessons.stream()
                 .collect(Collectors.groupingBy(l -> l.getSection().getId()));
@@ -120,6 +149,13 @@ public class CurriculumService {
                                 return CurriculumMapper.toResource(r, null);
                             }
                         }, Collectors.toList())));
+
+        Map<Long, List<AssessmentResponse>> assessmentsBySection = assessments.stream()
+                .collect(Collectors.groupingBy(
+                        assessment -> assessment.getSection().getId(),
+                        Collectors.mapping(assessment -> AssessmentMapper.toResponse(
+                                assessment, enrolled && completedAssessmentIds.contains(assessment.getId())),
+                                Collectors.toList())));
 
         List<SectionResponse> sectionResponses = sections.stream()
                 .map(section -> {
@@ -145,13 +181,15 @@ public class CurriculumService {
                                 return resp;
                             })
                             .toList();
-                    return CurriculumMapper.toSection(section, lessonResponses);
+                    return CurriculumMapper.toSection(section, lessonResponses,
+                            assessmentsBySection.getOrDefault(section.getId(), List.of()));
                 })
                 .toList();
 
         return CurriculumResponse.builder()
                 .courseId(courseId)
                 .sections(sectionResponses)
+                .unplacedAssessments(List.of())
                 .build();
     }
 
@@ -176,6 +214,24 @@ public class CurriculumService {
                         r -> r.getLesson().getId(),
                         Collectors.mapping(lessonAssembler::toResource, Collectors.toList())));
 
+        List<Assessment> assessments = (assessmentRepository == null ? List.<Assessment>of()
+                : assessmentRepository.findByCourse_Id(courseId)).stream()
+                .sorted(Comparator.comparing((Assessment a) -> a.getSection() == null ? 1 : 0)
+                        .thenComparing(a -> a.getSection() == null ? Integer.MAX_VALUE : a.getSection().getPosition())
+                        .thenComparing(Assessment::getPosition)
+                        .thenComparing(Assessment::getId))
+                .toList();
+
+        Map<Long, List<AssessmentResponse>> assessmentsBySection = assessments.stream()
+                .filter(assessment -> assessment.getSection() != null)
+                .collect(Collectors.groupingBy(
+                        assessment -> assessment.getSection().getId(),
+                        Collectors.mapping(AssessmentMapper::toResponse, Collectors.toList())));
+        List<AssessmentResponse> unplacedAssessments = assessments.stream()
+                .filter(assessment -> assessment.getSection() == null)
+                .map(AssessmentMapper::toResponse)
+                .toList();
+
         List<SectionResponse> sectionResponses = sections.stream()
                 .map(section -> {
                     List<LessonResponse> lessonResponses = lessonsBySection
@@ -187,13 +243,15 @@ public class CurriculumService {
                                         resourcesByLesson.getOrDefault(l.getId(), List.of()));
                             })
                             .toList();
-                    return CurriculumMapper.toSection(section, lessonResponses);
+                    return CurriculumMapper.toSection(section, lessonResponses,
+                            assessmentsBySection.getOrDefault(section.getId(), List.of()));
                 })
                 .toList();
 
         return CurriculumResponse.builder()
                 .courseId(courseId)
                 .sections(sectionResponses)
+                .unplacedAssessments(unplacedAssessments)
                 .build();
     }
 
@@ -233,7 +291,11 @@ public class CurriculumService {
         List<LessonResponse> lessonResponses = lessons.stream()
                 .map(lessonAssembler::assembleOne)
                 .toList();
-        return CurriculumMapper.toSection(saved, lessonResponses);
+        List<AssessmentResponse> assessmentResponses = (assessmentRepository == null ? List.<Assessment>of()
+                : assessmentRepository.findBySection_IdOrderByPositionAscIdAsc(sectionId)).stream()
+                .map(AssessmentMapper::toResponse)
+                .toList();
+        return CurriculumMapper.toSection(saved, lessonResponses, assessmentResponses);
     }
 
     @Transactional
@@ -243,6 +305,10 @@ public class CurriculumService {
 
         List<Lesson> lessons = lessonRepository.findBySection_IdOrderByPositionAsc(sectionId);
         softDeleteLessonsCascade(course, lessons);
+
+        // Assessments are designed independently from curriculum. Removing a
+        // section only returns them to the unplaced pool; quiz data stays intact.
+        assessmentService.unassignFromSection(sectionId);
 
         section.setDeletedAt(Instant.now());
         sectionRepository.save(section);
@@ -258,13 +324,14 @@ public class CurriculumService {
                                     CreateLessonRequest request, Long userId) {
         ownershipGuard.requireEditableCourse(courseId, userId);
         CourseSection section = ownershipGuard.requireSectionInCourse(sectionId, courseId);
+        Set<LearningOutcome> outcomes = resolveOutcomes(courseId, request.getOutcomeIds());
 
         int position = (int) lessonRepository.countBySection_Id(sectionId);
 
         Lesson lesson = Lesson.builder()
                 .section(section)
                 .title(request.getTitle().trim())
-                .contentType(request.getContentType())
+                .outcomes(outcomes)
                 .uploadStatus(LessonUploadStatus.EMPTY)
                 .position(position)
                 .build();
@@ -284,12 +351,8 @@ public class CurriculumService {
         if (request.getIsPreview() != null) {
             lesson.setIsPreview(request.getIsPreview());
         }
-        if (request.getContentText() != null) {
-            if (lesson.getContentType() != LessonContentType.ARTICLE) {
-                throw new AppException(ErrorCode.LESSON_CONTENT_TYPE_MISMATCH,
-                        "contentText chỉ áp dụng cho lesson dạng ARTICLE");
-            }
-            lesson.setContentText(request.getContentText());
+        if (request.getOutcomeIds() != null) {
+            lesson.setOutcomes(resolveOutcomes(courseId, request.getOutcomeIds()));
         }
 
         return lessonAssembler.assembleOne(lessonRepository.save(lesson));
@@ -436,6 +499,25 @@ public class CurriculumService {
             lessons.get(i).setPosition(i);
         }
         lessonRepository.saveAll(lessons);
+    }
+
+    private Set<LearningOutcome> resolveOutcomes(Long courseId, List<Long> outcomeIds) {
+        if (outcomeIds == null || outcomeIds.isEmpty()) {
+            return new LinkedHashSet<>();
+        }
+        Set<Long> uniqueIds = new LinkedHashSet<>(outcomeIds);
+        if (uniqueIds.size() != outcomeIds.size()) {
+            throw new AppException(ErrorCode.ASSESSMENT_OUTCOME_MISMATCH,
+                    "outcomeIds must not contain duplicates");
+        }
+        List<LearningOutcome> outcomes = outcomeRepository.findByCourse_IdAndIdIn(courseId, uniqueIds);
+        if (outcomes.size() != uniqueIds.size()) {
+            throw new AppException(ErrorCode.OUTCOME_NOT_IN_COURSE);
+        }
+        Map<Long, LearningOutcome> byId = outcomes.stream()
+                .collect(Collectors.toMap(LearningOutcome::getId, outcome -> outcome));
+        return uniqueIds.stream().map(byId::get)
+                .collect(Collectors.toCollection(LinkedHashSet::new));
     }
 
     private String trimToNull(String value) {

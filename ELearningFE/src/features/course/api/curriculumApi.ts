@@ -1,6 +1,7 @@
 import { apiClient } from '../../../lib/apiClient';
 import type {
   AddLessonResourceRequest,
+  Assessment,
   AttachLessonContentRequest,
   CreateLessonRequest,
   CreateSectionRequest,
@@ -96,6 +97,55 @@ export const curriculumApi = {
     return apiClient.patch<Curriculum>(
       `/api/v1/lecturer/courses/${courseId}/lessons/${lessonId}/move`,
       { targetSectionId, position }
+    );
+  },
+
+  listAssessments: async (courseId: number): Promise<Assessment[]> => {
+    return apiClient.get<Assessment[]>(`/api/v1/lecturer/courses/${courseId}/assessments`);
+  },
+
+  addAssessment: async (
+    courseId: number,
+    data: { type: 'QUIZ'; title: string; instructions?: string; outcomeIds: number[] }
+  ): Promise<Assessment> => {
+    return apiClient.post<Assessment>(`/api/v1/lecturer/courses/${courseId}/assessments`, data);
+  },
+
+  updateAssessment: async (
+    courseId: number,
+    assessmentId: number,
+    data: { title?: string; instructions?: string; outcomeIds?: number[] }
+  ): Promise<Assessment> => {
+    return apiClient.patch<Assessment>(
+      `/api/v1/lecturer/courses/${courseId}/assessments/${assessmentId}`,
+      data
+    );
+  },
+
+  deleteAssessment: async (courseId: number, assessmentId: number): Promise<void> => {
+    return apiClient.delete(`/api/v1/lecturer/courses/${courseId}/assessments/${assessmentId}`);
+  },
+
+  placeAssessment: async (
+    courseId: number,
+    assessmentId: number,
+    sectionId: number | null,
+    position = 0
+  ): Promise<Assessment> => {
+    return apiClient.patch<Assessment>(
+      `/api/v1/lecturer/courses/${courseId}/assessments/${assessmentId}/placement`,
+      { sectionId, position }
+    );
+  },
+
+  reorderAssessments: async (
+    courseId: number,
+    sectionId: number,
+    assessmentIds: number[]
+  ): Promise<Assessment[]> => {
+    return apiClient.put<Assessment[]>(
+      `/api/v1/lecturer/courses/${courseId}/sections/${sectionId}/assessments/order`,
+      { assessmentIds }
     );
   },
 

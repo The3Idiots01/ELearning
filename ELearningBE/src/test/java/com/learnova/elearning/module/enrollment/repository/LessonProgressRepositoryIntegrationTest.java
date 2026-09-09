@@ -26,9 +26,9 @@ import static org.assertj.core.api.Assertions.assertThat;
 /**
  * Xác nhận câu native SQL merge nguyên tử (§5.5 design_us15_us17.md) chạy đúng
  * trên PostgreSQL thật — {@code int4multirange}/{@code unnest(multirange)}
- * không tồn tại trên H2 nên không thể giả lập bằng in-memory DB (§11.2). Dự án
- * chưa có Testcontainers (việc đó thuộc Task 13); test này chạy trực tiếp
- * trên DB dev (Neon) đã cấu hình qua {@code .env}, và tự rollback nhờ
+ * không tồn tại trên H2 nên không thể giả lập bằng in-memory DB (§11.2). Test
+ * này vẫn chạy trực tiếp trên DB dev (Neon) đã cấu hình qua {@code .env}
+ * thay vì container riêng, và tự rollback nhờ
  * {@code @Transactional} nên không để lại dữ liệu thật.
  */
 @SpringBootTest

@@ -304,7 +304,7 @@ export const CourseDetailPage: React.FC<CourseDetailPageProps> = ({
                           Chương {sIdx + 1}: {sec.title}
                         </span>
                         <span className="text-[11px] font-semibold text-slate-500">
-                          {sec.lessons.length} bài học
+                          {sec.lessons.length + (sec.assessments || []).length} mục học
                         </span>
                       </div>
 
@@ -356,6 +356,22 @@ export const CourseDetailPage: React.FC<CourseDetailPageProps> = ({
                             </button>
                           );
                         })}
+                        {(sec.assessments || []).map((assessment) => (
+                          <div
+                            key={`assessment-${assessment.id}`}
+                            className="px-5 py-3.5 flex items-center justify-between text-xs bg-amber-50/40"
+                          >
+                            <div className="flex items-center gap-3">
+                              <span className="material-symbols-outlined text-[18px] text-amber-600">
+                                quiz
+                              </span>
+                              <span className="font-medium text-slate-800">
+                                Bài kiểm tra: {assessment.title}
+                              </span>
+                            </div>
+                            <span className="text-slate-400 text-[10px]">Quiz</span>
+                          </div>
+                        ))}
                       </div>
                     </div>
                   ))}

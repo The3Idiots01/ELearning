@@ -6,6 +6,7 @@ import com.learnova.elearning.module.course.dto.response.SectionResponse;
 import com.learnova.elearning.module.course.entity.CourseSection;
 import com.learnova.elearning.module.course.entity.Lesson;
 import com.learnova.elearning.module.course.entity.LessonResource;
+import com.learnova.elearning.module.course.entity.LearningOutcome;
 
 import java.math.BigDecimal;
 import java.util.List;
@@ -18,6 +19,11 @@ public final class CurriculumMapper {
     private CurriculumMapper() {}
 
     public static SectionResponse toSection(CourseSection section, List<LessonResponse> lessons) {
+        return toSection(section, lessons, List.of());
+    }
+
+    public static SectionResponse toSection(CourseSection section, List<LessonResponse> lessons,
+                                            List<com.learnova.elearning.module.course.dto.response.AssessmentResponse> assessments) {
         int totalDuration = lessons.stream()
                 .mapToInt(l -> l.getDurationSeconds() != null ? l.getDurationSeconds() : 0)
                 .sum();
@@ -27,8 +33,12 @@ public final class CurriculumMapper {
                 .description(section.getDescription())
                 .position(section.getPosition())
                 .totalLessons(lessons.size())
+                .completedLessons((int) lessons.stream().filter(l -> Boolean.TRUE.equals(l.getCompleted())).count())
+                .totalAssessments(assessments.size())
+                .completedAssessments((int) assessments.stream().filter(a -> Boolean.TRUE.equals(a.getCompleted())).count())
                 .totalDurationSeconds(totalDuration)
                 .lessons(lessons)
+                .assessments(assessments)
                 .build();
     }
 
@@ -46,6 +56,11 @@ public final class CurriculumMapper {
                 .playable(playable)
                 .lastPositionSeconds(lastPositionSeconds)
                 .coveragePercent(coveragePercent)
+                .outcomeIds((lesson.getOutcomes() == null ? java.util.Set.<LearningOutcome>of() : lesson.getOutcomes()).stream()
+                        .sorted(java.util.Comparator.comparing(LearningOutcome::getPosition)
+                                .thenComparing(LearningOutcome::getId))
+                        .map(LearningOutcome::getId)
+                        .toList())
                 .originalFileName(lesson.getOriginalFileName())
                 .fileSizeBytes(lesson.getFileSizeBytes())
                 .mimeType(lesson.getMimeType())

@@ -15,7 +15,12 @@ import com.learnova.elearning.module.quiz.dto.QuizOptionDto;
 import com.learnova.elearning.module.quiz.dto.request.SubmitQuizAttemptRequest;
 import com.learnova.elearning.module.quiz.dto.response.QuestionTakingResponse;
 import com.learnova.elearning.module.quiz.dto.response.QuizAttemptResponse;
+import com.learnova.elearning.module.quiz.dto.response.QuizAttemptResponse.QuestionResultItem;
 import com.learnova.elearning.module.quiz.dto.response.QuizTakingResponse;
+import com.learnova.elearning.module.quiz.entity.Quiz;
+import com.learnova.elearning.module.quiz.entity.QuizAttempt;
+import com.learnova.elearning.module.quiz.entity.QuizQuestion;
+import com.learnova.elearning.module.quiz.entity.enums.QuestionType;
 import com.learnova.elearning.module.quiz.entity.Quiz;
 import com.learnova.elearning.module.quiz.entity.QuizAttempt;
 import com.learnova.elearning.module.quiz.entity.QuizQuestion;
@@ -26,6 +31,7 @@ import com.learnova.elearning.module.quiz.repository.QuizRepository;
 import com.learnova.elearning.module.user.entity.User;
 import com.learnova.elearning.module.user.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -44,7 +50,10 @@ import java.util.stream.Collectors;
 @Service
 @RequiredArgsConstructor
 @Slf4j
+@Slf4j
 public class QuizTakingService {
+
+    private static final BigDecimal DEFAULT_PASSING_SCORE = new BigDecimal("80.00");
 
     private final QuizRepository quizRepository;
     private final QuizQuestionRepository quizQuestionRepository;

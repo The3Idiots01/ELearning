@@ -21,8 +21,8 @@ export interface QuizQuestion {
 
 export interface QuizDetail {
   id: number;
-  lessonId: number;
-  title: string;
+  assessmentId: number;
+  title?: string;
   passingScore: number;
   maxAttempts?: number | null;
   totalPoints: number;
@@ -32,7 +32,7 @@ export interface QuizDetail {
 }
 
 export interface UpsertQuizRequest {
-  title: string;
+  title?: string;
   passingScore: number;
   maxAttempts?: number | null;
 }
@@ -42,6 +42,58 @@ export interface UpsertQuestionRequest {
   questionType: QuestionType;
   points: number;
   options: QuizOption[];
+}
+
+export interface StudentQuizOption {
+  id: string;
+  text: string;
+}
+
+export interface StudentQuizQuestion {
+  id: number;
+  questionText: string;
+  questionType: QuestionType;
+  points: number;
+  position: number;
+  options: StudentQuizOption[];
+}
+
+export interface StudentQuiz {
+  id: number;
+  assessmentId: number;
+  title: string;
+  passingScore: number;
+  maxAttempts?: number | null;
+  attemptsUsed: number;
+  attemptsRemaining?: number | null;
+  hasPassed: boolean;
+  questions: StudentQuizQuestion[];
+}
+
+export interface QuizAnswer {
+  questionId: number;
+  selectedOptionIds: string[];
+}
+
+export interface QuizAttempt {
+  id: number;
+  quizId: number;
+  assessmentId: number;
+  score: number;
+  passingScore: number;
+  isPassed: boolean;
+  totalQuestions: number;
+  correctQuestions: number;
+  submittedAt: string;
+  questionResults?: Array<{
+    questionId: number;
+    isCorrect: boolean;
+    earnedPoints: number;
+    totalPoints: number;
+    selectedOptionIds?: string[];
+    correctOptionIds?: string[];
+    explanation?: string;
+  }>;
 }
 
 export interface ReorderQuestionsRequest {
