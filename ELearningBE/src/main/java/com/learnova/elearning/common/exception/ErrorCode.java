@@ -82,7 +82,7 @@ public enum ErrorCode {
     CONTENT_RANGE_NOT_SATISFIABLE(1257, "Requested range not satisfiable", HttpStatus.REQUESTED_RANGE_NOT_SATISFIABLE),
 
     // Knowledge Tracking (1261 - 1265)
-    PROGRESS_RATE_LIMITED(1261, "Progress updates are being sent too fast", HttpStatus.TOO_MANY_REQUESTS);
+    PROGRESS_RATE_LIMITED(1261, "Progress updates are being sent too fast", HttpStatus.TOO_MANY_REQUESTS),
     // Quiz Domain (1301 - 1310)
     QUIZ_NOT_FOUND(1301, "Quiz not found", HttpStatus.NOT_FOUND),
     QUIZ_QUESTION_NOT_FOUND(1302, "Quiz question not found", HttpStatus.NOT_FOUND),

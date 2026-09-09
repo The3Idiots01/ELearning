@@ -22,5 +22,6 @@ public class QuizTakingResponse {
     private Integer attemptsUsed;
     private Integer attemptsRemaining;
     private Boolean hasPassed;
+    private BigDecimal highestScore;
     private List<QuestionTakingResponse> questions;
 }

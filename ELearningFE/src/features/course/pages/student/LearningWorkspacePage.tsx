@@ -3,6 +3,7 @@ import type { CourseDetail, Curriculum, Lesson, ProgressSnapshot } from '../../.
 import { formatDuration } from '../../../../lib/formatters';
 import { DocumentViewer } from '../../components/DocumentViewer';
 import { LessonVideoPlayer } from '../../components/LessonVideoPlayer';
+import { QuizTakingView } from '../../components/QuizTakingView';
 import { playbackApi } from '../../api/playbackApi';
 import { ApiError } from '../../../../lib/apiClient';
 import { useCourseProgress } from '../../hooks/useCourseProgress';
@@ -212,6 +213,13 @@ export const LearningWorkspacePage: React.FC<LearningWorkspacePageProps> = ({
                 </div>
               </div>
             </div>
+          ) : activeLesson.contentType === 'QUIZ' ? (
+            /* QUIZ Content Type */
+            <QuizTakingView
+              courseId={courseId}
+              lesson={activeLesson}
+              onLessonCompleted={() => onCompleteLesson(activeLesson.id)}
+            />
           ) : (
             /* FILE Content Type */
             <div className="w-full min-h-[1400px] sm:min-h-[1600px] p-3 sm:p-5 border-b border-slate-800 flex flex-col shrink-0">
@@ -256,26 +264,38 @@ export const LearningWorkspacePage: React.FC<LearningWorkspacePageProps> = ({
 
                 {/* Mark Complete & Next Buttons */}
                 <div className="flex items-center gap-3">
-                  <button
-                    onClick={handleMarkComplete}
-                    disabled={isCompleting || activeLesson.completed}
-                    className={`px-5 py-2.5 rounded-xl text-xs font-extrabold transition-all flex items-center gap-2 cursor-pointer active:scale-95 ${
-                      activeLesson.completed
-                        ? 'bg-emerald-600/20 text-emerald-400 border border-emerald-500/30 cursor-default'
-                        : 'bg-emerald-600 hover:bg-emerald-500 text-white shadow-lg shadow-emerald-950/30'
-                    }`}
-                  >
-                    <span className="material-symbols-outlined text-[18px]">
-                      {activeLesson.completed ? 'task_alt' : 'check'}
-                    </span>
-                    <span>
-                      {activeLesson.completed
-                        ? 'Đã hoàn thành'
-                        : isCompleting
-                        ? 'Đang lưu...'
-                        : 'Đánh dấu hoàn thành'}
-                    </span>
-                  </button>
+                  {activeLesson.contentType !== 'QUIZ' ? (
+                    <button
+                      onClick={handleMarkComplete}
+                      disabled={isCompleting || activeLesson.completed}
+                      className={`px-5 py-2.5 rounded-xl text-xs font-extrabold transition-all flex items-center gap-2 cursor-pointer active:scale-95 ${
+                        activeLesson.completed
+                          ? 'bg-emerald-600/20 text-emerald-400 border border-emerald-500/30 cursor-default'
+                          : 'bg-emerald-600 hover:bg-emerald-500 text-white shadow-lg shadow-emerald-950/30'
+                      }`}
+                    >
+                      <span className="material-symbols-outlined text-[18px]">
+                        {activeLesson.completed ? 'task_alt' : 'check'}
+                      </span>
+                      <span>
+                        {activeLesson.completed
+                          ? 'Đã hoàn thành'
+                          : isCompleting
+                          ? 'Đang lưu...'
+                          : 'Đánh dấu hoàn thành'}
+                      </span>
+                    </button>
+                  ) : activeLesson.completed ? (
+                    <div className="px-4 py-2.5 rounded-xl bg-emerald-600/20 text-emerald-400 border border-emerald-500/30 text-xs font-extrabold flex items-center gap-2">
+                      <span className="material-symbols-outlined text-[18px]">task_alt</span>
+                      <span>Đã hoàn thành bài kiểm tra</span>
+                    </div>
+                  ) : (
+                    <div className="px-4 py-2.5 rounded-xl bg-slate-900 text-slate-400 border border-slate-800 text-xs font-semibold flex items-center gap-2">
+                      <span className="material-symbols-outlined text-[18px]">quiz</span>
+                      <span>Đạt bài kiểm tra để hoàn thành</span>
+                    </div>
+                  )}
 
                   {nextLesson && (
                     <button
