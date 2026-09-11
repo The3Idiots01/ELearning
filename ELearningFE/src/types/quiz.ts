@@ -1,4 +1,5 @@
 export type QuestionType = 'SINGLE_CHOICE' | 'MULTIPLE_CHOICE';
+export type QuizDifficulty = 'EASY' | 'MEDIUM' | 'HARD' | 'MIXED';
 
 export interface QuizOption {
   id?: string;
@@ -33,6 +34,8 @@ export interface QuizDetail {
 
 export interface UpsertQuizRequest {
   title?: string;
+  instructions?: string;
+  outcomeIds?: number[];
   passingScore: number;
   maxAttempts?: number | null;
 }
@@ -42,6 +45,25 @@ export interface UpsertQuestionRequest {
   questionType: QuestionType;
   points: number;
   options: QuizOption[];
+}
+
+export interface GenerateQuizDraftRequest {
+  questionCount?: number;
+  totalPoints?: number;
+  difficulty?: QuizDifficulty;
+  questionType?: QuestionType;
+  contentGuidance?: string;
+  questionGuidance?: string;
+}
+
+export interface QuizDraft {
+  totalPoints: number;
+  difficulty: QuizDifficulty;
+  questions: UpsertQuestionRequest[];
+}
+
+export interface ApplyQuizDraftRequest {
+  questions: UpsertQuestionRequest[];
 }
 
 export interface StudentQuizOption {

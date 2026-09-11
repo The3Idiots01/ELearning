@@ -6,14 +6,18 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.learnova.elearning.common.exception.AppException;
 import com.learnova.elearning.common.exception.ErrorCode;
 import com.learnova.elearning.module.course.entity.Assessment;
+import com.learnova.elearning.module.course.entity.LearningOutcome;
 import com.learnova.elearning.module.course.entity.enums.AssessmentType;
+import com.learnova.elearning.module.course.repository.LearningOutcomeRepository;
 import com.learnova.elearning.module.course.service.CourseOwnershipGuard;
 import com.learnova.elearning.module.quiz.dto.QuizOptionDto;
+import com.learnova.elearning.module.quiz.dto.request.ApplyQuizDraftRequest;
 import com.learnova.elearning.module.quiz.dto.request.ReorderQuestionsRequest;
 import com.learnova.elearning.module.quiz.dto.request.UpsertQuestionRequest;
 import com.learnova.elearning.module.quiz.dto.request.UpsertQuizRequest;
 import com.learnova.elearning.module.quiz.dto.response.QuestionDetailResponse;
 import com.learnova.elearning.module.quiz.dto.response.QuizDetailResponse;
+import com.learnova.elearning.module.quiz.dto.response.QuizQuestionDraft;
 import com.learnova.elearning.module.quiz.entity.Quiz;
 import com.learnova.elearning.module.quiz.entity.QuizQuestion;
 import com.learnova.elearning.module.quiz.entity.enums.QuestionType;
@@ -27,6 +31,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.HashSet;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -42,6 +47,7 @@ public class QuizAuthoringService {
     private final QuizRepository quizRepository;
     private final QuizQuestionRepository quizQuestionRepository;
     private final CourseOwnershipGuard ownershipGuard;
+    private final LearningOutcomeRepository outcomeRepository;
     private final ObjectMapper objectMapper;
 
     @Transactional(readOnly = true)
@@ -59,6 +65,15 @@ public class QuizAuthoringService {
         Assessment assessment = requireQuizAssessment(courseId, assessmentId);
         Quiz quiz = quizRepository.findByAssessment_Id(assessmentId)
                 .orElseGet(() -> Quiz.builder().assessment(assessment).build());
+        if (request.getTitle() != null && !request.getTitle().isBlank()) {
+            assessment.setTitle(request.getTitle().trim());
+        }
+        if (request.getInstructions() != null) {
+            assessment.setInstructions(trimToNull(request.getInstructions()));
+        }
+        if (request.getOutcomeIds() != null) {
+            assessment.setOutcomes(resolveOutcomes(courseId, request.getOutcomeIds()));
+        }
         quiz.setPassingScore(request.getPassingScore());
         quiz.setMaxAttempts(request.getMaxAttempts());
         return toQuizDetailResponse(quizRepository.save(quiz), assessment);
@@ -82,6 +97,56 @@ public class QuizAuthoringService {
                 .optionsJson(serializeOptions(options))
                 .build();
         return toQuestionDetailResponse(quizQuestionRepository.save(question));
+    }
+
+    /** Applies a reviewed AI draft by appending its questions, preserving existing author work. */
+    @Transactional
+    public QuizDetailResponse applyAiDraft(Long courseId, Long assessmentId,
+                                           ApplyQuizDraftRequest request, Long lecturerId) {
+        ownershipGuard.requireEditableCourse(courseId, lecturerId);
+        Assessment assessment = requireQuizAssessment(courseId, assessmentId);
+
+        List<List<QuizOptionDto>> normalizedOptions = new ArrayList<>();
+        for (QuizQuestionDraft question : request.questions()) {
+            normalizedOptions.add(validateAndNormalizeOptions(
+                    question.options(), question.questionType()));
+        }
+
+        Quiz quiz = quizRepository.findByAssessment_Id(assessmentId)
+                .orElseGet(() -> quizRepository.save(Quiz.builder().assessment(assessment).build()));
+
+        int startPosition = quizQuestionRepository.countByQuiz_Id(quiz.getId());
+        List<QuizQuestion> generated = new ArrayList<>();
+        for (int index = 0; index < request.questions().size(); index++) {
+            QuizQuestionDraft draft = request.questions().get(index);
+            generated.add(QuizQuestion.builder()
+                    .quiz(quiz)
+                    .questionText(draft.questionText().trim())
+                    .questionType(draft.questionType())
+                    .points(draft.points())
+                    .position(startPosition + index)
+                    .optionsJson(serializeOptions(normalizedOptions.get(index)))
+                    .build());
+        }
+        quizQuestionRepository.saveAll(generated);
+        return toQuizDetailResponse(quiz, assessment);
+    }
+
+    private Set<LearningOutcome> resolveOutcomes(Long courseId, List<Long> outcomeIds) {
+        Set<Long> uniqueIds = new LinkedHashSet<>(outcomeIds);
+        if (uniqueIds.size() != outcomeIds.size()) {
+            throw new AppException(ErrorCode.ASSESSMENT_OUTCOME_MISMATCH,
+                    "outcomeIds must not contain duplicates");
+        }
+        if (uniqueIds.isEmpty()) return new LinkedHashSet<>();
+        List<LearningOutcome> outcomes = outcomeRepository.findByCourse_IdAndIdIn(courseId, uniqueIds);
+        if (outcomes.size() != uniqueIds.size()) {
+            throw new AppException(ErrorCode.ASSESSMENT_OUTCOME_MISMATCH);
+        }
+        Map<Long, LearningOutcome> byId = outcomes.stream()
+                .collect(Collectors.toMap(LearningOutcome::getId, outcome -> outcome));
+        return uniqueIds.stream().map(byId::get)
+                .collect(Collectors.toCollection(LinkedHashSet::new));
     }
 
     @Transactional

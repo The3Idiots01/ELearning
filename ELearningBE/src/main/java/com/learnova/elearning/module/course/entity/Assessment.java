@@ -1,6 +1,7 @@
 package com.learnova.elearning.module.course.entity;
 
 import com.learnova.elearning.module.course.entity.enums.AssessmentType;
+import com.learnova.elearning.module.course.entity.enums.PublicationStatus;
 import jakarta.persistence.*;
 import lombok.*;
 import org.hibernate.annotations.CreationTimestamp;
@@ -37,6 +38,11 @@ public class Assessment {
     @Enumerated(EnumType.STRING)
     @Column(name = "assessment_type", nullable = false, length = 30)
     private AssessmentType type;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "publication_status", nullable = false, length = 20)
+    @Builder.Default
+    private PublicationStatus publicationStatus = PublicationStatus.PUBLISHED;
 
     @Column(name = "title", nullable = false, length = 255)
     private String title;

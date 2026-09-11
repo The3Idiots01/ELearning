@@ -2,6 +2,7 @@ package com.learnova.elearning.module.course.service;
 
 import com.learnova.elearning.common.exception.AppException;
 import com.learnova.elearning.common.exception.ErrorCode;
+import com.learnova.elearning.module.course.dto.request.CreateLessonRequest;
 import com.learnova.elearning.module.course.entity.Course;
 import com.learnova.elearning.module.course.entity.CourseSection;
 import com.learnova.elearning.module.course.entity.Lesson;
@@ -14,6 +15,7 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
+import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
@@ -118,5 +120,24 @@ class CurriculumServiceTest {
         verify(assessmentService).unassignFromSection(5L);
         assertThat(section.getDeletedAt()).isNotNull();
         verify(sectionRepository).save(section);
+    }
+
+    @Test
+    @DisplayName("Create lesson: lưu sẵn định dạng nội dung được chọn")
+    void addLesson_persistsSelectedContentType() {
+        CourseSection section = CourseSection.builder().id(5L).build();
+        CreateLessonRequest request = new CreateLessonRequest();
+        request.setTitle("Video JPA");
+        request.setContentType(LessonContentType.VIDEO);
+
+        when(ownershipGuard.requireSectionInCourse(5L, 1L)).thenReturn(section);
+        when(lessonRepository.countBySection_Id(5L)).thenReturn(0L);
+        when(lessonRepository.save(any(Lesson.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        curriculumService.addLesson(1L, 5L, request, 10L);
+
+        ArgumentCaptor<Lesson> lessonCaptor = ArgumentCaptor.forClass(Lesson.class);
+        verify(lessonRepository).save(lessonCaptor.capture());
+        assertThat(lessonCaptor.getValue().getContentType()).isEqualTo(LessonContentType.VIDEO);
     }
 }

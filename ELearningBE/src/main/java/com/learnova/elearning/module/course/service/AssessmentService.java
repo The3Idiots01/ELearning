@@ -11,11 +11,17 @@ import com.learnova.elearning.module.course.entity.Course;
 import com.learnova.elearning.module.course.entity.CourseSection;
 import com.learnova.elearning.module.course.entity.LearningOutcome;
 import com.learnova.elearning.module.course.entity.enums.AssessmentType;
+import com.learnova.elearning.module.course.entity.enums.PublicationStatus;
+import com.learnova.elearning.module.course.entity.enums.CourseStatus;
+import com.learnova.elearning.module.course.exception.CourseNotReadyException;
+import com.learnova.elearning.module.course.dto.response.PublishIssue;
 import com.learnova.elearning.module.course.mapper.AssessmentMapper;
 import com.learnova.elearning.module.course.repository.AssessmentRepository;
 import com.learnova.elearning.module.course.repository.LearningOutcomeRepository;
+import com.learnova.elearning.module.enrollment.repository.EnrollmentRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Instant;
@@ -35,6 +41,13 @@ public class AssessmentService {
     private final CourseOwnershipGuard ownershipGuard;
     private final AssessmentRepository assessmentRepository;
     private final LearningOutcomeRepository outcomeRepository;
+    private final EnrollmentRepository enrollmentRepository;
+    private CoursePublishValidator publishValidator;
+
+    @Autowired
+    void setPublishValidator(CoursePublishValidator publishValidator) {
+        this.publishValidator = publishValidator;
+    }
 
     @Transactional(readOnly = true)
     public List<AssessmentResponse> list(Long courseId, Long userId) {
@@ -59,12 +72,15 @@ public class AssessmentService {
         Assessment assessment = Assessment.builder()
                 .course(course)
                 .type(request.getType())
+                .publicationStatus(PublicationStatus.DRAFT)
                 .title(request.getTitle().trim())
                 .instructions(trimToNull(request.getInstructions()))
                 .position(0)
                 .outcomes(outcomes)
                 .build();
-        return AssessmentMapper.toResponse(assessmentRepository.save(assessment));
+        AssessmentResponse response = AssessmentMapper.toResponse(assessmentRepository.save(assessment));
+        validateLiveCourse(assessment.getCourse());
+        return response;
     }
 
     @Transactional
@@ -86,7 +102,9 @@ public class AssessmentService {
             Set<LearningOutcome> outcomes = resolveOutcomes(courseId, request.getOutcomeIds());
             assessment.setOutcomes(outcomes);
         }
-        return AssessmentMapper.toResponse(assessmentRepository.save(assessment));
+        AssessmentResponse response = AssessmentMapper.toResponse(assessmentRepository.save(assessment));
+        validateLiveCourse(assessment.getCourse());
+        return response;
     }
 
     @Transactional
@@ -144,14 +162,26 @@ public class AssessmentService {
 
     @Transactional
     public void delete(Long courseId, Long assessmentId, Long userId) {
-        ownershipGuard.requireEditableCourse(courseId, userId);
+        delete(courseId, assessmentId, userId, false);
+    }
+
+    @Transactional
+    public void delete(Long courseId, Long assessmentId, Long userId, boolean confirmed) {
+        Course course = ownershipGuard.requireEditableCourse(courseId, userId);
         Assessment assessment = ownershipGuard.requireAssessmentInCourse(assessmentId, courseId);
+        if (course.getStatus() == CourseStatus.PUBLISHED
+                && assessment.getPublicationStatus() == PublicationStatus.PUBLISHED && !confirmed) {
+            throw new AppException(ErrorCode.COURSE_NOT_READY_TO_PUBLISH,
+                    "Xác nhận để archive đánh giá đã xuất bản và tính lại tiến độ");
+        }
         Long sectionId = assessment.getSection() != null ? assessment.getSection().getId() : null;
         assessment.setDeletedAt(Instant.now());
         assessmentRepository.save(assessment);
         if (sectionId != null) {
             normalizeSectionPositions(sectionId);
         }
+        validateLiveCourse(course);
+        recalculateActiveEnrollments(courseId);
     }
 
     /** Called from section deletion so assessment plans survive curriculum restructuring. */
@@ -208,5 +238,18 @@ public class AssessmentService {
         }
         String trimmed = value.trim();
         return trimmed.isEmpty() ? null : trimmed;
+    }
+
+    private void validateLiveCourse(Course course) {
+        if (course.getStatus() == CourseStatus.PUBLISHED && publishValidator != null) {
+            List<PublishIssue> issues = publishValidator.validateLiveSnapshot(course);
+            if (!issues.isEmpty()) throw new CourseNotReadyException(issues);
+        }
+    }
+
+    private void recalculateActiveEnrollments(Long courseId) {
+        enrollmentRepository.findByCourse_Id(courseId).stream()
+                .filter(e -> e.getStatus().name().equals("ACTIVE"))
+                .forEach(e -> enrollmentRepository.recalculateCourseProgress(e.getId(), courseId));
     }
 }

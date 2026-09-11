@@ -1,3 +1,4 @@
+import { useConfirm } from '../../../../app/context/ConfirmContext';
 import React, { useState, useEffect, useMemo } from 'react';
 import type { CourseQuestion } from '../../../../types/qa';
 import { qaApi } from '../../api/qaApi';
@@ -17,6 +18,7 @@ export const InstructorQaPage: React.FC<InstructorQaPageProps> = ({
 }) => {
   const { currentUser } = useAuth();
   const { showSuccess, showError } = useToast();
+  const confirm = useConfirm();
 
   const [questions, setQuestions] = useState<CourseQuestion[]>([]);
   const [isLoading, setIsLoading] = useState<boolean>(true);
@@ -109,7 +111,7 @@ export const InstructorQaPage: React.FC<InstructorQaPageProps> = ({
   };
 
   const handleDeleteQuestion = async (questionId: number) => {
-    if (!window.confirm('Bạn có chắc chắn muốn xóa câu hỏi này cùng các phản hồi?')) {
+    if (!await confirm('Bạn có chắc chắn muốn xóa câu hỏi này cùng các phản hồi?')) {
       return;
     }
 

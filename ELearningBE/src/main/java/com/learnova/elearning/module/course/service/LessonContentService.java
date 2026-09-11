@@ -14,6 +14,7 @@ import com.learnova.elearning.module.course.entity.Lesson;
 import com.learnova.elearning.module.course.entity.LessonResource;
 import com.learnova.elearning.module.course.entity.enums.LessonContentType;
 import com.learnova.elearning.module.course.entity.enums.LessonUploadStatus;
+import com.learnova.elearning.module.course.entity.enums.PublicationStatus;
 import com.learnova.elearning.module.course.event.LessonContentAttachedEvent;
 import com.learnova.elearning.module.course.repository.LessonRepository;
 import com.learnova.elearning.module.course.repository.LessonResourceRepository;
@@ -41,6 +42,12 @@ public class LessonContentService {
     private final StorageKeyFactory keyFactory;
     private final LessonResponseAssembler lessonAssembler;
     private final ApplicationEventPublisher events;
+    private VideoMetadataJobs videoJobs;
+
+    @org.springframework.beans.factory.annotation.Autowired
+    void setVideoJobs(VideoMetadataJobs videoJobs) {
+        this.videoJobs = videoJobs;
+    }
 
     // ---- Lesson content (VIDEO / ARTICLE / FILE) --------------------------
 
@@ -56,10 +63,20 @@ public class LessonContentService {
         if (targetType == null) {
             throw new AppException(ErrorCode.VALIDATION_ERROR, "contentType is required");
         }
+        if (lesson.getPublicationStatus() == PublicationStatus.PUBLISHED
+                && lesson.getContentType() != null && lesson.getContentType() != targetType) {
+            throw new AppException(ErrorCode.COURSE_NOT_READY_TO_PUBLISH,
+                    "Lesson đã xuất bản phải giữ loại nội dung hoặc được archive trước khi đổi loại");
+        }
 
         String oldKey = lesson.getStorageKey();
+        String oldPendingKey = lesson.getPendingStorageKey();
         String key = null;
         ObjectMetadata meta = null;
+        boolean pendingVideoReplacement = targetType == LessonContentType.VIDEO
+                && lesson.getPublicationStatus() == PublicationStatus.PUBLISHED
+                && lesson.getStorageKey() != null
+                && course.getPublishedAt() != null;
 
         if (targetType == LessonContentType.ARTICLE) {
             if (request.getContentText() == null) {
@@ -84,19 +101,32 @@ public class LessonContentService {
             verifyMetadata(meta, request.getFileSizeBytes(), request.getMimeType(), purpose);
 
             String effectiveType = meta.contentType() != null ? meta.contentType() : request.getMimeType();
-            lesson.setStorageKey(key);
-            lesson.setOriginalFileName(request.getOriginalFileName());
-            lesson.setFileSizeBytes(meta.sizeBytes());
-            lesson.setMimeType(effectiveType);
-            lesson.setContentText(null);
-            lesson.setDurationSeconds(0);
-
             boolean isVideo = targetType == LessonContentType.VIDEO;
-            // VIDEO chuyển PROCESSING, job nền đo duration thật rồi mới READY.
-            lesson.setUploadStatus(isVideo ? LessonUploadStatus.PROCESSING : LessonUploadStatus.READY);
+            if (pendingVideoReplacement) {
+                lesson.setPendingStorageKey(key);
+                lesson.setPendingOriginalFileName(request.getOriginalFileName());
+                lesson.setPendingFileSizeBytes(meta.sizeBytes());
+                lesson.setPendingMimeType(effectiveType);
+                lesson.setPendingDurationSeconds(0);
+                lesson.setPendingUploadStatus(LessonUploadStatus.PROCESSING);
+            } else {
+                lesson.setStorageKey(key);
+                lesson.setOriginalFileName(request.getOriginalFileName());
+                lesson.setFileSizeBytes(meta.sizeBytes());
+                lesson.setMimeType(effectiveType);
+                lesson.setContentText(null);
+                lesson.setDurationSeconds(0);
+                // VIDEO chuyển PROCESSING, job nền đo duration thật rồi mới READY.
+                lesson.setUploadStatus(isVideo ? LessonUploadStatus.PROCESSING : LessonUploadStatus.READY);
+            }
         }
 
         if (targetType == LessonContentType.ARTICLE) {
+            if (lesson.getPublicationStatus() == PublicationStatus.PUBLISHED
+                    && (request.getContentText() == null || request.getContentText().isBlank())) {
+                throw new AppException(ErrorCode.COURSE_NOT_READY_TO_PUBLISH,
+                        "Không thể gỡ nội dung khỏi lesson đã xuất bản");
+            }
             lesson.setStorageKey(null);
             lesson.setOriginalFileName(null);
             lesson.setFileSizeBytes(null);
@@ -107,7 +137,10 @@ public class LessonContentService {
 
         Lesson saved = lessonRepository.save(lesson);
 
-        if (oldKey != null && !oldKey.equals(key) && course.getPublishedAt() == null) {
+        if (oldPendingKey != null && !oldPendingKey.equals(key)) {
+            storageService.delete(oldPendingKey);
+        }
+        if (!pendingVideoReplacement && oldKey != null && !oldKey.equals(key) && course.getPublishedAt() == null) {
             storageService.delete(oldKey);
         }
         if (targetType == LessonContentType.VIDEO) {
@@ -121,6 +154,11 @@ public class LessonContentService {
         Course course = ownershipGuard.requireEditableCourse(courseId, userId);
         Lesson lesson = ownershipGuard.requireLessonInCourse(lessonId, courseId);
 
+        if (lesson.getPublicationStatus() == PublicationStatus.PUBLISHED) {
+            throw new AppException(ErrorCode.COURSE_NOT_READY_TO_PUBLISH,
+                    "Không thể gỡ nội dung khỏi lesson đã xuất bản; hãy archive lesson hoặc thay nội dung hợp lệ");
+        }
+
         String key = lesson.getStorageKey();
         lesson.setContentType(null);
         lesson.setStorageKey(null);
@@ -130,6 +168,8 @@ public class LessonContentService {
         lesson.setContentText(null);
         lesson.setDurationSeconds(0);
         lesson.setUploadStatus(LessonUploadStatus.EMPTY);
+        lesson.setPendingStorageKey(null);
+        lesson.setPendingUploadStatus(null);
         Lesson saved = lessonRepository.save(lesson);
 
         // Chỉ xóa object khi course chưa từng publish (BR-07)
@@ -137,6 +177,26 @@ public class LessonContentService {
             storageService.delete(key);
         }
         return lessonAssembler.assembleOne(saved);
+    }
+
+    @Transactional
+    public LessonResponse cancelPendingVideo(Long courseId, Long lessonId, Long userId) {
+        Course course = ownershipGuard.requireEditableCourse(courseId, userId);
+        Lesson lesson = ownershipGuard.requireLessonInCourse(lessonId, courseId);
+        String key = lesson.getPendingStorageKey();
+        if (key == null) {
+            return lessonAssembler.assembleOne(lesson);
+        }
+        if (videoJobs != null) videoJobs.cancel(lesson.getId(), key);
+        lesson.setPendingStorageKey(null);
+        lesson.setPendingOriginalFileName(null);
+        lesson.setPendingFileSizeBytes(null);
+        lesson.setPendingMimeType(null);
+        lesson.setPendingDurationSeconds(0);
+        lesson.setPendingUploadStatus(null);
+        LessonResponse response = lessonAssembler.assembleOne(lessonRepository.save(lesson));
+        storageService.delete(key);
+        return response;
     }
 
     // ---- Lesson resources -------------------------------------------------

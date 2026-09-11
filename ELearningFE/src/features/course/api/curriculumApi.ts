@@ -38,8 +38,8 @@ export const curriculumApi = {
     );
   },
 
-  deleteSection: async (courseId: number, sectionId: number): Promise<void> => {
-    return apiClient.delete(`/api/v1/lecturer/courses/${courseId}/sections/${sectionId}`);
+  deleteSection: async (courseId: number, sectionId: number, confirm = false): Promise<void> => {
+    return apiClient.delete(`/api/v1/lecturer/courses/${courseId}/sections/${sectionId}`, { params: { confirm } });
   },
 
   reorderSections: async (courseId: number, sectionIds: number[]): Promise<Curriculum> => {
@@ -73,8 +73,8 @@ export const curriculumApi = {
     );
   },
 
-  deleteLesson: async (courseId: number, lessonId: number): Promise<void> => {
-    return apiClient.delete(`/api/v1/lecturer/courses/${courseId}/lessons/${lessonId}`);
+  deleteLesson: async (courseId: number, lessonId: number, confirm = false): Promise<void> => {
+    return apiClient.delete(`/api/v1/lecturer/courses/${courseId}/lessons/${lessonId}`, { params: { confirm } });
   },
 
   reorderLessons: async (
@@ -122,8 +122,8 @@ export const curriculumApi = {
     );
   },
 
-  deleteAssessment: async (courseId: number, assessmentId: number): Promise<void> => {
-    return apiClient.delete(`/api/v1/lecturer/courses/${courseId}/assessments/${assessmentId}`);
+  deleteAssessment: async (courseId: number, assessmentId: number, confirm = false): Promise<void> => {
+    return apiClient.delete(`/api/v1/lecturer/courses/${courseId}/assessments/${assessmentId}`, { params: { confirm } });
   },
 
   placeAssessment: async (

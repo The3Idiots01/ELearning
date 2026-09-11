@@ -1,83 +1,76 @@
-import { useEffect, useRef, type RefObject } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { progressApi } from '../api/progressApi';
-import type { ProgressSnapshot } from '../../../types/course';
+import type { HeartbeatPayload, ProgressSnapshot } from '../../../types/course';
 
-const FLUSH_MS = 10_000;
-
-/**
- * Đọc video.played + gửi heartbeat — §8.2 design_us15_us17.md. Không giữ
- * trạng thái tích luỹ nào phía client: video.played đã là trạng thái đó, và
- * trình duyệt tự loại phần tua qua (BR-27). Gửi lại cùng một tập nhiều lần là
- * vô hại vì merge phía server là phép hợp (§5.5) — nên không cần buffer, không
- * cần retry riêng.
- */
-export function useWatchTracker(
-  courseId: number,
-  lessonId: number | null,
-  videoRef: RefObject<HTMLVideoElement | null>,
-  enabled: boolean,
-  onSnapshot?: (snapshot: ProgressSnapshot) => void
-) {
-  const sessionId = useRef<string>(crypto.randomUUID());
-  const onSnapshotRef = useRef(onSnapshot);
-  onSnapshotRef.current = onSnapshot;
-
+/** Bind to a concrete media element: cleanup must never read the next lesson's ref. */
+export function useWatchTracker(courseId: number, lessonId: number, video: HTMLVideoElement | null,
+  enabled: boolean, onSnapshot?: (snapshot: ProgressSnapshot) => void) {
+  const callback = useRef(onSnapshot);
+  useEffect(() => { callback.current = onSnapshot; }, [onSnapshot]);
+  const [syncError, setSyncError] = useState(false);
   useEffect(() => {
-    sessionId.current = crypto.randomUUID();
-  }, [lessonId]);
-
-  useEffect(() => {
-    const video = videoRef.current;
-    if (!enabled || !lessonId || !video) return;
-
-    const readPlayed = (v: HTMLVideoElement): [number, number][] => {
-      const out: [number, number][] = [];
-      for (let i = 0; i < v.played.length; i++) {
-        out.push([v.played.start(i), v.played.end(i)]);
-      }
-      return out;
+    if (!enabled || !video) return;
+    const sessionId = crypto.randomUUID();
+    let disposed = false;
+    let inFlight = false;
+    let failures = 0;
+    let pending: HeartbeatPayload | null = null;
+    let last: HeartbeatPayload | null = null;
+    let acknowledged = '';
+    let sending = '';
+    let interacted = video.played.length > 0;
+    const capture = () => {
+      if (video.readyState < 1 || !Number.isFinite(video.currentTime) || !Number.isFinite(video.duration)) return last;
+      if (!interacted && video.played.length === 0) return last;
+      const ranges: [number, number][] = [];
+      for (let i = 0; i < video.played.length; i++) ranges.push([video.played.start(i), video.played.end(i)]);
+      last = { positionSeconds: video.currentTime, playedRanges: ranges, playbackRate: video.playbackRate,
+        clientSessionId: sessionId, durationSeconds: Math.round(video.duration) };
+      return last;
     };
-
-    const send = (keepalive = false) => {
-      const v = videoRef.current;
-      if (!v || v.played.length === 0) return;
-      const payload = {
-        positionSeconds: v.currentTime,
-        playedRanges: readPlayed(v),
-        playbackRate: v.playbackRate,
-        clientSessionId: sessionId.current,
-        durationSeconds: Math.round(v.duration || 0)
-      };
-      progressApi
-        .sendHeartbeat(courseId, lessonId, payload, keepalive)
-        .then((snapshot) => {
-          if (snapshot?.lessonId) onSnapshotRef.current?.(snapshot);
-        })
-        .catch(() => {
-          // Payload tích luỹ — mất một heartbeat không mất tiến độ, lần sau gửi lại là đủ.
-        });
+    const send = (payload: HeartbeatPayload, keepalive = false) => {
+      const signature = JSON.stringify(payload);
+      if (signature === acknowledged || signature === sending) return;
+      if (inFlight && !keepalive) { pending = payload; return; }
+      inFlight = true; sending = signature;
+      void progressApi.sendHeartbeat(courseId, lessonId, payload, keepalive).then(snapshot => {
+        acknowledged = signature; failures = 0;
+        if (!disposed) { setSyncError(false); if (snapshot?.lessonId === lessonId) callback.current?.(snapshot); }
+      }).catch(() => {
+        failures++;
+        if (!disposed) { pending = last || payload; if (failures >= 2) setSyncError(true); }
+      }).finally(() => {
+        inFlight = false; sending = '';
+        if (pending && !disposed && failures === 0) { const next = pending; pending = null; send(next); }
+      });
     };
-
-    const handleFlush = () => send(false);
-    const handleVisibility = () => {
-      if (document.visibilityState === 'hidden') send(true);
-    };
-    const handleBeforeUnload = () => send(true);
-
-    const intervalId = window.setInterval(handleFlush, FLUSH_MS);
-    video.addEventListener('pause', handleFlush);
-    video.addEventListener('ended', handleFlush);
-    video.addEventListener('seeked', handleFlush);
-    document.addEventListener('visibilitychange', handleVisibility);
-    window.addEventListener('beforeunload', handleBeforeUnload);
-
+    const flush = (keepalive = false) => { const value = capture(); if (value) send(value, keepalive); };
+    const played = () => { interacted = true; capture(); };
+    const seeked = () => { interacted = true; flush(); };
+    const normal = () => flush();
+    const leaving = () => flush(true);
+    const visibility = () => { if (document.visibilityState === 'hidden') leaving(); };
+    const online = () => flush();
+    const interval = window.setInterval(normal, 10_000);
+    video.addEventListener('timeupdate', played);
+    video.addEventListener('pause', normal);
+    video.addEventListener('ended', normal);
+    video.addEventListener('seeked', seeked);
+    document.addEventListener('visibilitychange', visibility);
+    window.addEventListener('pagehide', leaving);
+    window.addEventListener('online', online);
     return () => {
-      window.clearInterval(intervalId);
-      video.removeEventListener('pause', handleFlush);
-      video.removeEventListener('ended', handleFlush);
-      video.removeEventListener('seeked', handleFlush);
-      document.removeEventListener('visibilitychange', handleVisibility);
-      window.removeEventListener('beforeunload', handleBeforeUnload);
+      // last captures the pre-detach position even if readyState is already reset by the browser.
+      leaving(); disposed = true;
+      clearInterval(interval);
+      video.removeEventListener('timeupdate', played);
+      video.removeEventListener('pause', normal);
+      video.removeEventListener('ended', normal);
+      video.removeEventListener('seeked', seeked);
+      document.removeEventListener('visibilitychange', visibility);
+      window.removeEventListener('pagehide', leaving);
+      window.removeEventListener('online', online);
     };
-  }, [courseId, lessonId, enabled, videoRef]);
+  }, [courseId, lessonId, video, enabled]);
+  return syncError;
 }

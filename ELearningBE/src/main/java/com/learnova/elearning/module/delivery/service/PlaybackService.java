@@ -66,6 +66,7 @@ public class PlaybackService {
         return new PlaybackIssueResult(response, sessionId);
     }
 
+
     /**
      * Đối chiếu lại quyền tại thời điểm phát byte (gateway) — dùng
      * {@code lessonId}/{@code userId} từ ticket đã giải mã, không tin lại

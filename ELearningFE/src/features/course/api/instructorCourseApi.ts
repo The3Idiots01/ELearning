@@ -100,7 +100,7 @@ export const instructorCourseApi = {
    * 10. Check Publish Requirements
    */
   publishCheck: async (courseId: number): Promise<PublishCheckResponse> => {
-    return apiClient.get<PublishCheckResponse>(`/api/v1/lecturer/courses/${courseId}/publish-check`);
+    return apiClient.get<PublishCheckResponse>(`/api/v1/lecturer/courses/${courseId}/changes/publish-check`);
   },
 
   /**
@@ -108,6 +108,10 @@ export const instructorCourseApi = {
    */
   publish: async (courseId: number): Promise<CourseDetail> => {
     return apiClient.post<CourseDetail>(`/api/v1/lecturer/courses/${courseId}/publish`);
+  },
+
+  publishChanges: async (courseId: number): Promise<any> => {
+    return apiClient.post<any>(`/api/v1/lecturer/courses/${courseId}/changes/publish`);
   },
 
   /**

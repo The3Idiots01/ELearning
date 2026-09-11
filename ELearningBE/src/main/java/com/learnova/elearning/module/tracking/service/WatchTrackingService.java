@@ -38,6 +38,9 @@ import java.util.Optional;
 @RequiredArgsConstructor
 public class WatchTrackingService {
 
+    @jakarta.persistence.PersistenceContext
+    private jakarta.persistence.EntityManager entityManager;
+
     private final LessonRepository lessonRepository;
     private final EnrollmentRepository enrollmentRepository;
     private final LessonProgressRepository progressRepository;
@@ -97,9 +100,15 @@ public class WatchTrackingService {
                 .orElseThrow(() -> new IllegalStateException(
                         "lesson_progress " + merged.getId() + " biến mất ngay sau khi merge"));
 
+        // Unit tests and a few non-JPA callers do not provide a persistence
+        // context. The repository query above is already the fresh snapshot
+        // in those cases; refresh when an EntityManager is available.
+        if (entityManager != null) entityManager.refresh(progress);
+
         Enrollment enrollment = enrollmentRepository.findById(enrollmentId)
                 .orElseThrow(() -> new IllegalStateException("enrollment " + enrollmentId + " biến mất ngay sau khi merge"));
 
+        if (entityManager != null) entityManager.refresh(enrollment);
         boolean justCompleted = false;
         if (progress.getCompletedAt() == null && completionPolicy.isComplete(lesson, progress)) {
             progress.setCompletedAt(Instant.now());
@@ -113,6 +122,8 @@ public class WatchTrackingService {
             enrollment = enrollmentRepository.findById(enrollmentId)
                     .orElseThrow(() -> new IllegalStateException("enrollment " + enrollmentId + " biến mất sau rollup"));
         }
+
+        if (justCompleted && entityManager != null) entityManager.refresh(enrollment);
 
         return Optional.of(ProgressSnapshotResponse.builder()
                 .lessonId(lesson.getId())

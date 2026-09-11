@@ -18,6 +18,7 @@ public final class AssessmentMapper {
         return AssessmentResponse.builder()
                 .id(assessment.getId())
                 .type(assessment.getType())
+                .publicationStatus(assessment.getPublicationStatus())
                 .title(assessment.getTitle())
                 .instructions(assessment.getInstructions())
                 .sectionId(assessment.getSection() != null ? assessment.getSection().getId() : null)

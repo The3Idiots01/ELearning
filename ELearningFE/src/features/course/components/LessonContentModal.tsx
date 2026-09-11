@@ -1,3 +1,5 @@
+import { videoProcessingApi } from '../api/videoProcessingApi';
+import { videoProcessingError, uploadStatusLabels, contentTypeLabels } from '../../../lib/courseLabels';
 import React, { useState, useRef } from 'react';
 import { Modal } from '../../../components/common/Modal';
 import type { Lesson, LessonContentType, UploadPurpose } from '../../../types/course';
@@ -23,6 +25,14 @@ export const LessonContentModal: React.FC<LessonContentModalProps> = ({
   onContentUpdated
 }) => {
   const { showSuccess, showError } = useToast();
+  const [retrying, setRetrying] = useState(false);
+  const retryVideo = async () => {
+    if (retrying) return;
+    setRetrying(true);
+    try { await videoProcessingApi.retry(courseId, lesson.id); onContentUpdated(); }
+    catch (e) { showError(e instanceof Error ? e.message : 'Không thể yêu cầu xử lý lại video.'); }
+    finally { setRetrying(false); }
+  };
 
   // Active sub-tab: 'content' | 'resources'
   const [activeTab, setActiveTab] = useState<'content' | 'resources'>('content');
@@ -142,9 +152,9 @@ export const LessonContentModal: React.FC<LessonContentModalProps> = ({
       setUploadProgress(100);
       setUploadStatusText('Hoàn tất tải lên thành công!');
       if (contentType === 'VIDEO') {
-        showSuccess('Đã tải lên video! Hệ thống đang xử lý ở nền, quay lại sau ít phút để xem trạng thái.');
+        showSuccess('Đã tải lên video. Trạng thái xử lý sẽ tự động cập nhật.');
       } else {
-        showSuccess(`Đã tải lên và gắn nội dung ${contentType} thành công!`);
+        showSuccess(`Đã tải lên và gắn nội dung ${contentTypeLabels[contentType]} thành công!`);
       }
       onContentUpdated();
     } catch (err: any) {
@@ -229,7 +239,7 @@ export const LessonContentModal: React.FC<LessonContentModalProps> = ({
       title={`Soạn nội dung: ${lesson.title}`}
       subtitle={`Định dạng bài học: ${selectedContentType || 'chưa chọn'}${
         selectedContentType === 'VIDEO' || selectedContentType === 'FILE'
-          ? ` • Trạng thái: ${lesson.uploadStatus || 'EMPTY'}`
+          ? ` • Trạng thái: ${uploadStatusLabels[lesson.uploadStatus || 'EMPTY']}`
           : ''
       }`}
       maxWidth="2xl"
@@ -326,7 +336,7 @@ export const LessonContentModal: React.FC<LessonContentModalProps> = ({
                         : lesson.uploadStatus === 'PROCESSING'
                         ? 'Đang xử lý video...'
                         : lesson.uploadStatus === 'FAILED'
-                        ? 'Xử lý thất bại — hãy tải lại'
+                        ? 'Xử lý thất bại'
                         : 'Chưa có video'}
                     </span>
                   </div>
@@ -350,6 +360,7 @@ export const LessonContentModal: React.FC<LessonContentModalProps> = ({
                     </p>
                   )}
 
+                  {lesson.uploadStatus === 'FAILED' && <div role="alert" className="text-sm text-rose-700 space-y-2"><p>{videoProcessingError(lesson.processingErrorCode)}</p><button type="button" disabled={retrying || isUploading} onClick={() => void retryVideo()} className="border rounded-lg px-3 py-2">{retrying ? 'Đang tiếp nhận...' : 'Xử lý lại video'}</button></div>}
                   {lesson.uploadStatus === 'PROCESSING' && (
                     <p className="text-[11px] text-indigo-700 bg-indigo-50 border border-indigo-100 rounded-xl px-3 py-2 m-0">
                       Hệ thống đang đo thời lượng thật của video ở nền. Bạn có thể đóng cửa sổ này và quay

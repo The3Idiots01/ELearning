@@ -29,6 +29,8 @@ public class S3ClientConfig {
     public S3Client s3Client(StorageProperties properties) {
         StorageProperties.S3 s3 = properties.getS3();
         return S3Client.builder()
+                .overrideConfiguration(c -> c.apiCallTimeout(java.time.Duration.ofSeconds(15))
+                        .apiCallAttemptTimeout(java.time.Duration.ofSeconds(15)))
                 .endpointOverride(URI.create(s3.getEndpoint()))
                 .region(Region.of(s3.getRegion()))
                 .credentialsProvider(credentials(s3))

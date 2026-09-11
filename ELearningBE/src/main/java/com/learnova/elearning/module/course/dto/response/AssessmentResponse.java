@@ -1,6 +1,7 @@
 package com.learnova.elearning.module.course.dto.response;
 
 import com.learnova.elearning.module.course.entity.enums.AssessmentType;
+import com.learnova.elearning.module.course.entity.enums.PublicationStatus;
 import lombok.Builder;
 import lombok.Data;
 
@@ -11,6 +12,7 @@ import java.util.List;
 public class AssessmentResponse {
     private Long id;
     private AssessmentType type;
+    private PublicationStatus publicationStatus;
     private String title;
     private String instructions;
     private Long sectionId;

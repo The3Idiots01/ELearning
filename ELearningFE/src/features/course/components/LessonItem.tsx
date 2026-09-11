@@ -1,9 +1,10 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import type { Lesson, LearningOutcome, Section } from '../../../types/course';
 import { curriculumApi } from '../api/curriculumApi';
 import { useToast } from '../../../app/context/ToastContext';
 import { formatDuration, formatFileSize } from '../../../lib/formatters';
 import { LessonContentModal } from './LessonContentModal';
+import { videoProcessingApi } from '../api/videoProcessingApi';
 import { ConfirmDialog } from '../../../components/common/ConfirmDialog';
 import { Modal } from '../../../components/common/Modal';
 
@@ -43,6 +44,7 @@ export const LessonItem: React.FC<LessonItemProps> = ({
 
   // Delete dialog
   const [isDeleting, setIsDeleting] = useState(false);
+  const [isCancellingPending, setIsCancellingPending] = useState(false);
 
   // Move to section modal
   const [isMoveModalOpen, setIsMoveModalOpen] = useState(false);
@@ -51,6 +53,10 @@ export const LessonItem: React.FC<LessonItemProps> = ({
   const [targetSectionId, setTargetSectionId] = useState<number>(
     allSections.find((s) => s.id !== sectionId)?.id || sectionId
   );
+
+  useEffect(() => {
+    setSelectedOutcomeIds(lesson.outcomeIds || []);
+  }, [lesson.outcomeIds]);
 
   const handleUpdateTitle = async () => {
     if (!editTitle.trim()) return;
@@ -95,12 +101,25 @@ export const LessonItem: React.FC<LessonItemProps> = ({
 
   const handleDelete = async () => {
     try {
-      await curriculumApi.deleteLesson(courseId, lesson.id);
+      await curriculumApi.deleteLesson(courseId, lesson.id, true);
       setIsDeleting(false);
       showSuccess('Đã xóa bài học.');
       onCurriculumChanged();
     } catch (err: any) {
       showError(err.message || 'Lỗi khi xóa bài học.');
+    }
+  };
+
+  const handleCancelPending = async () => {
+    setIsCancellingPending(true);
+    try {
+      await videoProcessingApi.cancelPending(courseId, lesson.id);
+      showSuccess('Đã hủy video mới; video cũ vẫn tiếp tục phục vụ học viên.');
+      onCurriculumChanged();
+    } catch (err: any) {
+      showError(err.message || 'Không thể hủy video đang chờ.');
+    } finally {
+      setIsCancellingPending(false);
     }
   };
 
@@ -170,6 +189,11 @@ export const LessonItem: React.FC<LessonItemProps> = ({
               <span className="font-bold text-slate-900 truncate">
                 Bài {index + 1}: {lesson.title}
               </span>
+              {lesson.publicationStatus === 'DRAFT' ? (
+                <span className="rounded-full bg-amber-100 px-2 py-0.5 text-[9px] font-black uppercase text-amber-700">Bản nháp</span>
+              ) : lesson.publicationStatus === 'PUBLISHED' ? (
+                <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-[9px] font-black uppercase text-emerald-700">Đã xuất bản</span>
+              ) : null}
               <button
                 type="button"
                 onClick={() => {
@@ -213,7 +237,13 @@ export const LessonItem: React.FC<LessonItemProps> = ({
               ) : (
                 <span className="text-amber-600 font-semibold">• Chưa có nội dung</span>
               )}
-              {selectedOutcomeIds.length > 0 && <span className="text-indigo-600 font-semibold">• {selectedOutcomeIds.length} outcome</span>}
+              {lesson.pendingVideoStatus === 'PROCESSING' && (
+                <span className="text-indigo-600 font-semibold">• Video mới đang xử lý (video cũ vẫn đang phục vụ)</span>
+              )}
+              {lesson.pendingVideoStatus === 'FAILED' && (
+                <span className="text-rose-600 font-semibold">• Xử lý video mới thất bại</span>
+              )}
+              {selectedOutcomeIds.length > 0 && <span className="text-indigo-600 font-semibold">• {selectedOutcomeIds.length} chuẩn đầu ra</span>}
             </div>
           </div>
         </div>
@@ -239,7 +269,7 @@ export const LessonItem: React.FC<LessonItemProps> = ({
             onClick={() => setIsOutcomePickerOpen((open) => !open)}
             className="px-2.5 py-1 rounded-lg text-[10px] font-extrabold uppercase tracking-wider border border-indigo-200 bg-indigo-50 text-indigo-700 cursor-pointer"
           >
-            Outcome
+            Chuẩn đầu ra
           </button>
 
           {/* Edit Content Button */}
@@ -251,6 +281,17 @@ export const LessonItem: React.FC<LessonItemProps> = ({
             <span className="material-symbols-outlined text-[16px]">edit_note</span>
             <span>Soạn nội dung</span>
           </button>
+          {lesson.pendingVideoStatus && (
+            <button
+              type="button"
+              onClick={() => void handleCancelPending()}
+              disabled={isCancellingPending}
+              className="px-2.5 py-1 rounded-lg text-[10px] font-extrabold uppercase tracking-wider border border-amber-200 bg-amber-50 text-amber-700 disabled:opacity-50"
+              title="Hủy video mới đang chờ; video live không bị ảnh hưởng"
+            >
+              {isCancellingPending ? 'Đang hủy...' : 'Hủy video mới'}
+            </button>
+          )}
 
           {/* Move to another section */}
           {allSections.length > 1 && (
@@ -278,11 +319,22 @@ export const LessonItem: React.FC<LessonItemProps> = ({
 
       {isOutcomePickerOpen && (
         <div className="mt-2 rounded-xl border border-indigo-200 bg-indigo-50 p-3 space-y-2">
-          <div className="text-[11px] font-black uppercase tracking-wider text-indigo-800">Gắn learning outcomes</div>
-          {outcomes.length === 0 ? <p className="text-xs text-slate-500 m-0">Chưa có outcome. Hãy tạo outcome ở phần Cài đặt khóa học.</p> : outcomes.map((outcome) => (
-            <label key={outcome.id} className="flex items-center gap-2 text-xs text-slate-700"><input type="checkbox" checked={selectedOutcomeIds.includes(outcome.id)} onChange={() => setSelectedOutcomeIds((current) => current.includes(outcome.id) ? current.filter((id) => id !== outcome.id) : [...current, outcome.id])} />{outcome.statement}</label>
-          ))}
-          <button type="button" onClick={() => void saveOutcomes()} className="rounded-lg bg-indigo-600 px-3 py-2 text-xs font-bold text-white">Lưu liên kết</button>
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <div className="text-[11px] font-black uppercase tracking-wider text-indigo-800">Gắn learning outcomes</div>
+          </div>
+          {outcomes.length === 0 ? <p className="text-xs text-slate-500 m-0">Chưa có outcome. Hãy tạo outcome ở phần Cài đặt khóa học.</p> : outcomes.map((outcome) => {
+            return (
+              <label key={outcome.id} className="block rounded-lg border border-transparent p-2 text-xs text-slate-700">
+                <span className="flex items-start gap-2">
+                  <input type="checkbox" className="mt-0.5" checked={selectedOutcomeIds.includes(outcome.id)} onChange={() => setSelectedOutcomeIds((current) => current.includes(outcome.id) ? current.filter((id) => id !== outcome.id) : [...current, outcome.id])} />
+                  <span>
+                    <span className="font-semibold text-slate-800">{outcome.statement}</span>
+                  </span>
+                </span>
+              </label>
+            );
+          })}
+          <button type="button" onClick={() => void saveOutcomes()} className="rounded-lg bg-indigo-600 px-3 py-2 text-xs font-bold text-white">Xem lại · Lưu liên kết</button>
         </div>
       )}
 
@@ -389,8 +441,8 @@ export const LessonItem: React.FC<LessonItemProps> = ({
           onClose={() => setIsDeleting(false)}
           onConfirm={handleDelete}
           title="Xóa bài học"
-          message={`Bạn có chắc muốn xóa bài học "${lesson.title}" không? Hành động này không thể hoàn tác.`}
-          confirmText="Xóa bài học"
+          message={`Bài học "${lesson.title}" sẽ bị archive khỏi học viên và tiến độ course có thể được tính lại. Bạn có chắc không?`}
+          confirmText="Xác nhận archive"
           isDestructive
         />
       )}

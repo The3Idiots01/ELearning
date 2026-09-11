@@ -10,6 +10,7 @@ import java.util.List;
 public class CurriculumResponse {
 
     private Long courseId;
+    private Long resumeLessonId;
     private List<SectionResponse> sections;
     /** Instructor-only pool; public curriculum always returns an empty list. */
     @Builder.Default

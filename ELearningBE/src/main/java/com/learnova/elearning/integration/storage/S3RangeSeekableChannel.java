@@ -24,6 +24,8 @@ final class S3RangeSeekableChannel implements SeekableByteChannel {
     private final String key;
     private final long size;
     private long position = 0;
+    private byte[] buffer = new byte[0];
+    private long bufferStart = -1;
     private boolean open = true;
 
     S3RangeSeekableChannel(S3Client s3Client, String bucket, String key) {
@@ -40,24 +42,26 @@ final class S3RangeSeekableChannel implements SeekableByteChannel {
         if (position >= size) {
             return -1;
         }
-        int wanted = dst.remaining();
-        if (wanted == 0) {
-            return 0;
+        if (!dst.hasRemaining()) return 0;
+        if (position < bufferStart || position >= bufferStart + buffer.length) {
+            long end = Math.min(position + 65536, size) - 1;
+            GetObjectRequest request = GetObjectRequest.builder().bucket(bucket).key(key)
+                    .range("bytes=" + position + "-" + end).build();
+            try (ResponseInputStream<GetObjectResponse> in = s3Client.getObject(request)) {
+                if (in.response().contentRange() == null) {
+                    in.abort();
+                    throw new IOException("Storage ignored Range request");
+                }
+                buffer = in.readNBytes((int) (end - position + 1));
+                if (buffer.length == 0) throw new IOException("Empty storage range");
+                bufferStart = position;
+            } catch (UncheckedIOException e) { throw e.getCause(); }
         }
-        long end = Math.min(position + wanted, size) - 1;
-        GetObjectRequest request = GetObjectRequest.builder()
-                .bucket(bucket)
-                .key(key)
-                .range("bytes=" + position + "-" + end)
-                .build();
-        try (ResponseInputStream<GetObjectResponse> in = s3Client.getObject(request)) {
-            byte[] bytes = in.readAllBytes();
-            dst.put(bytes);
-            position += bytes.length;
-            return bytes.length;
-        } catch (UncheckedIOException e) {
-            throw e.getCause();
-        }
+        int offset = (int) (position - bufferStart);
+        int count = Math.min(dst.remaining(), buffer.length - offset);
+        dst.put(buffer, offset, count);
+        position += count;
+        return count;
     }
 
     @Override

@@ -60,6 +60,7 @@ export function usePlaybackTicket(
     setIsForbidden(false);
     if (!enabled || !lessonId) return;
     void fetchTicket();
+    return () => { requestSeq.current++; };
   }, [enabled, lessonId, fetchTicket]);
 
   useEffect(() => {

@@ -9,6 +9,7 @@ import com.learnova.elearning.module.course.entity.Lesson;
 import com.learnova.elearning.module.course.entity.enums.AssessmentType;
 import com.learnova.elearning.module.course.entity.enums.BulletType;
 import com.learnova.elearning.module.course.entity.enums.LessonUploadStatus;
+import com.learnova.elearning.module.course.entity.enums.PublicationStatus;
 import com.learnova.elearning.module.course.repository.CourseBulletRepository;
 import com.learnova.elearning.module.course.repository.CourseSectionRepository;
 import com.learnova.elearning.module.course.repository.LearningOutcomeRepository;
@@ -63,6 +64,8 @@ public class CoursePublishValidator {
         this.quizRepository = quizRepository;
         this.quizQuestionRepository = quizQuestionRepository;
     }
+
+    public int minOutcomes() { return props.getMinObjectives(); }
 
     public List<PublishIssue> validate(Course course) {
         List<PublishIssue> issues = new ArrayList<>();
@@ -125,20 +128,69 @@ public class CoursePublishValidator {
                         "Bài học \"" + lesson.getTitle() + "\" chưa có nội dung hoàn chỉnh",
                         lesson.getId(), curriculumPath(courseId, "lesson-" + lesson.getId())));
             }
+            if (lesson.getPendingUploadStatus() != null
+                    && lesson.getPendingUploadStatus() != LessonUploadStatus.READY) {
+                issues.add(issue("PENDING_VIDEO_NOT_READY", "lesson:" + lesson.getId(),
+                        "Video thay thế của bài học chưa xử lý xong", lesson.getId(),
+                        curriculumPath(courseId, "lesson-" + lesson.getId())));
+            }
         }
 
-        validateAlignment(courseId, lessons, issues);
+        validateAlignment(courseId, lessons, null, issues);
 
         return issues;
     }
 
-    private void validateAlignment(Long courseId, List<Lesson> lessons, List<PublishIssue> issues) {
+    public List<PublishIssue> validateLiveSnapshot(Course course) {
+        Long courseId = course.getId();
+        List<PublishIssue> issues = new ArrayList<>();
+        if (isBlank(course.getTitle())) issues.add(issue("TITLE_REQUIRED", "title", "Tiêu đề khóa học là bắt buộc"));
+        if (course.getCategory() == null) issues.add(issue("CATEGORY_REQUIRED", "categoryId", "Cần chọn danh mục cho khóa học"));
+        if (isBlank(course.getThumbnailKey())) issues.add(issue("THUMBNAIL_REQUIRED", "thumbnail", "Cần tải lên ảnh bìa khóa học"));
+        BigDecimal price = course.getPrice();
+        if (price == null || price.compareTo(BigDecimal.ZERO) < 0 || price.compareTo(PRICE_MAX) > 0) {
+            issues.add(issue("PRICE_INVALID", "price", "Giá phải trong khoảng 0–10.000.000 VND"));
+        }
+        long requirements = bulletRepository.countByCourse_IdAndBulletType(courseId, BulletType.REQUIREMENT);
+        long audiences = bulletRepository.countByCourse_IdAndBulletType(courseId, BulletType.TARGET_AUDIENCE);
+        if (requirements < props.getMinRequirements()) issues.add(issue("REQUIREMENTS_NOT_ENOUGH", "requirements", "Thiếu yêu cầu/điều kiện tiên quyết"));
+        if (audiences < props.getMinAudiences()) issues.add(issue("AUDIENCE_NOT_ENOUGH", "targetAudiences", "Thiếu đối tượng khóa học"));
+        if (outcomeRepository != null && outcomeRepository.countByCourse_Id(courseId) < props.getMinObjectives()) {
+            issues.add(issue("OUTCOMES_NOT_ENOUGH", "outcomes", "Thiếu kết quả đầu ra tối thiểu"));
+        }
+        int descriptionLength = course.getDescription() == null ? 0 : course.getDescription().trim().length();
+        if (descriptionLength < props.getMinDescriptionLength()) {
+            issues.add(issue("DESCRIPTION_TOO_SHORT", "description", "Mô tả khóa học chưa đủ dài"));
+        }
+        List<Lesson> publishedLessons = lessonRepository.findBySection_Course_Id(courseId).stream()
+                .filter(l -> l.getPublicationStatus() == PublicationStatus.PUBLISHED).toList();
+        List<Assessment> publishedAssessments = assessmentRepository == null ? List.of()
+                : assessmentRepository.findByCourse_Id(courseId).stream()
+                    .filter(a -> a.getPublicationStatus() == PublicationStatus.PUBLISHED).toList();
+        if (publishedLessons.isEmpty() && publishedAssessments.isEmpty()) {
+            issues.add(issue("NO_PUBLISHED_CONTENT", "curriculum", "Khóa học cần ít nhất một nội dung đã xuất bản"));
+        }
+        for (Lesson lesson : publishedLessons) {
+            if (!isLessonComplete(lesson)) {
+                issues.add(issue("LESSON_CONTENT_INCOMPLETE", "lesson:" + lesson.getId(),
+                        "Nội dung live của bài học không còn hợp lệ", lesson.getId(),
+                        curriculumPath(courseId, "lesson-" + lesson.getId())));
+            }
+        }
+        validateAlignment(courseId, publishedLessons, publishedAssessments, issues);
+        return issues;
+    }
+
+    private void validateAlignment(Long courseId, List<Lesson> lessons,
+                                   List<Assessment> requestedAssessments,
+                                   List<PublishIssue> issues) {
         if (outcomeRepository == null || assessmentRepository == null) {
             return;
         }
 
         List<LearningOutcome> outcomes = outcomeRepository.findByCourse_IdOrderByPositionAsc(courseId);
-        List<Assessment> assessments = assessmentRepository.findByCourse_Id(courseId);
+        List<Assessment> assessments = requestedAssessments != null
+                ? requestedAssessments : assessmentRepository.findByCourse_Id(courseId);
 
         for (LearningOutcome outcome : outcomes) {
             boolean usedByLesson = lessons.stream().anyMatch(lesson -> hasOutcome(lesson.getOutcomes(), outcome.getId()));

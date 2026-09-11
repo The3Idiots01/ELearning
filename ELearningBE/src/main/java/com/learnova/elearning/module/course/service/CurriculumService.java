@@ -21,6 +21,7 @@ import com.learnova.elearning.module.course.entity.LearningOutcome;
 import com.learnova.elearning.module.course.entity.enums.LessonContentType;
 import com.learnova.elearning.module.course.entity.enums.LessonUploadStatus;
 import com.learnova.elearning.module.course.entity.enums.CourseStatus;
+import com.learnova.elearning.module.course.entity.enums.PublicationStatus;
 import com.learnova.elearning.module.course.mapper.CurriculumMapper;
 import com.learnova.elearning.module.course.mapper.AssessmentMapper;
 import com.learnova.elearning.module.course.repository.CourseRepository;
@@ -36,6 +37,7 @@ import com.learnova.elearning.module.enrollment.repository.LessonProgressReposit
 import com.learnova.elearning.module.enrollment.repository.AssessmentProgressRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.Optional;
@@ -72,6 +74,12 @@ public class CurriculumService {
     private final AssessmentRepository assessmentRepository;
     private final LearningOutcomeRepository outcomeRepository;
     private final AssessmentProgressRepository assessmentProgressRepository;
+    private CoursePublishValidator publishValidator;
+
+    @Autowired
+    void setPublishValidator(CoursePublishValidator publishValidator) {
+        this.publishValidator = publishValidator;
+    }
 
     // ---- Read -------------------------------------------------------------
 
@@ -109,7 +117,17 @@ public class CurriculumService {
             }
         }
 
-        return buildPublicCurriculum(courseId, enrolled, progressByLessonId, completedAssessmentIds);
+        CurriculumResponse response = buildPublicCurriculum(courseId, enrolled, progressByLessonId, completedAssessmentIds);
+        Set<Long> playableVideoIds = response.getSections().stream().flatMap(s -> s.getLessons().stream())
+                .filter(l -> l.getContentType() == com.learnova.elearning.module.course.entity.enums.LessonContentType.VIDEO
+                        && Boolean.TRUE.equals(l.getPlayable()))
+                .map(LessonResponse::getId).collect(Collectors.toSet());
+        response.setResumeLessonId(progressByLessonId.values().stream()
+                .filter(p -> playableVideoIds.contains(p.getLesson().getId()))
+                .max(Comparator.comparing((LessonProgress p) -> p.getUpdatedAt() != null ? p.getUpdatedAt() : p.getFirstStartedAt(),
+                        Comparator.nullsFirst(Comparator.naturalOrder())).thenComparing(LessonProgress::getId))
+                .map(p -> p.getLesson().getId()).orElse(null));
+        return response;
     }
 
     private CurriculumResponse buildPublicCurriculum(Long courseId, boolean enrolled,
@@ -120,7 +138,9 @@ public class CurriculumService {
 
         List<Lesson> lessons = sectionIds.isEmpty()
                 ? List.of()
-                : lessonRepository.findBySection_IdInOrderByPositionAsc(sectionIds);
+                : lessonRepository.findBySection_IdInOrderByPositionAsc(sectionIds).stream()
+                    .filter(l -> l.getPublicationStatus() == PublicationStatus.PUBLISHED)
+                    .toList();
         List<Long> lessonIds = lessons.stream().map(Lesson::getId).toList();
 
         List<LessonResource> resources = lessonIds.isEmpty()
@@ -129,6 +149,7 @@ public class CurriculumService {
 
         List<Assessment> assessments = (assessmentRepository == null ? List.<Assessment>of()
                 : assessmentRepository.findByCourse_Id(courseId)).stream()
+                .filter(assessment -> assessment.getPublicationStatus() == PublicationStatus.PUBLISHED)
                 .filter(assessment -> assessment.getSection() != null)
                 .sorted(Comparator.comparing((Assessment a) -> a.getSection().getPosition())
                         .thenComparing(Assessment::getPosition)
@@ -158,6 +179,8 @@ public class CurriculumService {
                                 Collectors.toList())));
 
         List<SectionResponse> sectionResponses = sections.stream()
+                .filter(section -> lessonsBySection.containsKey(section.getId())
+                        || assessmentsBySection.containsKey(section.getId()))
                 .map(section -> {
                     List<LessonResponse> lessonResponses = lessonsBySection
                             .getOrDefault(section.getId(), List.of()).stream()
@@ -300,10 +323,22 @@ public class CurriculumService {
 
     @Transactional
     public void deleteSection(Long courseId, Long sectionId, Long userId) {
+        deleteSection(courseId, sectionId, userId, false);
+    }
+
+    @Transactional
+    public void deleteSection(Long courseId, Long sectionId, Long userId, boolean confirmed) {
         Course course = ownershipGuard.requireEditableCourse(courseId, userId);
         CourseSection section = ownershipGuard.requireSectionInCourse(sectionId, courseId);
 
         List<Lesson> lessons = lessonRepository.findBySection_IdOrderByPositionAsc(sectionId);
+        boolean liveContent = lessons.stream().anyMatch(l -> l.getPublicationStatus() == PublicationStatus.PUBLISHED)
+                || (assessmentRepository != null && assessmentRepository.findBySection_IdOrderByPositionAscIdAsc(sectionId)
+                    .stream().anyMatch(a -> a.getPublicationStatus() == PublicationStatus.PUBLISHED));
+        if (course.getStatus() == CourseStatus.PUBLISHED && liveContent && !confirmed) {
+            throw new AppException(ErrorCode.COURSE_NOT_READY_TO_PUBLISH,
+                    "Xác nhận để ẩn chương đã xuất bản và tính lại tiến độ");
+        }
         softDeleteLessonsCascade(course, lessons);
 
         // Assessments are designed independently from curriculum. Removing a
@@ -315,6 +350,8 @@ public class CurriculumService {
 
         // Dồn lại position của các section còn lại cho liên tục
         normalizeSectionPositions(courseId);
+        validateLiveCourse(course);
+        recalculateActiveEnrollments(courseId);
     }
 
     // ---- Lesson -----------------------------------------------------------
@@ -331,8 +368,10 @@ public class CurriculumService {
         Lesson lesson = Lesson.builder()
                 .section(section)
                 .title(request.getTitle().trim())
+                .contentType(request.getContentType())
                 .outcomes(outcomes)
                 .uploadStatus(LessonUploadStatus.EMPTY)
+                .publicationStatus(PublicationStatus.DRAFT)
                 .position(position)
                 .build();
 
@@ -355,19 +394,34 @@ public class CurriculumService {
             lesson.setOutcomes(resolveOutcomes(courseId, request.getOutcomeIds()));
         }
 
-        return lessonAssembler.assembleOne(lessonRepository.save(lesson));
+        LessonResponse response = lessonAssembler.assembleOne(lessonRepository.save(lesson));
+        validateLiveCourse(lesson.getSection().getCourse());
+        return response;
     }
 
     @Transactional
     public void deleteLesson(Long courseId, Long lessonId, Long userId) {
+        deleteLesson(courseId, lessonId, userId, false);
+    }
+
+    @Transactional
+    public void deleteLesson(Long courseId, Long lessonId, Long userId, boolean confirmed) {
         Course course = ownershipGuard.requireEditableCourse(courseId, userId);
         Lesson lesson = ownershipGuard.requireLessonInCourse(lessonId, courseId);
         Long sectionId = lesson.getSection().getId();
+
+        if (course.getStatus() == CourseStatus.PUBLISHED
+                && lesson.getPublicationStatus() == PublicationStatus.PUBLISHED && !confirmed) {
+            throw new AppException(ErrorCode.COURSE_NOT_READY_TO_PUBLISH,
+                    "Xác nhận để archive bài học đã xuất bản và tính lại tiến độ");
+        }
 
         softDeleteLessonsCascade(course, List.of(lesson));
 
         // Dồn lại position của các lesson còn lại trong section cho liên tục
         normalizeLessonPositions(sectionId);
+        validateLiveCourse(course);
+        recalculateActiveEnrollments(courseId);
     }
 
     // ---- Reorder & Move ---------------------------------------------------
@@ -499,6 +553,21 @@ public class CurriculumService {
             lessons.get(i).setPosition(i);
         }
         lessonRepository.saveAll(lessons);
+    }
+
+    private void validateLiveCourse(Course course) {
+        if (course.getStatus() == CourseStatus.PUBLISHED && publishValidator != null) {
+            List<com.learnova.elearning.module.course.dto.response.PublishIssue> issues =
+                    publishValidator.validateLiveSnapshot(course);
+            if (!issues.isEmpty()) throw new com.learnova.elearning.module.course.exception.CourseNotReadyException(issues);
+        }
+    }
+
+    private void recalculateActiveEnrollments(Long courseId) {
+        if (enrollmentRepository == null) return;
+        enrollmentRepository.findByCourse_Id(courseId).stream()
+                .filter(e -> e.getStatus().name().equals("ACTIVE"))
+                .forEach(e -> enrollmentRepository.recalculateCourseProgress(e.getId(), courseId));
     }
 
     private Set<LearningOutcome> resolveOutcomes(Long courseId, List<Long> outcomeIds) {

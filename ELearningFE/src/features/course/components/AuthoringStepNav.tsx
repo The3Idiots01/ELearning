@@ -10,7 +10,7 @@ interface AuthoringStepNavProps {
 
 const steps: Array<{ id: AuthoringStep; label: string; anchor: string; route: 'settings' | 'curriculum' }> = [
   { id: 'info', label: 'Thông tin', anchor: '', route: 'settings' },
-  { id: 'assessment', label: 'Assessment plan', anchor: 'assessment-plan', route: 'curriculum' },
+  { id: 'assessment', label: 'Soạn giáo trình', anchor: 'curriculum', route: 'curriculum' },
 ];
 
 export const AuthoringStepNav: React.FC<AuthoringStepNavProps> = ({ courseId, active }) => {
