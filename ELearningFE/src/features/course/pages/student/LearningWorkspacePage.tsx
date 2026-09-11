@@ -8,6 +8,11 @@ import { ApiError } from '../../../../lib/apiClient';
 import { useCourseProgress } from '../../hooks/useCourseProgress';
 import { QuizTakingView } from '../../components/QuizTakingView';
 import { LessonQaSection } from '../../components/LessonQaSection';
+import { CourseReviewModal } from '../../components/reviews/CourseReviewModal';
+import { WorkspaceReviewsTab } from '../../components/reviews/WorkspaceReviewsTab';
+import { AssessmentReviewPromptModal } from '../../components/reviews/AssessmentReviewPromptModal';
+import { reviewApi } from '../../api/reviewApi';
+import type { CourseReview, CourseReviewSummary } from '../../../../types/review';
 
 interface LearningWorkspacePageProps {
   courseId: number;
@@ -36,12 +41,61 @@ export const LearningWorkspacePage: React.FC<LearningWorkspacePageProps> = ({
   const activeLesson = curriculum?.sections.flatMap(s => s.lessons).find(l => l.id === activeLessonId) ?? null;
   const setActiveLesson = (lesson: Lesson | null) => setActiveLessonId(lesson?.id ?? null);
   const [activeAssessment, setActiveAssessment] = useState<Assessment | null>(null);
-  const [activeTab, setActiveTab] = useState<'overview' | 'qa'>('overview');
+  const [activeTab, setActiveTab] = useState<'overview' | 'qa' | 'reviews'>('overview');
   const [isCompleting, setIsCompleting] = useState(false);
   const [expandedSections, setExpandedSections] = useState<Record<number, boolean>>({});
   const [playbackUrl, setPlaybackUrl] = useState<string | null>(null);
   const [playbackError, setPlaybackError] = useState<string | null>(null);
   const [isLoadingPlayback, setIsLoadingPlayback] = useState(false);
+  const [isReviewModalOpen, setIsReviewModalOpen] = useState(false);
+  const [initialModalRating, setInitialModalRating] = useState<number | undefined>(undefined);
+  const [isAssessmentReviewPromptOpen, setIsAssessmentReviewPromptOpen] = useState(false);
+  const [myReview, setMyReview] = useState<CourseReview | null>(null);
+  const [summary, setSummary] = useState<CourseReviewSummary | null>(null);
+
+  useEffect(() => {
+    reviewApi.getMyReview(courseId).then(setMyReview).catch(() => {});
+    reviewApi.getCourseReviewSummary(courseId).then(setSummary).catch(() => {});
+  }, [courseId]);
+
+  const handleOpenReviewModal = (rating?: number) => {
+    setInitialModalRating(rating);
+    setIsReviewModalOpen(true);
+  };
+
+  const handleSelectRatingFromPrompt = (rating: number) => {
+    setIsAssessmentReviewPromptOpen(false);
+    handleOpenReviewModal(rating);
+  };
+
+  const handleDismissPrompt = () => {
+    setIsAssessmentReviewPromptOpen(false);
+    sessionStorage.setItem(`dismissed_review_prompt_${courseId}`, 'true');
+  };
+
+  const handleDeleteReview = async () => {
+    try {
+      await reviewApi.deleteMyReview(courseId);
+      setMyReview(null);
+      reviewApi.getCourseReviewSummary(courseId).then(setSummary).catch(() => {});
+    } catch {
+      // Ignored
+    }
+  };
+
+  const handleAssessmentCompletedInternal = () => {
+    onAssessmentCompleted?.();
+
+    // Coursera-style milestone review prompt:
+    const dismissedKey = `dismissed_review_prompt_${courseId}`;
+    const wasDismissed = sessionStorage.getItem(dismissedKey);
+
+    if (!myReview && overallProgress >= 20 && !wasDismissed) {
+      setTimeout(() => {
+        setIsAssessmentReviewPromptOpen(true);
+      }, 700);
+    }
+  };
 
   // Xin PlaybackTicket khi bấm phát, thay vì dùng URL ký sẵn hàng loạt trong
   // curriculum (§7.1 G1). VIDEO dùng LessonVideoPlayer riêng (Task 10 — có
@@ -158,7 +212,7 @@ export const LearningWorkspacePage: React.FC<LearningWorkspacePageProps> = ({
           <button
             onClick={onBack}
             className="p-2 text-slate-400 hover:text-white hover:bg-slate-800 rounded-xl transition-colors cursor-pointer shrink-0"
-            title="Quay lại danh sách khóa học"
+            title="Quay lại chi tiết khóa học"
           >
             <span className="material-symbols-outlined text-[20px]">arrow_back</span>
           </button>
@@ -173,13 +227,54 @@ export const LearningWorkspacePage: React.FC<LearningWorkspacePageProps> = ({
           </div>
         </div>
 
-        {/* Overall Progress Indicator */}
-        <div className="flex items-center gap-4 shrink-0">
+        {/* Overall Progress Indicator & Review Button */}
+        <div className="flex items-center gap-3 sm:gap-4 shrink-0">
+          {myReview ? (
+            <button
+              onClick={() => setIsReviewModalOpen(true)}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-amber-300 hover:text-amber-200 border border-slate-700 text-xs font-bold transition-all cursor-pointer shadow-sm"
+              title="Chỉnh sửa đánh giá của bạn"
+            >
+              <span className="material-symbols-outlined text-[16px]" style={{ fontVariationSettings: "'FILL' 1" }}>
+                star
+              </span>
+              <span className="hidden sm:inline">Đã đánh giá</span>
+            </button>
+          ) : overallProgress < 20 ? (
+            <div className="relative group">
+              <button
+                type="button"
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-800/80 text-slate-400 border border-slate-700/60 text-xs font-semibold cursor-not-allowed opacity-75"
+              >
+                <span className="material-symbols-outlined text-[16px] text-amber-500/80">
+                  lock_clock
+                </span>
+                <span className="hidden sm:inline">Cần 20% để đánh giá</span>
+              </button>
+              <div className="absolute right-0 top-full mt-2 hidden group-hover:flex flex-col items-center z-50 w-56 p-2.5 rounded-xl bg-slate-900 text-white text-[11px] font-medium shadow-2xl border border-slate-800 pointer-events-none text-center leading-relaxed">
+                <div className="w-2 h-2 bg-slate-900 border-l border-t border-slate-800 rotate-45 -mt-3.5 mb-1" />
+                <span>Hoàn thành tối thiểu <strong>20%</strong> để mở tính năng đánh giá.</span>
+                <span className="text-amber-400 font-bold mt-0.5">Hiện tại: {overallProgress}%</span>
+              </div>
+            </div>
+          ) : (
+            <button
+              onClick={() => setIsReviewModalOpen(true)}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-amber-300 hover:text-amber-200 border border-slate-700 text-xs font-bold transition-all cursor-pointer shadow-sm"
+              title="Đánh giá khóa học"
+            >
+              <span className="material-symbols-outlined text-[16px]" style={{ fontVariationSettings: "'FILL' 1" }}>
+                star
+              </span>
+              <span className="hidden sm:inline">Đánh giá</span>
+            </button>
+          )}
+
           <div className="hidden sm:flex flex-col items-end">
             <span className="text-[10px] font-bold text-slate-400 uppercase">Tiến độ</span>
             <span className="text-xs font-black text-emerald-400">{overallProgress}% Hoàn thành</span>
           </div>
-          <div className="w-24 sm:w-32 bg-slate-800 rounded-full h-2 overflow-hidden border border-slate-700">
+          <div className="w-20 sm:w-32 bg-slate-800 rounded-full h-2 overflow-hidden border border-slate-700">
             <div
               className="bg-emerald-500 h-full rounded-full transition-all duration-500"
               style={{ width: `${overallProgress}%` }}
@@ -199,7 +294,7 @@ export const LearningWorkspacePage: React.FC<LearningWorkspacePageProps> = ({
             <QuizTakingView
               courseId={courseId}
               assessmentId={activeAssessment.id}
-              onSubmitted={onAssessmentCompleted}
+              onSubmitted={handleAssessmentCompletedInternal}
             />
           ) : !activeLesson ? (
             <div className="w-full bg-black aspect-video max-h-[60vh] flex items-center justify-center relative border-b border-slate-800 shrink-0">
@@ -328,6 +423,20 @@ export const LearningWorkspacePage: React.FC<LearningWorkspacePageProps> = ({
                   <span className="material-symbols-outlined text-[18px]">forum</span>
                   <span>Hỏi đáp (Q&A)</span>
                 </button>
+
+                <button
+                  onClick={() => setActiveTab('reviews')}
+                  className={`pb-3 flex items-center gap-2 border-b-2 transition-colors cursor-pointer ${
+                    activeTab === 'reviews'
+                      ? 'border-primary text-primary-container font-extrabold'
+                      : 'border-transparent text-slate-400 hover:text-slate-200'
+                  }`}
+                >
+                  <span className="material-symbols-outlined text-[18px] text-amber-400" style={{ fontVariationSettings: "'FILL' 1" }}>
+                    star
+                  </span>
+                  <span>Đánh giá {summary && summary.totalReviews > 0 ? `(${summary.ratingAvg.toFixed(1)} ★)` : ''}</span>
+                </button>
               </div>
 
               {/* Tab Content */}
@@ -369,11 +478,21 @@ export const LearningWorkspacePage: React.FC<LearningWorkspacePageProps> = ({
                     </div>
                   )}
                 </div>
-              ) : (
+              ) : activeTab === 'qa' ? (
                 <LessonQaSection
                   courseId={courseId}
                   lessonId={activeLesson.id}
                   lessonTitle={activeLesson.title}
+                />
+              ) : (
+                <WorkspaceReviewsTab
+                  courseId={courseId}
+                  courseTitle={courseDetail?.title || 'Khóa học'}
+                  currentProgress={overallProgress}
+                  myReview={myReview}
+                  summary={summary}
+                  onOpenReviewModal={handleOpenReviewModal}
+                  onDeleteReview={handleDeleteReview}
                 />
               )}
             </div>
@@ -490,6 +609,33 @@ export const LearningWorkspacePage: React.FC<LearningWorkspacePageProps> = ({
         </aside>
 
       </div>
+
+      {/* Review Modal for Workspace */}
+      <CourseReviewModal
+        isOpen={isReviewModalOpen}
+        onClose={() => setIsReviewModalOpen(false)}
+        courseId={courseId}
+        courseTitle={courseDetail?.title || 'Khóa học'}
+        initialRating={initialModalRating}
+        existingReview={myReview}
+        onReviewSubmitted={(updated) => {
+          setMyReview(updated);
+          reviewApi.getCourseReviewSummary(courseId).then(setSummary).catch(() => {});
+        }}
+        onReviewDeleted={() => {
+          setMyReview(null);
+          reviewApi.getCourseReviewSummary(courseId).then(setSummary).catch(() => {});
+        }}
+      />
+
+      {/* Coursera-style Post-Assessment Review Prompt */}
+      <AssessmentReviewPromptModal
+        isOpen={isAssessmentReviewPromptOpen}
+        onClose={handleDismissPrompt}
+        onSelectRating={handleSelectRatingFromPrompt}
+        courseTitle={courseDetail?.title || 'Khóa học'}
+        currentProgress={overallProgress}
+      />
     </div>
   );
 };

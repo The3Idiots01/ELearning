@@ -93,7 +93,7 @@ public class CurriculumService {
     public CurriculumResponse getPublicCurriculum(Long courseId, Long studentId) {
         Course course = courseRepository.findById(courseId)
                 .orElseThrow(() -> new AppException(ErrorCode.COURSE_NOT_FOUND));
-        if (course.getStatus() != CourseStatus.PUBLISHED) {
+        if (course.getStatus() != CourseStatus.PUBLISHED && (studentId == null || !course.getLecturer().getId().equals(studentId))) {
             throw new AppException(ErrorCode.COURSE_NOT_PUBLISHED);
         }
 
@@ -101,6 +101,9 @@ public class CurriculumService {
         Map<Long, LessonProgress> progressByLessonId = Map.of();
         Set<Long> completedAssessmentIds = Set.of();
         if (studentId != null) {
+            if (course.getLecturer().getId().equals(studentId)) {
+                enrolled = true;
+            }
             Optional<Enrollment> enrollment = enrollmentRepository.findByStudent_IdAndCourse_Id(studentId, courseId);
             if (enrollment.isPresent()) {
                 enrolled = true;

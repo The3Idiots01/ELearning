@@ -13,5 +13,7 @@ public interface QuizAttemptRepository extends JpaRepository<QuizAttempt, Long> 
 
     int countByQuiz_IdAndLearner_Id(Long quizId, Long learnerId);
 
+    int countByQuiz_IdAndLearner_IdAndSubmittedAtGreaterThanEqual(Long quizId, Long learnerId, java.time.Instant submittedAt);
+
     boolean existsByQuiz_IdAndLearner_IdAndIsPassedTrue(Long quizId, Long learnerId);
 }

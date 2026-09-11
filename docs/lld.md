@@ -24,6 +24,7 @@ LLD đặc tả chi tiết các **luồng có rủi ro kỹ thuật cao hoặc t
 - **Flow 1 — OAuth Login (Sprint 2):** .
 - **Flow 2 — Protected Video Delivery (Sprint 3):** hard core #1.
 - **Flow 3 — Knowledge Tracking (Sprint 3):** hard core #2.
+- **Flow 4 — Learner Quiz Taking & Daily Attempt Window (Sprint 3):** US-20.
 
 
 ---
@@ -104,3 +105,58 @@ sequenceDiagram
 ## Flow 3 — Knowledge Tracking (watched coverage bằng bitmap)
 
 Làm trong sprint 2
+
+---
+
+## Flow 4 — Learner Quiz Taking & Daily Attempt Window (US-20)
+
+### 1. Mục đích & Nguyên lý
+Phục vụ học viên làm bài trắc nghiệm gắn với bài học (`Lesson.contentType = 'QUIZ'`). Hệ thống thực hiện:
+- **Bảo mật đề thi (BR-16)**: Ẩn hoàn toàn cờ `isCorrect` và `explanation` khi cấp đề cho học viên.
+- **Chấm điểm tự động tại Server**: Hỗ trợ câu hỏi đơn lựa chọn (`SINGLE_CHOICE`) và đa lựa chọn (`MULTIPLE_CHOICE`).
+- **Gác số lần làm bài theo ngày (Daily Attempt Window)**: Tận dụng mốc thời gian `submitted_at >= startOfDay` để giới hạn số lần làm bài trong 1 ngày theo `quizzes.max_attempts`. Tự động khôi phục số lượt làm bài về ban đầu vào 00:00:00 ngày mới mà không cần cronjob.
+- **Bảo toàn điểm cao nhất (Best Score Preservation)**: Học viên đã Pass vẫn có thể làm lại nhiều lần để ôn tập kiến thức. Hệ thống chọn lần có điểm số cao nhất (`highestScore = max(score)`) làm đại diện và không bao giờ hạ trạng thái Đạt của học viên.
+- **Ghi nhận tiến độ khóa học (BR-29 & US-17)**: Khi `isPassed == true`, tạo/cập nhật `LessonProgress` với `completion_source = QUIZ` và tính lại `% hoàn thành khóa học`.
+
+### 2. Sơ đồ tuần tự (Sequence Diagram)
+
+```mermaid
+sequenceDiagram
+    autonumber
+    actor U as Learner (Học viên)
+    participant FE as React SPA (QuizTakingView)
+    participant BE as Spring Boot (LearnerQuizController / QuizTakingService)
+    participant DB as PostgreSQL (quizzes, attempts, lesson_progress)
+
+    U->>FE: Mở bài học Quiz
+    FE->>BE: GET /api/v1/learner/courses/{courseId}/lessons/{lessonId}/quiz
+    BE->>DB: Kiểm tra Enrollment & Quiz tồn tại
+    BE->>DB: Đếm attemptsUsedToday (submitted_at >= startOfDay)
+    BE->>DB: Tính highestScore & hasPassed từ toàn bộ lịch sử attempts
+    BE->>DB: Lấy đề thi (chuyển options_json sang StudentOptionItem, ẩn isCorrect)
+    BE-->>FE: QuizTakingResponse (Đề thi sạch + attemptsRemaining + highestScore)
+
+    alt Còn lượt làm bài trong ngày (hoặc max_attempts = null)
+        FE-->>U: Hiển thị giao diện làm bài (Radio / Checkbox)
+        U->>FE: Chọn phương án & bấm "Nộp bài"
+        FE->>BE: POST /api/v1/learner/.../quiz/attempts {answers}
+        BE->>DB: Kiểm tra lại attemptsUsedToday < maxAttempts
+        BE->>BE: Server-side grading: đối chiếu selectedOptionIds với options_json
+        BE->>BE: score = (earnedPoints / totalPoints) * 100, isPassed = score >= passingScore
+        BE->>DB: INSERT INTO quiz_attempts (lưu snapshot bài nộp + điểm)
+        opt isPassed == true
+            BE->>DB: Cập nhật/tạo LessonProgress (completion_source = QUIZ)
+            BE->>DB: recalculateCourseProgress (Enrollment)
+        end
+        BE-->>FE: QuizAttemptResponse (Điểm lần này, đáp án đúng, giải thích từng câu)
+        FE-->>U: Hiển thị kết quả chi tiết & cập nhật Best Score trên UI
+    else Đã hết lượt làm bài trong ngày
+        FE-->>U: Khóa làm bài, thông báo số lượt sẽ được khôi phục vào ngày mai
+    end
+```
+
+### 3. Edge Cases & Xử lý ngoại lệ
+- Học viên chưa đăng ký khóa học (`Enrollment` không tồn tại) → ném lỗi `ENROLLMENT_NOT_FOUND` (404).
+- Học viên cố tình gửi request nộp bài khi đã hết lượt trong ngày → ném lỗi `QUIZ_MAX_ATTEMPTS_REACHED` (400).
+- Học viên nộp bài làm lại đạt điểm thấp hơn lần thi Đạt trước đó → điểm lần này vẫn ghi nhận, nhưng `LessonProgress` và `highestScore` được giữ nguyên vẹn ở mốc tốt nhất.
+

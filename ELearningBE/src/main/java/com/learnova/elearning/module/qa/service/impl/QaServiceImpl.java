@@ -17,6 +17,7 @@ import com.learnova.elearning.module.qa.entity.CourseQuestion;
 import com.learnova.elearning.module.qa.repository.CourseAnswerRepository;
 import com.learnova.elearning.module.qa.repository.CourseQuestionRepository;
 import com.learnova.elearning.module.qa.service.QaService;
+import com.learnova.elearning.module.review.moderation.ContentModerationService;
 import com.learnova.elearning.module.user.entity.User;
 import com.learnova.elearning.module.user.entity.enums.UserRole;
 import com.learnova.elearning.module.user.repository.UserRepository;
@@ -40,6 +41,7 @@ public class QaServiceImpl implements QaService {
     private final LessonRepository lessonRepository;
     private final UserRepository userRepository;
     private final EnrollmentRepository enrollmentRepository;
+    private final ContentModerationService contentModerationService;
 
     @Override
     @Transactional(readOnly = true)
@@ -81,6 +83,9 @@ public class QaServiceImpl implements QaService {
         // Enforce BR-32: Only enrolled learners or course lecturer (or admin) can ask questions
         validateCanParticipateInQa(course, user);
 
+        // Kiểm duyệt nội dung câu hỏi (tiêu đề và nội dung)
+        contentModerationService.validateQaQuestion(request.getTitle(), request.getContent());
+
         CourseQuestion question = CourseQuestion.builder()
                 .course(course)
                 .lesson(lesson)
@@ -111,6 +116,9 @@ public class QaServiceImpl implements QaService {
 
         // Enforce BR-32: Only enrolled learners or course lecturer can answer
         validateCanParticipateInQa(question.getCourse(), user);
+
+        // Kiểm duyệt nội dung câu trả lời
+        contentModerationService.validateQaAnswer(request.getContent());
 
         boolean isLecturer = question.getCourse().getLecturer().getId().equals(currentUserId);
         boolean isAdmin = user.getRole() == UserRole.ADMIN;

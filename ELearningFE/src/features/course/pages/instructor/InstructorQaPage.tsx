@@ -68,6 +68,11 @@ export const InstructorQaPage: React.FC<InstructorQaPageProps> = ({
     const content = replyInputs[questionId]?.trim();
     if (!content) return;
 
+    if (content.length < 2) {
+      showError('Nội dung phản hồi phải có ít nhất 2 ký tự.');
+      return;
+    }
+
     try {
       setSubmittingReplies((prev) => ({ ...prev, [questionId]: true }));
       const newAnswer = await qaApi.createAnswer(
@@ -95,7 +100,11 @@ export const InstructorQaPage: React.FC<InstructorQaPageProps> = ({
       setReplyInputs((prev) => ({ ...prev, [questionId]: '' }));
       showSuccess('Đã gửi phản hồi với tư cách Giảng viên!');
     } catch (err: any) {
-      showError(err.message || 'Lỗi khi gửi câu trả lời.');
+      if (err?.code === 1324) {
+        showError(err.message || 'Vui lòng kiểm tra lại ngôn từ có chứa nội dung không phù hợp và thử lại.');
+      } else {
+        showError(err.message || 'Lỗi khi gửi câu trả lời.');
+      }
     } finally {
       setSubmittingReplies((prev) => ({ ...prev, [questionId]: false }));
     }

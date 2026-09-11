@@ -75,6 +75,15 @@ export const LessonQaSection: React.FC<LessonQaSectionProps> = ({
       return;
     }
 
+    if (newTitle.trim().length < 5) {
+      showError('Tiêu đề câu hỏi phải có ít nhất 5 ký tự.');
+      return;
+    }
+    if (newContent.trim().length < 10) {
+      showError('Nội dung câu hỏi phải có ít nhất 10 ký tự.');
+      return;
+    }
+
     try {
       setIsSubmitting(true);
       const created = await qaApi.createQuestion(
@@ -96,8 +105,10 @@ export const LessonQaSection: React.FC<LessonQaSectionProps> = ({
     } catch (err: any) {
       if (err?.status === 403 || err?.response?.status === 403) {
         showError('Chỉ học viên đã đăng ký khóa học mới có thể đặt câu hỏi.');
+      } else if (err?.code === 1324) {
+        showError(err.message || 'Vui lòng kiểm tra lại ngôn từ có chứa nội dung không phù hợp và thử lại.');
       } else {
-        showError(err.message || 'Lỗi khi gửi câu hỏi.');
+        showError(err.message || 'Có lỗi xảy ra khi gửi câu hỏi.');
       }
     } finally {
       setIsSubmitting(false);
@@ -114,6 +125,10 @@ export const LessonQaSection: React.FC<LessonQaSectionProps> = ({
   const handleCreateAnswer = async (questionId: number) => {
     const text = replyInputs[questionId]?.trim();
     if (!text) return;
+    if (text.length < 2) {
+      showError('Nội dung phản hồi phải có ít nhất 2 ký tự.');
+      return;
+    }
 
     try {
       setSubmittingReplies((prev) => ({ ...prev, [questionId]: true }));
@@ -146,8 +161,10 @@ export const LessonQaSection: React.FC<LessonQaSectionProps> = ({
     } catch (err: any) {
       if (err?.status === 403 || err?.response?.status === 403) {
         showError('Bạn không có quyền phản hồi trên khóa học này.');
+      } else if (err?.code === 1324) {
+        showError(err.message || 'Vui lòng kiểm tra lại ngôn từ có chứa nội dung không phù hợp và thử lại.');
       } else {
-        showError(err.message || 'Lỗi khi gửi phản hồi.');
+        showError(err.message || 'Có lỗi xảy ra khi gửi phản hồi.');
       }
     } finally {
       setSubmittingReplies((prev) => ({ ...prev, [questionId]: false }));

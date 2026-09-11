@@ -4,5 +4,6 @@ package com.learnova.elearning.module.course.entity.enums;
 public enum LessonContentType {
     VIDEO,
     ARTICLE,
-    FILE
+    FILE,
+    QUIZ
 }

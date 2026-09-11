@@ -1,4 +1,4 @@
-import { apiClient } from '../../../lib/apiClient';
+import { apiClient, ApiError } from '../../../lib/apiClient';
 import type {
   CourseQuestion,
   CourseAnswer,
@@ -83,8 +83,8 @@ export const qaApi = {
         return data;
       }
     } catch (err: any) {
-      // If error is 403 (unauthorized/not enrolled), propagate it
-      if (err?.status === 403 || err?.response?.status === 403) {
+      // Propagate API errors (e.g. 400 content moderation violation, 403 not enrolled)
+      if (err instanceof ApiError || err?.status || err?.response?.status) {
         throw err;
       }
     }
@@ -133,7 +133,7 @@ export const qaApi = {
         return data;
       }
     } catch (err: any) {
-      if (err?.status === 403 || err?.response?.status === 403) {
+      if (err instanceof ApiError || err?.status || err?.response?.status) {
         throw err;
       }
     }

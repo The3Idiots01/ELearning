@@ -79,6 +79,10 @@ public class Course {
     @Builder.Default
     private BigDecimal ratingAvg = BigDecimal.ZERO;
 
+    @Column(name = "rating_count", nullable = false)
+    @Builder.Default
+    private Integer ratingCount = 0;
+
     @Column(name = "total_students", nullable = false)
     @Builder.Default
     private Integer totalStudents = 0;

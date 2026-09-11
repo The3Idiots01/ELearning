@@ -73,7 +73,14 @@ async function request<T>(endpoint: string, options: RequestOptions = {}): Promi
       if (response.status === 401) {
         storage.removeToken();
       }
+      const fieldErrors =
+        data?.errors && typeof data.errors === 'object'
+          ? Object.values(data.errors).filter(Boolean).join('; ')
+          : null;
+
       const errorMessage =
+        fieldErrors ||
+        data?.detail ||
         data?.message ||
         data?.error ||
         `Lỗi hệ thống (${response.status}): ${response.statusText}`;

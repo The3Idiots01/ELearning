@@ -29,6 +29,7 @@ public final class CourseMapper {
                 .categoryName(category != null ? category.getName() : null)
                 .totalStudents(course.getTotalStudents())
                 .ratingAvg(course.getRatingAvg())
+                .ratingCount(course.getRatingCount())
                 .updatedAt(course.getUpdatedAt())
                 .build();
     }
@@ -53,6 +54,7 @@ public final class CourseMapper {
                 .categoryId(category != null ? category.getId() : null)
                 .categoryName(category != null ? category.getName() : null)
                 .ratingAvg(course.getRatingAvg())
+                .ratingCount(course.getRatingCount())
                 .totalStudents(course.getTotalStudents())
                 .version(course.getVersion())
                 .createdAt(course.getCreatedAt())
