@@ -20,6 +20,8 @@ public interface EnrollmentRepository extends JpaRepository<Enrollment, Long> {
 
     boolean existsByCourse_Id(Long courseId);
 
+    java.util.List<Enrollment> findByCourse_Id(Long courseId);
+
     /**
      * Tính lại {@code progress} / {@code status} / {@code completed_at} của một
      * enrollment từ trạng thái hoàn thành thật của lessons và assessments — §9
@@ -36,7 +38,8 @@ public interface EnrollmentRepository extends JpaRepository<Enrollment, Long> {
     @Modifying(clearAutomatically = true, flushAutomatically = true)
     @Query(value = """
             UPDATE enrollments e
-            SET progress = CASE WHEN c.total_units = 0 THEN 0
+            SET progress = CASE WHEN e.status = 'COMPLETED' THEN 100
+                                WHEN c.total_units = 0 THEN 0
                                 ELSE ROUND(100.0 * c.completed_units / c.total_units, 2) END,
                 status = CASE WHEN (c.total_units > 0 AND c.completed_units = c.total_units)
                                    OR e.status = 'COMPLETED'
@@ -52,14 +55,16 @@ public interface EnrollmentRepository extends JpaRepository<Enrollment, Long> {
                     (SELECT COUNT(*)
                        FROM lessons l
                        JOIN course_sections s ON s.id = l.section_id
-                      WHERE s.course_id = :courseId AND l.deleted_at IS NULL)
+                      WHERE s.course_id = :courseId AND l.deleted_at IS NULL
+                        AND l.publication_status = 'PUBLISHED')
                     +
                     (SELECT COUNT(*)
                        FROM assessments a
                        JOIN course_sections s ON s.id = a.section_id
                       WHERE s.course_id = :courseId
                         AND a.section_id IS NOT NULL
-                        AND a.deleted_at IS NULL) AS total_units,
+                        AND a.deleted_at IS NULL
+                        AND a.publication_status = 'PUBLISHED') AS total_units,
                     (SELECT COUNT(*)
                        FROM lessons l
                        JOIN course_sections s ON s.id = l.section_id
@@ -68,6 +73,7 @@ public interface EnrollmentRepository extends JpaRepository<Enrollment, Long> {
                         AND lp.enrollment_id = :enrollmentId
                       WHERE s.course_id = :courseId
                         AND l.deleted_at IS NULL
+                        AND l.publication_status = 'PUBLISHED'
                         AND lp.completed_at IS NOT NULL)
                     +
                     (SELECT COUNT(*)
@@ -79,6 +85,7 @@ public interface EnrollmentRepository extends JpaRepository<Enrollment, Long> {
                       WHERE s.course_id = :courseId
                         AND a.section_id IS NOT NULL
                         AND a.deleted_at IS NULL
+                        AND a.publication_status = 'PUBLISHED'
                         AND ap.completed_at IS NOT NULL) AS completed_units
             ) c
             WHERE e.id = :enrollmentId

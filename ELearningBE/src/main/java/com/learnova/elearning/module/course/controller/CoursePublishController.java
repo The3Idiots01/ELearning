@@ -5,6 +5,7 @@ import com.learnova.elearning.module.course.dto.request.UnpublishRequest;
 import com.learnova.elearning.module.course.dto.response.CourseResponse;
 import com.learnova.elearning.module.course.dto.response.CourseStatusLogResponse;
 import com.learnova.elearning.module.course.dto.response.PublishCheckResponse;
+import com.learnova.elearning.module.course.dto.response.PublishChangesResponse;
 import com.learnova.elearning.module.course.service.CoursePublishService;
 import com.learnova.elearning.security.CustomUserDetails;
 import jakarta.validation.Valid;
@@ -21,6 +22,21 @@ import java.util.List;
 public class CoursePublishController {
 
     private final CoursePublishService publishService;
+
+    @GetMapping("/changes/publish-check")
+    public ResponseEntity<ApiResponse<PublishCheckResponse>> changesPublishCheck(
+            @PathVariable Long courseId,
+            @AuthenticationPrincipal CustomUserDetails user) {
+        return ResponseEntity.ok(ApiResponse.success(publishService.publishCheck(courseId, user.getId())));
+    }
+
+    @PostMapping("/changes/publish")
+    public ResponseEntity<ApiResponse<PublishChangesResponse>> publishChanges(
+            @PathVariable Long courseId,
+            @AuthenticationPrincipal CustomUserDetails user) {
+        return ResponseEntity.ok(ApiResponse.success("Đã xuất bản thay đổi",
+                publishService.publishChanges(courseId, user.getId())));
+    }
 
     @GetMapping("/publish-check")
     public ResponseEntity<ApiResponse<PublishCheckResponse>> publishCheck(

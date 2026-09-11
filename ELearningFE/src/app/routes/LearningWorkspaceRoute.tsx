@@ -105,6 +105,7 @@ export function LearningWorkspaceRoute() {
 
   return (
     <LearningWorkspacePage
+      key={courseIdNum}
       courseId={courseIdNum}
       courseDetail={courseDetail}
       curriculum={curriculum}

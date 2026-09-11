@@ -8,6 +8,7 @@ import { useAuth } from '../../../app/context/AuthContext';
 
 interface PublishCheckModalProps {
   isOpen: boolean;
+  refreshKey?: string;
   onClose: () => void;
   courseId: number;
   onPublishSuccess: () => void;
@@ -15,6 +16,7 @@ interface PublishCheckModalProps {
 
 export const PublishCheckModal: React.FC<PublishCheckModalProps> = ({
   isOpen,
+  refreshKey,
   onClose,
   courseId,
   onPublishSuccess
@@ -45,7 +47,7 @@ export const PublishCheckModal: React.FC<PublishCheckModalProps> = ({
     if (isOpen && !isProfileIncomplete) {
       fetchCheck();
     }
-  }, [isOpen, courseId, isProfileIncomplete]);
+  }, [isOpen, courseId, isProfileIncomplete, refreshKey]);
 
   const handleGoToProfile = () => {
     onClose();
@@ -56,8 +58,8 @@ export const PublishCheckModal: React.FC<PublishCheckModalProps> = ({
     if (!checkResult?.canPublish) return;
     setIsPublishing(true);
     try {
-      await instructorCourseApi.publish(courseId);
-      showSuccess('🎉 Chúc mừng! Khóa học đã được xuất bản công khai thành công.');
+      await instructorCourseApi.publishChanges(courseId);
+      showSuccess('Đã xuất bản toàn bộ thay đổi thành công.');
       onPublishSuccess();
       onClose();
     } catch (err: any) {
@@ -91,8 +93,8 @@ export const PublishCheckModal: React.FC<PublishCheckModalProps> = ({
     <Modal
       isOpen={isOpen}
       onClose={onClose}
-      title="Kiểm tra điều kiện xuất bản khóa học"
-      subtitle="Hệ thống xác thực các tiêu chí chất lượng trước khi khóa học lên sàn thương mại."
+      title="Kiểm tra & xuất bản thay đổi"
+      subtitle="Nội dung mới chỉ hiển thị cho học viên sau khi toàn bộ thay đổi hợp lệ được phát hành."
       maxWidth="lg"
       icon="fact_check"
     >
@@ -170,6 +172,14 @@ export const PublishCheckModal: React.FC<PublishCheckModalProps> = ({
               </div>
             )}
 
+            {(checkResult.hasPendingChanges || (checkResult.pendingVideos ?? 0) > 0) && (
+              <div className="rounded-2xl border border-indigo-200 bg-indigo-50 p-4 text-xs text-indigo-900">
+                <div className="font-black uppercase tracking-wider">Thay đổi đang chờ phát hành</div>
+                <div className="mt-1">{checkResult.draftLessons ?? 0} lesson nháp · {checkResult.draftAssessments ?? 0} assessment nháp · {checkResult.pendingVideos ?? 0} video thay thế</div>
+                {(checkResult.pendingVideos ?? 0) > 0 && <div className="mt-1 font-semibold">Video cũ vẫn tiếp tục phục vụ học viên cho đến khi video mới READY và được xuất bản.</div>}
+              </div>
+            )}
+
             {/* Checklist of Issues */}
             <div className="space-y-3">
               <h5 className="text-xs font-bold uppercase tracking-wider text-slate-800 m-0">
@@ -201,7 +211,7 @@ export const PublishCheckModal: React.FC<PublishCheckModalProps> = ({
                   </div>
                   <div className="flex items-center gap-2 text-emerald-700 font-semibold">
                     <span className="material-symbols-outlined text-[16px]">done</span>
-                    <span>Đủ learning outcome (≥2), yêu cầu (≥1) và đối tượng học viên (≥1)</span>
+                    <span>Đủ kết quả đầu ra (≥{checkResult.requirements?.minOutcomes ?? 2}), yêu cầu (≥1) và đối tượng học viên (≥1)</span>
                   </div>
                   <div className="flex items-center gap-2 text-emerald-700 font-semibold">
                     <span className="material-symbols-outlined text-[16px]">done</span>
@@ -249,7 +259,7 @@ export const PublishCheckModal: React.FC<PublishCheckModalProps> = ({
                     <span className="inline-block animate-spin w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full mr-1" />
                   )}
                   <span className="material-symbols-outlined text-[18px]">publish</span>
-                  <span>Xuất bản khóa học</span>
+                  <span>Xuất bản thay đổi</span>
                 </button>
               </div>
             </div>

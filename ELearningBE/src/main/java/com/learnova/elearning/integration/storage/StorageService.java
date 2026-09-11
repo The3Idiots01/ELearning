@@ -29,9 +29,8 @@ public interface StorageService {
     void deleteByPrefix(String prefix);
 
     /**
-     * Mở stream đọc object — dùng cho {@code StreamDeliveryStrategy} khi
-     * provider=local (§4.7, §7.4 design_us15_us17.md). Nhánh s3 luôn đi
-     * redirect nên không hỗ trợ thao tác này.
+     * Mở stream đọc object cho delivery local hoặc xử lý nội bộ như trích xuất
+     * văn bản phục vụ AI. Caller phải đóng stream sau khi đọc.
      */
     Resource openReadable(String key);
 }

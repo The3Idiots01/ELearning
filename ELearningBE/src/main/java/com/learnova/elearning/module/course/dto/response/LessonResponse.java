@@ -2,6 +2,7 @@ package com.learnova.elearning.module.course.dto.response;
 
 import com.learnova.elearning.module.course.entity.enums.LessonContentType;
 import com.learnova.elearning.module.course.entity.enums.LessonUploadStatus;
+import com.learnova.elearning.module.course.entity.enums.PublicationStatus;
 import lombok.Builder;
 import lombok.Data;
 
@@ -17,6 +18,8 @@ public class LessonResponse {
     private String title;
     private LessonContentType contentType;
     private LessonUploadStatus uploadStatus;
+    private PublicationStatus publicationStatus;
+    private LessonUploadStatus pendingVideoStatus;
     private Integer durationSeconds;
     private Boolean isPreview;
     private Integer position;

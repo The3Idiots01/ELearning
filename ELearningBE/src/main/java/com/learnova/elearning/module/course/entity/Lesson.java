@@ -2,6 +2,7 @@ package com.learnova.elearning.module.course.entity;
 
 import com.learnova.elearning.module.course.entity.enums.LessonContentType;
 import com.learnova.elearning.module.course.entity.enums.LessonUploadStatus;
+import com.learnova.elearning.module.course.entity.enums.PublicationStatus;
 import jakarta.persistence.*;
 import lombok.*;
 import org.hibernate.annotations.CreationTimestamp;
@@ -69,12 +70,37 @@ public class Lesson {
     @Builder.Default
     private LessonUploadStatus uploadStatus = LessonUploadStatus.EMPTY;
 
+    @Enumerated(EnumType.STRING)
+    @Column(name = "publication_status", nullable = false, length = 20)
+    @Builder.Default
+    private PublicationStatus publicationStatus = PublicationStatus.PUBLISHED;
+
     @Column(name = "content_text", columnDefinition = "TEXT")
     private String contentText;
 
     @Column(name = "duration_seconds", nullable = false)
     @Builder.Default
     private Integer durationSeconds = 0;
+
+    @Column(name = "pending_storage_key", length = 500)
+    private String pendingStorageKey;
+
+    @Column(name = "pending_original_file_name", length = 255)
+    private String pendingOriginalFileName;
+
+    @Column(name = "pending_file_size_bytes")
+    private Long pendingFileSizeBytes;
+
+    @Column(name = "pending_mime_type", length = 100)
+    private String pendingMimeType;
+
+    @Column(name = "pending_duration_seconds", nullable = false)
+    @Builder.Default
+    private Integer pendingDurationSeconds = 0;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "pending_upload_status", length = 20)
+    private LessonUploadStatus pendingUploadStatus;
 
     @Column(name = "is_preview", nullable = false)
     @Builder.Default

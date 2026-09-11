@@ -2,6 +2,7 @@ import React, { useState, useRef } from 'react';
 import type { LessonContentType, LearningOutcome, Section } from '../../../types/course';
 import { curriculumApi } from '../api/curriculumApi';
 import { instructorCourseApi } from '../api/instructorCourseApi';
+import { aiAuthoringApi } from '../api/aiAuthoringApi';
 import { apiClient } from '../../../lib/apiClient';
 import { useToast } from '../../../app/context/ToastContext';
 import { LessonItem } from './LessonItem';
@@ -18,6 +19,7 @@ interface SectionItemProps {
   onMoveSectionUp?: () => void;
   onMoveSectionDown?: () => void;
   outcomes?: LearningOutcome[];
+  onEditAssessment?: (id: number) => void;
 }
 
 export const SectionItem: React.FC<SectionItemProps> = ({
@@ -29,9 +31,11 @@ export const SectionItem: React.FC<SectionItemProps> = ({
   onCurriculumChanged,
   onMoveSectionUp,
   onMoveSectionDown
-  , outcomes = []
+  , outcomes = [], onEditAssessment
 }) => {
   const { showSuccess, showError } = useToast();
+
+  type AiReviewStatus = 'suggested' | 'analyzed-empty' | 'skipped';
 
   // Section Edit State
   const [isEditingSection, setIsEditingSection] = useState(false);
@@ -66,6 +70,12 @@ export const SectionItem: React.FC<SectionItemProps> = ({
   const [uploadProgress, setUploadProgress] = useState(0);
   const [uploadStatusText, setUploadStatusText] = useState('');
 
+  const [isSuggestingOutcomes, setIsSuggestingOutcomes] = useState(false);
+  const [isOutcomeReviewOpen, setIsOutcomeReviewOpen] = useState(false);
+  const [isSavingOutcomes, setIsSavingOutcomes] = useState(false);
+  const [reviewSelections, setReviewSelections] = useState<Record<number, number[]>>({});
+  const [reviewStatuses, setReviewStatuses] = useState<Record<number, AiReviewStatus>>({});
+
   const resetForm = () => {
     setNewLessonTitle('');
     setNewLessonType('VIDEO');
@@ -95,7 +105,7 @@ export const SectionItem: React.FC<SectionItemProps> = ({
 
   const handleDeleteSection = async () => {
     try {
-      await curriculumApi.deleteSection(courseId, section.id);
+      await curriculumApi.deleteSection(courseId, section.id, true);
       setIsDeleting(false);
       showSuccess('Đã xóa chương học.');
       onCurriculumChanged();
@@ -237,6 +247,97 @@ export const SectionItem: React.FC<SectionItemProps> = ({
     }
   };
 
+  const canAiAnalyze = (lesson: Section['lessons'][number]) =>
+    lesson.uploadStatus === 'READY' &&
+    (lesson.contentType === 'ARTICLE' || lesson.contentType === 'FILE');
+
+  const handleSuggestSectionOutcomes = async () => {
+    if (outcomes.length === 0) {
+      showError('Chưa có learning outcome. Hãy tạo outcome ở phần Cài đặt khóa học trước.');
+      return;
+    }
+    if (section.lessons.length === 0) {
+      showError('Chương này chưa có bài học để phân tích.');
+      return;
+    }
+
+    setIsSuggestingOutcomes(true);
+    try {
+      const initialSelections: Record<number, number[]> = {};
+      const initialStatuses: Record<number, AiReviewStatus> = {};
+      section.lessons.forEach((lesson) => {
+        initialSelections[lesson.id] = lesson.outcomeIds || [];
+        if (!canAiAnalyze(lesson)) initialStatuses[lesson.id] = 'skipped';
+      });
+
+      const results = await Promise.all(section.lessons.map(async (lesson) => {
+        if (!canAiAnalyze(lesson)) return { lesson, result: null };
+        try {
+          return {
+            lesson,
+            result: await aiAuthoringApi.suggestLessonOutcomes(courseId, lesson.id)
+          };
+        } catch {
+          return { lesson, result: null };
+        }
+      }));
+
+      let failedCount = 0;
+      results.forEach(({ lesson, result }) => {
+        if (!canAiAnalyze(lesson)) return;
+        if (!result) {
+          failedCount += 1;
+          initialStatuses[lesson.id] = 'skipped';
+          return;
+        }
+
+        const suggestedIds = Array.from(new Set(result.suggestions.map((item) => item.outcomeId)));
+        // AI suggestions replace the previous mapping. Do not merge with old outcome IDs.
+        initialSelections[lesson.id] = suggestedIds;
+        initialStatuses[lesson.id] = suggestedIds.length > 0 ? 'suggested' : 'analyzed-empty';
+      });
+
+      setReviewSelections(initialSelections);
+      setReviewStatuses(initialStatuses);
+      setIsOutcomeReviewOpen(true);
+      if (failedCount > 0) {
+        showError(`${failedCount} bài chưa thể phân tích; các bài đó được giữ nguyên để bạn review.`);
+      }
+    } finally {
+      setIsSuggestingOutcomes(false);
+    }
+  };
+
+  const toggleReviewOutcome = (lessonId: number, outcomeId: number) => {
+    setReviewSelections((current) => {
+      const selected = current[lessonId] || [];
+      return {
+        ...current,
+        [lessonId]: selected.includes(outcomeId)
+          ? selected.filter((id) => id !== outcomeId)
+          : [...selected, outcomeId]
+      };
+    });
+  };
+
+  const saveSectionOutcomes = async () => {
+    setIsSavingOutcomes(true);
+    try {
+      await Promise.all(section.lessons.map((lesson) =>
+        curriculumApi.updateLesson(courseId, lesson.id, {
+          outcomeIds: reviewSelections[lesson.id] || []
+        })
+      ));
+      setIsOutcomeReviewOpen(false);
+      showSuccess('Đã lưu outcome mới cho toàn bộ bài học trong chương.');
+      onCurriculumChanged();
+    } catch (err: any) {
+      showError(err.message || 'Không thể lưu outcome cho chương này.');
+    } finally {
+      setIsSavingOutcomes(false);
+    }
+  };
+
   return (
     <>
       <div className="bg-surface-container-lowest border border-outline-variant/70 rounded-2xl overflow-hidden shadow-xs space-y-4 p-5">
@@ -284,6 +385,21 @@ export const SectionItem: React.FC<SectionItemProps> = ({
             <span className="text-xs text-slate-400 font-semibold mr-1">
               {section.lessons.length} bài học
             </span>
+
+            <button
+              type="button"
+              onClick={() => void handleSuggestSectionOutcomes()}
+              disabled={isSuggestingOutcomes || section.lessons.length === 0 || outcomes.length === 0}
+              className="flex items-center gap-1.5 rounded-lg border border-violet-300 bg-violet-50 px-2.5 py-1.5 text-[10px] font-extrabold uppercase tracking-wider text-violet-700 transition-colors hover:bg-violet-100 disabled:cursor-not-allowed disabled:opacity-50"
+              title={outcomes.length === 0 ? 'Hãy tạo learning outcome trước' : 'AI phân tích các bài có nội dung trong chương'}
+            >
+              {isSuggestingOutcomes ? (
+                <span className="inline-block h-3 w-3 animate-spin rounded-full border-2 border-violet-600 border-t-transparent" />
+              ) : (
+                <span className="material-symbols-outlined text-[15px]">auto_awesome</span>
+              )}
+              <span>{isSuggestingOutcomes ? 'AI đang phân tích…' : 'AI gợi ý outcome'}</span>
+            </button>
 
             <button
               type="button"
@@ -337,13 +453,30 @@ export const SectionItem: React.FC<SectionItemProps> = ({
         </div>
 
         {section.assessments?.length > 0 && (
-          <div className="space-y-2 border-t border-dashed border-amber-200 pt-3">
-            <div className="text-[10px] font-black uppercase tracking-wider text-amber-700">Assessment cuối chương</div>
+          <div className="space-y-2 border-t border-dashed border-outline-variant/60 pt-3.5">
+            <div className="flex items-center gap-1.5 text-[10px] font-extrabold uppercase tracking-wider text-slate-500">
+              <span className="material-symbols-outlined text-primary text-[15px]">assignment_turned_in</span>
+              <span>Bài kiểm tra đánh giá cuối chương</span>
+            </div>
             {section.assessments.map((assessment) => (
-              <div key={assessment.id} className="flex items-center gap-3 rounded-xl border border-amber-200 bg-amber-50/60 px-3 py-2.5 text-xs">
-                <span className="material-symbols-outlined text-amber-500 text-[18px]">quiz</span>
-                <span className="flex-1 font-bold text-slate-800">{assessment.title}</span>
-                <span className="text-[10px] text-slate-500">{assessment.outcomeIds?.length || 0} outcomes</span>
+              <div
+                key={assessment.id}
+                className="flex items-center gap-3 rounded-xl border border-outline-variant/60 bg-surface-container-low/40 px-3.5 py-2.5 text-xs transition-all hover:bg-white hover:border-primary/40 group"
+              >
+                <div className="w-7 h-7 rounded-lg bg-primary/10 text-primary flex items-center justify-center shrink-0">
+                  <span className="material-symbols-outlined text-[16px]">quiz</span>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => onEditAssessment?.(assessment.id)}
+                  className="flex-1 font-bold text-slate-800 text-left hover:text-primary transition cursor-pointer flex items-center gap-2"
+                >
+                  <span className="truncate">{assessment.title}</span>
+                  <span className="text-[11px] font-semibold text-primary/80 group-hover:underline">· Chỉnh sửa</span>
+                </button>
+                <span className="text-[10px] font-bold text-slate-400 bg-white px-2 py-0.5 rounded-full border border-outline-variant/50">
+                  {assessment.outcomeIds?.length || 0} chuẩn đầu ra
+                </span>
               </div>
             ))}
           </div>
@@ -573,6 +706,81 @@ export const SectionItem: React.FC<SectionItemProps> = ({
         )}
       </div>
 
+      <Modal
+        isOpen={isOutcomeReviewOpen}
+        onClose={() => !isSavingOutcomes && setIsOutcomeReviewOpen(false)}
+        title={`Review outcome · ${section.title}`}
+        subtitle="AI đã cập nhật lựa chọn cho các bài có nội dung. Video chưa có script được bỏ qua."
+        maxWidth="4xl"
+        icon="auto_awesome"
+      >
+        <div className="space-y-3">
+          {section.lessons.map((lesson, lessonIndex) => {
+            const status = reviewStatuses[lesson.id];
+            const selectedIds = reviewSelections[lesson.id] || [];
+            return (
+              <div key={lesson.id} className="rounded-xl border border-slate-200 bg-white p-3.5">
+                <div className="mb-2.5 flex flex-wrap items-center justify-between gap-2">
+                  <div className="min-w-0">
+                    <div className="text-xs font-extrabold text-slate-900">
+                      Bài {lessonIndex + 1}: {lesson.title}
+                    </div>
+                    <div className="mt-0.5 text-[10px] font-semibold uppercase tracking-wider text-slate-400">
+                      {lesson.contentType || 'PLAN'}
+                    </div>
+                  </div>
+                  <span className={`rounded-full px-2 py-1 text-[10px] font-bold ${
+                    status === 'suggested'
+                      ? 'bg-violet-50 text-violet-700'
+                      : status === 'analyzed-empty'
+                        ? 'bg-amber-50 text-amber-700'
+                        : 'bg-slate-100 text-slate-500'
+                  }`}>
+                    {status === 'suggested'
+                      ? `AI đã chọn ${selectedIds.length} outcome`
+                      : status === 'analyzed-empty'
+                        ? 'Đã phân tích · chưa chọn outcome'
+                        : 'Bỏ qua · chưa có nội dung phân tích'}
+                  </span>
+                </div>
+                <div className="grid gap-2 sm:grid-cols-2">
+                  {outcomes.map((outcome) => (
+                    <label key={outcome.id} className="flex cursor-pointer items-start gap-2 rounded-lg border border-slate-100 p-2 text-xs hover:bg-slate-50">
+                      <input
+                        type="checkbox"
+                        className="mt-0.5"
+                        checked={selectedIds.includes(outcome.id)}
+                        onChange={() => toggleReviewOutcome(lesson.id, outcome.id)}
+                      />
+                      <span className="font-semibold text-slate-700">{outcome.statement}</span>
+                    </label>
+                  ))}
+                </div>
+              </div>
+            );
+          })}
+          <div className="flex justify-end gap-2 pt-2">
+            <button
+              type="button"
+              onClick={() => setIsOutcomeReviewOpen(false)}
+              disabled={isSavingOutcomes}
+              className="rounded-xl bg-slate-100 px-4 py-2 text-xs font-bold text-slate-600 hover:bg-slate-200 disabled:opacity-50"
+            >
+              Hủy
+            </button>
+            <button
+              type="button"
+              onClick={() => void saveSectionOutcomes()}
+              disabled={isSavingOutcomes}
+              className="flex items-center gap-1.5 rounded-xl bg-indigo-600 px-4 py-2 text-xs font-bold text-white hover:bg-indigo-700 disabled:opacity-50"
+            >
+              {isSavingOutcomes && <span className="inline-block h-3.5 w-3.5 animate-spin rounded-full border-2 border-white border-t-transparent" />}
+              Lưu outcome cho chương
+            </button>
+          </div>
+        </div>
+      </Modal>
+
       {/* Edit Section Modal */}
       {isEditingSection && (
         <Modal
@@ -638,8 +846,8 @@ export const SectionItem: React.FC<SectionItemProps> = ({
           onClose={() => setIsDeleting(false)}
           onConfirm={handleDeleteSection}
           title="Xóa chương học"
-          message={`Bạn có chắc chắn muốn xóa chương "${section.title}" cùng toàn bộ các bài học bên trong không?`}
-          confirmText="Xóa chương học"
+          message={`Chương "${section.title}" và nội dung live bên trong sẽ bị archive khỏi học viên, đồng thời tiến độ có thể được tính lại. Bạn có chắc chắn không?`}
+          confirmText="Xác nhận archive"
           isDestructive
         />
       )}

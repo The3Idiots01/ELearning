@@ -12,8 +12,8 @@ export const progressApi = {
     lessonId: number,
     payload: HeartbeatPayload,
     keepalive = false
-  ): Promise<ProgressSnapshot> =>
-    apiClient.post<ProgressSnapshot>(
+  ): Promise<ProgressSnapshot | null> =>
+    apiClient.post<ProgressSnapshot | null>(
       `/api/v1/courses/${courseId}/lessons/${lessonId}/progress/heartbeat`,
       payload,
       { keepalive }

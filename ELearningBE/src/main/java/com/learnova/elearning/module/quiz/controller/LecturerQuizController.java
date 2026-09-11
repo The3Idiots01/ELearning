@@ -2,10 +2,14 @@ package com.learnova.elearning.module.quiz.controller;
 
 import com.learnova.elearning.common.dto.ApiResponse;
 import com.learnova.elearning.module.quiz.dto.request.ReorderQuestionsRequest;
+import com.learnova.elearning.module.quiz.dto.request.ApplyQuizDraftRequest;
+import com.learnova.elearning.module.quiz.dto.request.GenerateQuizDraftRequest;
 import com.learnova.elearning.module.quiz.dto.request.UpsertQuestionRequest;
 import com.learnova.elearning.module.quiz.dto.request.UpsertQuizRequest;
 import com.learnova.elearning.module.quiz.dto.response.QuestionDetailResponse;
 import com.learnova.elearning.module.quiz.dto.response.QuizDetailResponse;
+import com.learnova.elearning.module.quiz.dto.response.QuizDraftResponse;
+import com.learnova.elearning.module.quiz.service.QuizAiAuthoringService;
 import com.learnova.elearning.module.quiz.service.QuizAuthoringService;
 import com.learnova.elearning.security.CustomUserDetails;
 import jakarta.validation.Valid;
@@ -24,6 +28,7 @@ import org.springframework.web.bind.annotation.*;
 public class LecturerQuizController {
 
     private final QuizAuthoringService quizAuthoringService;
+    private final QuizAiAuthoringService quizAiAuthoringService;
 
     @GetMapping
     public ResponseEntity<ApiResponse<QuizDetailResponse>> getQuiz(
@@ -44,6 +49,28 @@ public class LecturerQuizController {
     ) {
         QuizDetailResponse response = quizAuthoringService.upsertQuiz(courseId, assessmentId, request, user.getId());
         return ResponseEntity.ok(ApiResponse.success("Cập nhật bài quiz thành công", response));
+    }
+
+    @PostMapping("/ai/draft")
+    public ResponseEntity<ApiResponse<QuizDraftResponse>> generateAiDraft(
+            @PathVariable Long courseId,
+            @PathVariable Long assessmentId,
+            @Valid @RequestBody(required = false) GenerateQuizDraftRequest request,
+            @AuthenticationPrincipal CustomUserDetails user
+    ) {
+        return ResponseEntity.ok(ApiResponse.success("AI đã tạo bản nháp quiz",
+                quizAiAuthoringService.generateDraft(courseId, assessmentId, request, user.getId())));
+    }
+
+    @PostMapping("/ai/draft/apply")
+    public ResponseEntity<ApiResponse<QuizDetailResponse>> applyAiDraft(
+            @PathVariable Long courseId,
+            @PathVariable Long assessmentId,
+            @Valid @RequestBody ApplyQuizDraftRequest request,
+            @AuthenticationPrincipal CustomUserDetails user
+    ) {
+        return ResponseEntity.ok(ApiResponse.success("Đã áp dụng bản nháp AI vào quiz",
+                quizAuthoringService.applyAiDraft(courseId, assessmentId, request, user.getId())));
     }
 
     @PostMapping("/questions")

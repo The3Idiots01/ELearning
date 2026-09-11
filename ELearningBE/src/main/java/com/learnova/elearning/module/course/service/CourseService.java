@@ -22,6 +22,8 @@ import com.learnova.elearning.module.course.entity.LearningOutcome;
 import com.learnova.elearning.module.course.entity.enums.BulletType;
 import com.learnova.elearning.module.course.entity.enums.CourseLevel;
 import com.learnova.elearning.module.course.entity.enums.CourseStatus;
+import com.learnova.elearning.module.course.exception.CourseNotReadyException;
+import com.learnova.elearning.module.course.entity.enums.CourseStatus;
 import com.learnova.elearning.module.course.mapper.CourseMapper;
 import com.learnova.elearning.module.course.repository.CourseBulletRepository;
 import com.learnova.elearning.module.course.repository.CourseRepository;
@@ -33,6 +35,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
@@ -52,6 +55,12 @@ import java.util.Map;
 @RequiredArgsConstructor
 @Slf4j
 public class CourseService {
+    private CoursePublishValidator publishValidator;
+
+    @Autowired
+    void setPublishValidator(CoursePublishValidator publishValidator) {
+        this.publishValidator = publishValidator;
+    }
 
     private static final String DEFAULT_SLUG_BASE = "khoa-hoc";
     private static final int MAX_BULLETS_PER_GROUP = 20;
@@ -141,6 +150,7 @@ public class CourseService {
             course.setCategory(categoryService.getByIdOrThrow(request.getCategoryId()));
         }
 
+        validateLiveCourse(course);
         return toDetail(courseRepository.save(course));
     }
 
@@ -162,6 +172,7 @@ public class CourseService {
         String oldKey = course.getThumbnailKey();
         course.setThumbnailKey(key);
         Course saved = courseRepository.save(course);
+        validateLiveCourse(saved);
 
         if (oldKey != null && !oldKey.equals(key)) {
             storageService.delete(oldKey);
@@ -181,6 +192,7 @@ public class CourseService {
             throw new AppException(ErrorCode.COURSE_PRICE_OUT_OF_RANGE);
         }
         course.setPrice(price);
+        validateLiveCourse(course);
         return toDetail(courseRepository.save(course));
     }
 
@@ -192,6 +204,7 @@ public class CourseService {
         replaceBulletGroup(course, BulletType.REQUIREMENT, request.getRequirements());
         replaceBulletGroup(course, BulletType.TARGET_AUDIENCE, request.getTargetAudiences());
 
+        validateLiveCourse(course);
         return toDetail(course);
     }
 
@@ -210,6 +223,13 @@ public class CourseService {
                     .build());
         }
         bulletRepository.saveAll(bullets);
+    }
+
+    private void validateLiveCourse(Course course) {
+        if (course.getStatus() == CourseStatus.PUBLISHED && publishValidator != null) {
+            var issues = publishValidator.validateLiveSnapshot(course);
+            if (!issues.isEmpty()) throw new CourseNotReadyException(issues);
+        }
     }
 
     /** Trim, bỏ dòng rỗng, kiểm tối đa 20 dòng và mỗi dòng ≤ 500 ký tự. */

@@ -32,7 +32,9 @@ export const LearningWorkspacePage: React.FC<LearningWorkspacePageProps> = ({
   onAssessmentCompleted,
   onBack
 }) => {
-  const [activeLesson, setActiveLesson] = useState<Lesson | null>(null);
+  const [activeLessonId, setActiveLessonId] = useState<number | null>(null);
+  const activeLesson = curriculum?.sections.flatMap(s => s.lessons).find(l => l.id === activeLessonId) ?? null;
+  const setActiveLesson = (lesson: Lesson | null) => setActiveLessonId(lesson?.id ?? null);
   const [activeAssessment, setActiveAssessment] = useState<Assessment | null>(null);
   const [activeTab, setActiveTab] = useState<'overview' | 'qa'>('overview');
   const [isCompleting, setIsCompleting] = useState(false);
@@ -208,7 +210,7 @@ export const LearningWorkspacePage: React.FC<LearningWorkspacePageProps> = ({
             </div>
           ) : activeLesson.contentType === 'VIDEO' ? (
             <div className="w-full bg-black aspect-video max-h-[60vh] flex items-center justify-center relative border-b border-slate-800 shrink-0">
-              <LessonVideoPlayer courseId={courseId} lesson={activeLesson} onProgress={onLessonProgress} />
+              <LessonVideoPlayer key={courseId + ":" + activeLesson.id} courseId={courseId} lesson={activeLesson} onProgress={onLessonProgress} />
             </div>
           ) : activeLesson.contentType === 'ARTICLE' ? (
             /* ARTICLE Content Type */

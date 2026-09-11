@@ -5,6 +5,7 @@ import com.learnova.elearning.common.exception.ErrorCode;
 import com.learnova.elearning.module.course.entity.Course;
 import com.learnova.elearning.module.course.entity.Lesson;
 import com.learnova.elearning.module.course.entity.enums.CourseStatus;
+import com.learnova.elearning.module.course.entity.enums.PublicationStatus;
 import com.learnova.elearning.module.enrollment.entity.Enrollment;
 import com.learnova.elearning.module.enrollment.entity.enums.EnrollmentStatus;
 import com.learnova.elearning.module.enrollment.repository.EnrollmentRepository;
@@ -38,6 +39,14 @@ public class ContentAccessGuard {
      */
     public AccessDecision decide(Lesson lesson, Long userId) {
         Course course = lesson.getSection().getCourse();
+
+        if (lesson.getPublicationStatus() != null
+                && lesson.getPublicationStatus() != PublicationStatus.PUBLISHED) {
+            if (userId != null && (isLecturerOfCourse(course, userId) || isAdmin(userId))) {
+                return new AccessDecision(true, AccessScope.OWNER, null);
+            }
+            throw new AppException(ErrorCode.LESSON_NOT_FOUND);
+        }
 
         if (course.getStatus() != CourseStatus.PUBLISHED) {
             if (userId != null && (isLecturerOfCourse(course, userId) || isAdmin(userId))) {

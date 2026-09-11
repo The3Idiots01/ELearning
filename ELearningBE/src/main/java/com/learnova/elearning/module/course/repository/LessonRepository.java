@@ -15,6 +15,10 @@ import java.util.Optional;
 
 @Repository
 public interface LessonRepository extends JpaRepository<Lesson, Long> {
+    @org.springframework.data.jpa.repository.Lock(jakarta.persistence.LockModeType.PESSIMISTIC_WRITE)
+    @Query("SELECT l FROM Lesson l WHERE l.id=:lessonId AND l.section.course.id=:courseId")
+    Optional<Lesson> findForMetadataUpdate(@Param("lessonId") Long lessonId, @Param("courseId") Long courseId);
+
 
     Optional<Lesson> findByIdAndSection_Id(Long id, Long sectionId);
 

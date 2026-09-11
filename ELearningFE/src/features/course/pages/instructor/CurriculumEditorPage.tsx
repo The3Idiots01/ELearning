@@ -1,3 +1,4 @@
+import { useVideoProcessing } from '../../hooks/useVideoProcessing';
 import React, { useState, useEffect } from 'react';
 import type { CourseDetail, Curriculum, LearningOutcome, Assessment } from '../../../../types/course';
 import { curriculumApi } from '../../api/curriculumApi';
@@ -11,6 +12,7 @@ import { outcomeApi } from '../../api/outcomeApi';
 import { AssessmentPlanPanel } from '../../components/AssessmentPlanPanel';
 import { AlignmentMatrix } from '../../components/AlignmentMatrix';
 import { AuthoringStepNav } from '../../components/AuthoringStepNav';
+import { AiCurriculumDraftModal } from '../../components/AiCurriculumDraftModal';
 
 interface CurriculumEditorPageProps {
   courseId: number;
@@ -28,8 +30,15 @@ export const CurriculumEditorPage: React.FC<CurriculumEditorPageProps> = ({
   const [course, setCourse] = useState<CourseDetail | null>(null);
   const [curriculum, setCurriculum] = useState<Curriculum | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const videoProcessing = useVideoProcessing(courseId, curriculum, setCurriculum);
+  const [contentRevision, setContentRevision] = useState(0);
   const [outcomes, setOutcomes] = useState<LearningOutcome[]>([]);
   const [assessments, setAssessments] = useState<Assessment[]>([]);
+  const hasPendingChanges = Boolean(course?.status === 'PUBLISHED' && (
+    curriculum?.sections.some(section => section.lessons.some(lesson =>
+      lesson.publicationStatus === 'DRAFT' || Boolean(lesson.pendingVideoStatus))) ||
+    assessments.some(assessment => assessment.publicationStatus === 'DRAFT')
+  ));
 
   // Add Section Form
   const [showAddSectionForm, setShowAddSectionForm] = useState(false);
@@ -39,6 +48,8 @@ export const CurriculumEditorPage: React.FC<CurriculumEditorPageProps> = ({
 
   // Publish Check Modal
   const [showPublishCheck, setShowPublishCheck] = useState(false);
+  const [openAssessmentId, setOpenAssessmentId] = useState<number | null>(null);
+  const [showAiCurriculum, setShowAiCurriculum] = useState(false);
 
   // Silent update that updates state without blocking UI with full spinner
   const refreshCurriculumSilent = async () => {
@@ -49,6 +60,7 @@ export const CurriculumEditorPage: React.FC<CurriculumEditorPageProps> = ({
       ]);
       setCurriculum(curriculumData);
       setAssessments(assessmentData);
+      setContentRevision(r => r + 1);
     } catch (err: any) {
       showError(err.message || 'Lỗi khi cập nhật dữ liệu giáo trình.');
     }
@@ -144,45 +156,95 @@ export const CurriculumEditorPage: React.FC<CurriculumEditorPageProps> = ({
   return (
     <div className="flex-1 flex flex-col bg-background min-h-0 overflow-y-auto">
       {/* Top Header */}
-      <header className="bg-surface-container-lowest border-b border-outline-variant/70 px-6 sm:px-8 py-4 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 sticky top-0 z-20 backdrop-blur-md shrink-0">
-        <div className="flex items-center gap-3 overflow-hidden">
-          <button
-            type="button"
-            onClick={onBack}
-            className="p-2 text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-xl transition-colors cursor-pointer shrink-0"
-            title="Quay lại danh sách khóa học"
-          >
-            <span className="material-symbols-outlined text-[20px]">arrow_back</span>
-          </button>
+      <header className="bg-surface-container-lowest/95 border-b border-outline-variant/70 px-6 sm:px-8 py-3.5 sticky top-0 z-30 backdrop-blur-md shrink-0">
+        <div className="flex flex-col xl:flex-row xl:items-center xl:justify-between gap-3">
+          <div className="flex items-center gap-3 min-w-0">
+            <button
+              type="button"
+              onClick={onBack}
+              className="p-2 text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-xl transition-colors cursor-pointer shrink-0"
+              title="Quay lại danh sách khóa học"
+            >
+              <span className="material-symbols-outlined text-[20px]">arrow_back</span>
+            </button>
 
-          <div className="overflow-hidden">
-            <div className="flex items-center gap-2">
-              <StatusBadge status={course.status} />
+            <div className="overflow-hidden">
+              <div className="flex items-center gap-2">
+                <StatusBadge status={course.status} />
+              </div>
+              <h1 className="text-base sm:text-lg font-black text-slate-900 truncate m-0 mt-0.5 font-display">
+                Soạn giáo trình: {course.title}
+              </h1>
             </div>
-            <h1 className="text-base sm:text-lg font-black text-slate-900 truncate m-0 mt-0.5 font-display">
-              Soạn Giáo Trình: {course.title}
-            </h1>
+          </div>
+
+          <div className="flex items-center gap-2.5 shrink-0 self-end xl:self-center">
+            <button
+              type="button"
+              onClick={() => setShowAiCurriculum(true)}
+              className="bg-violet-600 hover:bg-violet-700 text-white font-extrabold text-xs px-4 py-2.5 rounded-xl transition-all flex items-center gap-1.5 cursor-pointer shadow-md shadow-violet-200"
+            >
+              <span className="material-symbols-outlined text-[18px]">auto_awesome</span>
+              <span>AI tạo cấu trúc</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => onGoToSettings(course.id)}
+              className="bg-surface-container-low hover:bg-surface-container text-on-surface font-bold text-xs px-4 py-2.5 rounded-xl border border-outline-variant/60 transition-all flex items-center gap-1.5 cursor-pointer shadow-xs"
+            >
+              <span className="material-symbols-outlined text-[18px]">tune</span>
+              <span>Cài đặt thông tin & Giá</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setShowPublishCheck(true)}
+              className="bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold text-xs px-4 py-2.5 rounded-xl transition-all shadow-md shadow-emerald-200 flex items-center gap-1.5 cursor-pointer active:scale-95"
+            >
+              <span className="material-symbols-outlined text-[18px]">publish</span>
+              <span>{hasPendingChanges ? 'Xuất bản thay đổi' : 'Kiểm tra xuất bản'}</span>
+            </button>
           </div>
         </div>
 
-        {/* Action Header Buttons */}
-        <div className="flex items-center gap-2.5 shrink-0 self-end sm:self-center">
-          <button
-            type="button"
-            onClick={() => onGoToSettings(course.id)}
-            className="bg-surface-container-low hover:bg-surface-container text-on-surface font-bold text-xs px-4 py-2.5 rounded-xl border border-outline-variant/60 transition-all flex items-center gap-1.5 cursor-pointer shadow-xs"
-          >
-            <span className="material-symbols-outlined text-[18px]">tune</span>
-            <span>Cài đặt thông tin & Giá</span>
-          </button>
+        {/* Thanh thống kê và thao tác nhanh luôn bám theo khi cuộn */}
+        <div className="mt-3 pt-3 border-t border-outline-variant/50 flex items-center gap-5 overflow-x-auto">
+          <div className="flex items-center gap-5 shrink-0">
+            <div>
+              <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Tổng chương học</span>
+              <strong className="text-base font-black text-slate-900 font-display">{curriculum?.sections.length || 0} chương</strong>
+            </div>
+
+            <div className="h-8 w-px bg-slate-200" />
+
+            <div>
+              <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Đánh giá</span>
+              <strong className="text-base font-black text-amber-600 font-display">{totalAssessments} bài kiểm tra</strong>
+            </div>
+
+            <div className="h-8 w-px bg-slate-200" />
+
+            <div>
+              <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Tổng bài giảng</span>
+              <strong className="text-base font-black text-slate-900 font-display">{totalLessons} bài học</strong>
+            </div>
+
+            <div className="h-8 w-px bg-slate-200" />
+
+            <div>
+              <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Thời lượng video</span>
+              <strong className="text-base font-black text-primary font-display">{formatDuration(totalDuration)}</strong>
+            </div>
+          </div>
 
           <button
             type="button"
-            onClick={() => setShowPublishCheck(true)}
-            className="bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold text-xs px-4 py-2.5 rounded-xl transition-all shadow-md shadow-emerald-200 flex items-center gap-1.5 cursor-pointer active:scale-95"
+            onClick={() => setShowAddSectionForm(true)}
+            className="ml-auto bg-primary hover:bg-primary/90 text-white font-bold text-xs px-4 py-2.5 rounded-xl transition-all shadow-md shadow-primary/20 flex items-center gap-1.5 cursor-pointer shrink-0"
           >
-            <span className="material-symbols-outlined text-[18px]">publish</span>
-            <span>Kiểm tra xuất bản</span>
+            <span className="material-symbols-outlined text-[18px]">add</span>
+            <span>Thêm chương học mới</span>
           </button>
         </div>
       </header>
@@ -190,64 +252,24 @@ export const CurriculumEditorPage: React.FC<CurriculumEditorPageProps> = ({
       {/* Main Content Body */}
       <div className="p-6 sm:p-8 max-w-5xl mx-auto w-full space-y-6">
         <AuthoringStepNav courseId={course.id} active="assessment" />
-        {/* Curriculum Stats Banner */}
-        <div className="bg-surface-container-lowest p-5 rounded-3xl border border-outline-variant/70 shadow-xs flex flex-col sm:flex-row items-center justify-between gap-4">
-          <div className="flex items-center gap-6">
+        {hasPendingChanges && (
+          <div className="flex items-start gap-3 rounded-2xl border border-indigo-200 bg-indigo-50 p-4 text-indigo-900 shadow-sm">
+            <span className="material-symbols-outlined text-indigo-600">published_with_changes</span>
             <div>
-              <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">
-                Tổng chương học
-              </span>
-              <strong className="text-lg font-black text-slate-900 font-display">
-                {curriculum?.sections.length || 0} chương
-              </strong>
-            </div>
-
-            <div className="h-8 w-px bg-slate-200" />
-
-            <div>
-              <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Đánh giá</span>
-              <strong className="text-lg font-black text-amber-600 font-display">{totalAssessments} quiz</strong>
-            </div>
-
-            <div className="h-8 w-px bg-slate-200" />
-
-            <div>
-              <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">
-                Tổng bài giảng
-              </span>
-              <strong className="text-lg font-black text-slate-900 font-display">
-                {totalLessons} bài học
-              </strong>
-            </div>
-
-            <div className="h-8 w-px bg-slate-200" />
-
-            <div>
-              <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">
-                Thời lượng Video
-              </span>
-              <strong className="text-lg font-black text-primary font-display">
-                {formatDuration(totalDuration)}
-              </strong>
+              <div className="text-xs font-black uppercase tracking-wider">Có thay đổi chưa xuất bản</div>
+              <p className="m-0 mt-1 text-xs text-indigo-800">Course vẫn đang live. Lesson/assessment mới chỉ hiển thị cho instructor; hãy kiểm tra và bấm <strong>Xuất bản thay đổi</strong> để phát hành cùng lúc.</p>
             </div>
           </div>
-
-          <button
-            type="button"
-            onClick={() => setShowAddSectionForm(true)}
-            className="bg-primary hover:bg-primary/90 text-white font-bold text-xs px-4 py-2.5 rounded-xl transition-all shadow-md shadow-primary/20 flex items-center gap-1.5 cursor-pointer shrink-0"
-          >
-            <span className="material-symbols-outlined text-[18px]">add</span>
-            <span>Thêm chương học mới</span>
-          </button>
-        </div>
-
+        )}
+        {videoProcessing.error && <p role="status" className="bg-amber-50 text-amber-800 rounded-xl p-3">{videoProcessing.error}</p>}
         <div id="assessment-plan">
           <AssessmentPlanPanel
             courseId={courseId}
             sections={curriculum!.sections}
             outcomes={outcomes}
             assessments={assessments}
+            openId={openAssessmentId}
+            onOpen={setOpenAssessmentId}
             onChanged={refreshCurriculumSilent}
           />
         </div>
@@ -362,6 +384,7 @@ export const CurriculumEditorPage: React.FC<CurriculumEditorPageProps> = ({
                   sIdx < curriculum.sections.length - 1 && handleReorderSections(sIdx, sIdx + 1)
                 }
                 outcomes={outcomes}
+                onEditAssessment={(id) => { setOpenAssessmentId(id); document.getElementById('assessment-' + id)?.scrollIntoView({ behavior: 'smooth', block: 'start' }); }}
               />
             ))
           )}
@@ -372,11 +395,21 @@ export const CurriculumEditorPage: React.FC<CurriculumEditorPageProps> = ({
       {showPublishCheck && (
         <PublishCheckModal
           isOpen={showPublishCheck}
+          refreshKey={contentRevision + ":" + videoProcessing.revision}
           onClose={() => setShowPublishCheck(false)}
           courseId={course.id}
           onPublishSuccess={() => refreshCurriculumSilent()}
         />
       )}
+
+      <AiCurriculumDraftModal
+        courseId={course.id}
+        outcomes={outcomes}
+        isOpen={showAiCurriculum}
+        hasExistingCurriculum={(curriculum?.sections.length || 0) > 0}
+        onClose={() => setShowAiCurriculum(false)}
+        onApplied={refreshCurriculumSilent}
+      />
     </div>
   );
 };

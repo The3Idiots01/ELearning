@@ -33,9 +33,8 @@ public class S3VideoDurationProbe implements VideoDurationProbe {
             throw new AppException(ErrorCode.UPLOAD_METADATA_MISMATCH,
                     "Cannot read MP4 duration for key " + storageKey, e);
         } catch (SdkException e) {
-            log.warn("S3 read failed while probing duration for key {}: {}", storageKey, e.getMessage());
-            throw new AppException(ErrorCode.UPLOAD_OBJECT_NOT_FOUND,
-                    "Object not found in storage: " + storageKey, e);
+            // Preserve transport errors so the durable worker can retry transient failures.
+            throw e;
         }
     }
 }

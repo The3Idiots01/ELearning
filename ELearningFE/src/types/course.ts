@@ -4,6 +4,7 @@ export type CourseLevel = 'ALL' | 'BEGINNER' | 'INTERMEDIATE' | 'ADVANCED';
 export type CourseStatus = 'DRAFT' | 'PUBLISHED' | 'UNPUBLISHED' | 'SUSPENDED';
 export type LessonContentType = 'VIDEO' | 'ARTICLE' | 'FILE';
 export type LessonUploadStatus = 'EMPTY' | 'PENDING' | 'PROCESSING' | 'READY' | 'FAILED';
+export type PublicationStatus = 'DRAFT' | 'PUBLISHED';
 
 export interface LessonResource {
   id: number;
@@ -16,10 +17,14 @@ export interface LessonResource {
 }
 
 export interface Lesson {
+  processingErrorCode?: string | null;
+  canRetryProcessing?: boolean;
   id: number;
   title: string;
   contentType?: LessonContentType;
   uploadStatus?: LessonUploadStatus;
+  publicationStatus?: PublicationStatus;
+  pendingVideoStatus?: LessonUploadStatus | null;
   durationSeconds?: number;
   isPreview?: boolean;
   position: number;
@@ -39,6 +44,7 @@ export interface Lesson {
 export interface Assessment {
   id: number;
   type: 'QUIZ';
+  publicationStatus?: PublicationStatus;
   title: string;
   instructions?: string;
   sectionId?: number | null;
@@ -51,6 +57,39 @@ export interface LearningOutcome {
   id: number;
   statement: string;
   position: number;
+}
+
+export interface OutcomeSuggestion {
+  outcomeId: number;
+  confidence: number;
+  reason: string;
+}
+
+export interface OutcomeSuggestionResponse {
+  suggestions: OutcomeSuggestion[];
+  warning?: string | null;
+}
+
+export interface CurriculumLessonDraft {
+  title: string;
+  recommendedContentType: LessonContentType;
+  outcomeIds: number[];
+}
+
+export interface CurriculumSectionDraft {
+  title: string;
+  description?: string | null;
+  lessons: CurriculumLessonDraft[];
+}
+
+export interface CurriculumDraft {
+  sections: CurriculumSectionDraft[];
+}
+
+export interface GenerateCurriculumDraftRequest {
+  maxSections?: number;
+  lessonsPerSection?: number;
+  guidance?: string;
 }
 
 export interface Section {
@@ -68,6 +107,7 @@ export interface Section {
 }
 
 export interface Curriculum {
+  resumeLessonId?: number | null;
   courseId: number;
   sections: Section[];
   unplacedAssessments?: Assessment[];
@@ -142,6 +182,7 @@ export interface UpdateSectionRequest {
 
 export interface CreateLessonRequest {
   title: string;
+  contentType?: LessonContentType;
   outcomeIds?: number[];
 }
 
@@ -202,8 +243,13 @@ export interface PublishIssue {
 }
 
 export interface PublishCheckResponse {
+  requirements?: { minOutcomes: number };
   canPublish: boolean;
   issues: (PublishIssue | string)[];
+  hasPendingChanges?: boolean;
+  draftLessons?: number;
+  draftAssessments?: number;
+  pendingVideos?: number;
 }
 
 export interface StatusLog {

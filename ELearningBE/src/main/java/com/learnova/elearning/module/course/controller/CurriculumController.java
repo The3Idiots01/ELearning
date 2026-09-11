@@ -3,6 +3,7 @@ package com.learnova.elearning.module.course.controller;
 import com.learnova.elearning.common.dto.ApiResponse;
 import com.learnova.elearning.module.course.dto.request.CreateLessonRequest;
 import com.learnova.elearning.module.course.dto.request.CreateSectionRequest;
+import com.learnova.elearning.module.course.dto.request.ArchiveConfirmationRequest;
 import com.learnova.elearning.module.course.dto.request.MoveLessonRequest;
 import com.learnova.elearning.module.course.dto.request.ReorderLessonsRequest;
 import com.learnova.elearning.module.course.dto.request.ReorderSectionsRequest;
@@ -64,9 +65,11 @@ public class CurriculumController {
     public ResponseEntity<ApiResponse<Void>> deleteSection(
             @PathVariable Long courseId,
             @PathVariable Long sectionId,
+            @RequestBody(required = false) ArchiveConfirmationRequest request,
+            @RequestParam(defaultValue = "false") boolean confirm,
             @AuthenticationPrincipal CustomUserDetails user
     ) {
-        curriculumService.deleteSection(courseId, sectionId, user.getId());
+        curriculumService.deleteSection(courseId, sectionId, user.getId(), confirm || request != null && Boolean.TRUE.equals(request.getConfirm()));
         return ResponseEntity.ok(ApiResponse.success("Section deleted", null));
     }
 
@@ -110,9 +113,11 @@ public class CurriculumController {
     public ResponseEntity<ApiResponse<Void>> deleteLesson(
             @PathVariable Long courseId,
             @PathVariable Long lessonId,
+            @RequestBody(required = false) ArchiveConfirmationRequest request,
+            @RequestParam(defaultValue = "false") boolean confirm,
             @AuthenticationPrincipal CustomUserDetails user
     ) {
-        curriculumService.deleteLesson(courseId, lessonId, user.getId());
+        curriculumService.deleteLesson(courseId, lessonId, user.getId(), confirm || request != null && Boolean.TRUE.equals(request.getConfirm()));
         return ResponseEntity.ok(ApiResponse.success("Lesson deleted", null));
     }
 

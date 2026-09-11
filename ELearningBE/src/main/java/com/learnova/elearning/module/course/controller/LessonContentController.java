@@ -41,6 +41,14 @@ public class LessonContentController {
         return ResponseEntity.ok(ApiResponse.success("Lesson content removed", response));
     }
 
+    @DeleteMapping("/pending-content")
+    public ResponseEntity<ApiResponse<LessonResponse>> cancelPendingContent(
+            @PathVariable Long courseId, @PathVariable Long lessonId,
+            @AuthenticationPrincipal CustomUserDetails user) {
+        return ResponseEntity.ok(ApiResponse.success("Đã hủy video đang chờ xuất bản",
+                lessonContentService.cancelPendingVideo(courseId, lessonId, user.getId())));
+    }
+
     @PostMapping("/resources")
     public ResponseEntity<ApiResponse<LessonResponse>> addResource(
             @PathVariable Long courseId,

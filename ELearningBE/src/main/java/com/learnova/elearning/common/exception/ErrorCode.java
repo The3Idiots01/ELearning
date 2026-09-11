@@ -109,7 +109,15 @@ public enum ErrorCode {
     // Q&A Domain (1321 - 1325)
     QUESTION_NOT_FOUND(1321, "Question not found", HttpStatus.NOT_FOUND),
     NOT_ENROLLED(1322, "Only enrolled students or course lecturer can participate in Q&A", HttpStatus.FORBIDDEN),
-    QUESTION_ACCESS_DENIED(1323, "You do not have permission to modify this thread", HttpStatus.FORBIDDEN);
+    QUESTION_ACCESS_DENIED(1323, "You do not have permission to modify this thread", HttpStatus.FORBIDDEN),
+
+    // AI-assisted authoring (1331 - 1336)
+    AI_NOT_CONFIGURED(1331, "AI authoring is not configured", HttpStatus.SERVICE_UNAVAILABLE),
+    AI_PROVIDER_ERROR(1332, "AI provider is temporarily unavailable", HttpStatus.BAD_GATEWAY),
+    AI_CONTENT_UNAVAILABLE(1333, "Lesson content is not available for AI analysis", HttpStatus.UNPROCESSABLE_ENTITY),
+    AI_RESPONSE_INVALID(1334, "AI returned an invalid response", HttpStatus.BAD_GATEWAY),
+    AI_QUOTA_EXCEEDED(1335, "AI free-tier quota has been reached", HttpStatus.TOO_MANY_REQUESTS),
+    AI_OUTCOMES_REQUIRED(1336, "Create at least two learning outcomes before using AI authoring", HttpStatus.UNPROCESSABLE_ENTITY);
 
     private final int code;
     private final String message;

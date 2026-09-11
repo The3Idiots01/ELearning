@@ -64,6 +64,7 @@ async function request<T>(endpoint: string, options: RequestOptions = {}): Promi
       headers
     });
 
+    if (response.status === 204) return null as T;
     const contentType = response.headers.get('content-type');
     const isJson = contentType && contentType.includes('application/json');
     const data = isJson ? await response.json() : null;

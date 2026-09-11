@@ -5,6 +5,7 @@ import com.learnova.elearning.module.course.dto.request.CreateAssessmentRequest;
 import com.learnova.elearning.module.course.dto.request.PlaceAssessmentRequest;
 import com.learnova.elearning.module.course.dto.request.ReorderAssessmentsRequest;
 import com.learnova.elearning.module.course.dto.request.UpdateAssessmentRequest;
+import com.learnova.elearning.module.course.dto.request.ArchiveConfirmationRequest;
 import com.learnova.elearning.module.course.dto.response.AssessmentResponse;
 import com.learnova.elearning.module.course.service.AssessmentService;
 import com.learnova.elearning.security.CustomUserDetails;
@@ -51,8 +52,11 @@ public class AssessmentController {
     @DeleteMapping("/assessments/{assessmentId}")
     public ResponseEntity<ApiResponse<Void>> delete(
             @PathVariable Long courseId, @PathVariable Long assessmentId,
+            @RequestBody(required = false) ArchiveConfirmationRequest request,
+            @RequestParam(defaultValue = "false") boolean confirm,
             @AuthenticationPrincipal CustomUserDetails user) {
-        assessmentService.delete(courseId, assessmentId, user.getId());
+        assessmentService.delete(courseId, assessmentId, user.getId(),
+                confirm || request != null && Boolean.TRUE.equals(request.getConfirm()));
         return ResponseEntity.ok(ApiResponse.success("Assessment deleted", null));
     }
 

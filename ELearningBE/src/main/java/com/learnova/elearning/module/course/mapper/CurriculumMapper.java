@@ -49,6 +49,8 @@ public final class CurriculumMapper {
                 .title(lesson.getTitle())
                 .contentType(lesson.getContentType())
                 .uploadStatus(lesson.getUploadStatus())
+                .publicationStatus(lesson.getPublicationStatus())
+                .pendingVideoStatus(lesson.getPendingUploadStatus())
                 .durationSeconds(lesson.getDurationSeconds())
                 .isPreview(lesson.getIsPreview())
                 .position(lesson.getPosition())

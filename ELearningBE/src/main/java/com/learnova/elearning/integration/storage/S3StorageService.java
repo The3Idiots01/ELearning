@@ -7,6 +7,7 @@ import com.learnova.elearning.integration.storage.model.PresignedUpload;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.core.io.Resource;
+import org.springframework.core.io.InputStreamResource;
 import org.springframework.stereotype.Service;
 import software.amazon.awssdk.services.s3.S3Client;
 import software.amazon.awssdk.services.s3.model.Delete;
@@ -14,6 +15,7 @@ import software.amazon.awssdk.services.s3.model.DeleteObjectRequest;
 import software.amazon.awssdk.services.s3.model.DeleteObjectsRequest;
 import software.amazon.awssdk.services.s3.model.HeadObjectRequest;
 import software.amazon.awssdk.services.s3.model.HeadObjectResponse;
+import software.amazon.awssdk.services.s3.model.GetObjectRequest;
 import software.amazon.awssdk.services.s3.model.ListObjectsV2Request;
 import software.amazon.awssdk.services.s3.model.NoSuchKeyException;
 import software.amazon.awssdk.services.s3.model.ObjectIdentifier;
@@ -132,8 +134,16 @@ public class S3StorageService implements StorageService {
 
     @Override
     public Resource openReadable(String key) {
-        throw new UnsupportedOperationException(
-                "S3StorageService không hỗ trợ openReadable — nhánh provider=s3 luôn đi redirect (§4.7)");
+        try {
+            return new InputStreamResource(s3Client.getObject(
+                    GetObjectRequest.builder().bucket(bucket).key(key).build()));
+        } catch (S3Exception e) {
+            if (e.statusCode() == 404) {
+                throw new AppException(ErrorCode.UPLOAD_OBJECT_NOT_FOUND);
+            }
+            log.error("S3 getObject failed for key {}: {}", key, e.getMessage());
+            throw new AppException(ErrorCode.STORAGE_UNAVAILABLE, e);
+        }
     }
 
     private void flushDelete(List<ObjectIdentifier> keys) {

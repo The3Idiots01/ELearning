@@ -4,6 +4,7 @@ import com.learnova.elearning.common.exception.AppException;
 import com.learnova.elearning.common.exception.ErrorCode;
 import com.learnova.elearning.module.course.entity.Course;
 import com.learnova.elearning.module.course.entity.Lesson;
+import com.learnova.elearning.module.course.entity.enums.PublicationStatus;
 import com.learnova.elearning.module.course.entity.enums.CourseStatus;
 import com.learnova.elearning.module.course.repository.CourseRepository;
 import com.learnova.elearning.module.course.repository.LessonRepository;
@@ -98,6 +99,9 @@ public class EnrollmentService {
 
         Lesson lesson = lessonRepository.findByIdAndSection_Course_Id(lessonId, courseId)
                 .orElseThrow(() -> new AppException(ErrorCode.LESSON_NOT_IN_COURSE));
+        if (lesson.getPublicationStatus() != null && lesson.getPublicationStatus() != PublicationStatus.PUBLISHED) {
+            throw new AppException(ErrorCode.LESSON_NOT_FOUND);
+        }
 
         // §5.8: áp dụng cho mọi contentType kể cả VIDEO. Dòng lesson_progress có
         // thể đã tồn tại (heartbeat VIDEO tạo trước) mà chưa completed — không chỉ

@@ -195,7 +195,7 @@ export const CourseSettingsPage: React.FC<CourseSettingsPageProps> = ({
           <div>
             <h3 className="text-base font-extrabold text-slate-900 m-0 font-display flex items-center gap-2">
               <span className="material-symbols-outlined text-primary text-[22px]">feed</span>
-              <span>1. Thông tin giới thiệu khóa học (Landing Page)</span>
+              <span>1. Thông tin giới thiệu khóa học</span>
             </h3>
             <p className="text-xs text-slate-500 mt-1 m-0">
               Thông tin hiển thị tại trang chi tiết để học viên tìm kiếm và đăng ký.
@@ -260,9 +260,9 @@ export const CourseSettingsPage: React.FC<CourseSettingsPageProps> = ({
                   onChange={(e) => setLevel(e.target.value as CourseLevel)}
                   className="w-full px-4 py-3 bg-surface-container-low border border-outline-variant/70 rounded-2xl text-xs text-on-surface font-bold focus:bg-white focus:border-primary focus:outline-none"
                 >
-                  <option value="BEGINNER">Cơ bản (Beginner)</option>
-                  <option value="INTERMEDIATE">Trung cấp (Intermediate)</option>
-                  <option value="ADVANCED">Nâng cao (Expert)</option>
+                  <option value="BEGINNER">Cơ bản</option>
+                  <option value="INTERMEDIATE">Trung cấp</option>
+                  <option value="ADVANCED">Nâng cao</option>
                 </select>
               </div>
 
@@ -276,7 +276,7 @@ export const CourseSettingsPage: React.FC<CourseSettingsPageProps> = ({
                   className="w-full px-4 py-3 bg-surface-container-low border border-outline-variant/70 rounded-2xl text-xs text-on-surface font-bold focus:bg-white focus:border-primary focus:outline-none"
                 >
                   <option value="vi">Tiếng Việt</option>
-                  <option value="en">English (Tiếng Anh)</option>
+                  <option value="en">Tiếng Anh</option>
                 </select>
               </div>
             </div>
@@ -309,7 +309,7 @@ export const CourseSettingsPage: React.FC<CourseSettingsPageProps> = ({
                 <p className="text-[11px] text-amber-600 font-medium m-0 flex items-center gap-1">
                   <span className="material-symbols-outlined text-[14px]">info</span>
                   <span>
-                    Lưu ý: Mô tả cần đạt <strong>tối thiểu 200 ký tự</strong> để vượt qua bước kiểm tra xuất bản (Publish Check).
+                    Lưu ý: Mô tả cần đạt <strong>tối thiểu 200 ký tự</strong> để vượt qua bước kiểm tra xuất bản.
                   </span>
                 </p>
               )}
@@ -333,7 +333,7 @@ export const CourseSettingsPage: React.FC<CourseSettingsPageProps> = ({
           <div>
             <h3 className="text-base font-extrabold text-slate-900 m-0 font-display flex items-center gap-2">
               <span className="material-symbols-outlined text-primary text-[22px]">payments</span>
-              <span>2. Định giá bán khóa học (Pricing)</span>
+              <span>2. Định giá bán khóa học</span>
             </h3>
             <p className="text-xs text-slate-500 mt-1 m-0">
               Quy định mức học phí khóa học theo quy định hệ thống (0 – 10.000.000 VNĐ, BR-04).
@@ -398,7 +398,7 @@ export const CourseSettingsPage: React.FC<CourseSettingsPageProps> = ({
           <div>
             <h3 className="text-base font-extrabold text-slate-900 m-0 font-display flex items-center gap-2">
               <span className="material-symbols-outlined text-primary text-[22px]">checklist</span>
-              <span>3. Khối mục tiêu, yêu cầu & đối tượng (Course Highlights)</span>
+              <span>4. Khối mục tiêu, yêu cầu & đối tượng</span>
             </h3>
             <p className="text-xs text-slate-500 mt-1 m-0">
               Tạo sự rõ ràng và chuyên nghiệp cho trang khóa học của bạn.

@@ -20,6 +20,7 @@ import com.learnova.elearning.module.quiz.entity.Quiz;
 import com.learnova.elearning.module.quiz.entity.QuizAttempt;
 import com.learnova.elearning.module.quiz.entity.QuizQuestion;
 import com.learnova.elearning.module.quiz.entity.enums.QuestionType;
+import com.learnova.elearning.module.course.entity.enums.PublicationStatus;
 import com.learnova.elearning.module.quiz.repository.QuizAttemptRepository;
 import com.learnova.elearning.module.quiz.repository.QuizQuestionRepository;
 import com.learnova.elearning.module.quiz.repository.QuizRepository;
@@ -145,8 +146,13 @@ public class QuizTakingService {
     }
 
     private Quiz requireQuiz(Long courseId, Long assessmentId) {
-        return quizRepository.findByAssessment_IdAndAssessment_Course_Id(assessmentId, courseId)
+        Quiz quiz = quizRepository.findByAssessment_IdAndAssessment_Course_Id(assessmentId, courseId)
                 .orElseThrow(() -> new AppException(ErrorCode.QUIZ_NOT_FOUND));
+        if (quiz.getAssessment().getPublicationStatus() != null
+                && quiz.getAssessment().getPublicationStatus() != PublicationStatus.PUBLISHED) {
+            throw new AppException(ErrorCode.QUIZ_NOT_FOUND);
+        }
+        return quiz;
     }
 
     private QuestionTakingResponse toTakingQuestion(QuizQuestion question) {

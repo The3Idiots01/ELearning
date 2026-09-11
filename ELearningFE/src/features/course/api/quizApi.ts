@@ -1,7 +1,10 @@
 import { apiClient } from '../../../lib/apiClient';
 import type {
   QuizDetail,
+  QuizDraft,
   QuizQuestion,
+  ApplyQuizDraftRequest,
+  GenerateQuizDraftRequest,
   UpsertQuestionRequest,
   UpsertQuizRequest
 } from '../../../types/quiz';
@@ -83,6 +86,28 @@ export const quizApi = {
     return apiClient.patch<void>(
       `/api/v1/lecturer/courses/${courseId}/assessments/${assessmentId}/quiz/questions/reorder`,
       { questionIds }
+    );
+  },
+
+  generateDraft: async (
+    courseId: number,
+    assessmentId: number,
+    data: GenerateQuizDraftRequest
+  ): Promise<QuizDraft> => {
+    return apiClient.post<QuizDraft>(
+      `/api/v1/lecturer/courses/${courseId}/assessments/${assessmentId}/quiz/ai/draft`,
+      data
+    );
+  },
+
+  applyDraft: async (
+    courseId: number,
+    assessmentId: number,
+    data: ApplyQuizDraftRequest
+  ): Promise<QuizDetail> => {
+    return apiClient.post<QuizDetail>(
+      `/api/v1/lecturer/courses/${courseId}/assessments/${assessmentId}/quiz/ai/draft/apply`,
+      data
     );
   }
 };

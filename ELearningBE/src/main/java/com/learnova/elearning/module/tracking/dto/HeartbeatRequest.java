@@ -14,6 +14,8 @@ import java.util.List;
 public class HeartbeatRequest {
 
     @NotNull
+    @jakarta.validation.constraints.DecimalMin("0")
+    @jakarta.validation.constraints.DecimalMax("2147483647")
     private Double positionSeconds;
 
     /** Mỗi phần tử là {@code [start, end]} giây, giống hệt {@code video.played}. */
