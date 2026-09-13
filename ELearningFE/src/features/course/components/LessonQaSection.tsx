@@ -105,8 +105,8 @@ export const LessonQaSection: React.FC<LessonQaSectionProps> = ({
     } catch (err: any) {
       if (err?.status === 403 || err?.response?.status === 403) {
         showError('Chỉ học viên đã đăng ký khóa học mới có thể đặt câu hỏi.');
-      } else if (err?.code === 1324) {
-        showError(err.message || 'Vui lòng kiểm tra lại ngôn từ có chứa nội dung không phù hợp và thử lại.');
+      } else if (err?.code === 1324 || err?.status === 400 || err?.response?.status === 400) {
+        showError('Vui lòng kiểm tra lại nội dung sao cho phù hợp !');
       } else {
         showError(err.message || 'Có lỗi xảy ra khi gửi câu hỏi.');
       }
@@ -161,8 +161,8 @@ export const LessonQaSection: React.FC<LessonQaSectionProps> = ({
     } catch (err: any) {
       if (err?.status === 403 || err?.response?.status === 403) {
         showError('Bạn không có quyền phản hồi trên khóa học này.');
-      } else if (err?.code === 1324) {
-        showError(err.message || 'Vui lòng kiểm tra lại ngôn từ có chứa nội dung không phù hợp và thử lại.');
+      } else if (err?.code === 1324 || err?.status === 400 || err?.response?.status === 400) {
+        showError('Vui lòng kiểm tra lại nội dung sao cho phù hợp !');
       } else {
         showError(err.message || 'Có lỗi xảy ra khi gửi phản hồi.');
       }
