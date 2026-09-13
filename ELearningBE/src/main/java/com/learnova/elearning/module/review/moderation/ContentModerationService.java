@@ -39,17 +39,14 @@ public class ContentModerationService {
         ProfanityFilterService.ModerationCheckResult offlineResult = profanityFilterService.check(text);
         if (!offlineResult.allowed()) {
             log.warn("Content blocked by ProfanityFilterService: {}", offlineResult.reason());
-            throw new AppException(code, offlineResult.reason());
+            throw new AppException(code, "Vui lòng kiểm tra lại nội dung sao cho phù hợp !");
         }
 
         // Lớp 2: AI check
         ProfanityFilterService.ModerationCheckResult aiResult = aiContentModerationService.check(text);
         if (!aiResult.allowed()) {
             log.warn("Content blocked by AiContentModerationService: {}", aiResult.reason());
-            String reason = (aiResult.reason() != null && !aiResult.reason().isBlank())
-                    ? aiResult.reason()
-                    : code.getMessage();
-            throw new AppException(code, reason);
+            throw new AppException(code, "Vui lòng kiểm tra lại nội dung sao cho phù hợp !");
         }
     }
 
