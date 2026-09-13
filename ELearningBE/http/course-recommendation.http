@@ -1,0 +1,22 @@
+### 1. Đề xuất liên tục Top 5 khóa học (Popular Discovery - Guest)
+GET http://localhost:8080/api/v1/recommendations/continuous
+
+### 2. Đề xuất liên tục Top 5 khóa học liên quan đến 1 khóa học (Related Course)
+GET http://localhost:8080/api/v1/recommendations/continuous?courseId=2
+
+### 3. Đề xuất liên tục Top 5 khóa học theo Danh mục (Category Trending)
+GET http://localhost:8080/api/v1/recommendations/continuous?categoryId=1
+
+### 4. Đề xuất Top 3 khóa học thông minh với Gemini AI
+POST http://localhost:8080/api/v1/recommendations/ai
+Content-Type: application/json; charset=utf-8
+
+{
+  "goal": "Tôi muốn học chuyên sâu về Backend với Java và Spring Boot",
+  "interests": ["Java", "Spring Boot", "Backend", "REST API"],
+  "preferredLevel": "INTERMEDIATE"
+}
+
+### 5. Đề xuất nhanh Top 3 bằng AI cho học viên đã đăng nhập (cần Bearer Token)
+GET http://localhost:8080/api/v1/recommendations/ai/quick
+Authorization: Bearer {{token}}

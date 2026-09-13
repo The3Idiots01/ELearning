@@ -92,4 +92,7 @@ public interface CourseRepository extends JpaRepository<Course, Long> {
     Optional<Course> findByIdAndStatus(Long id, CourseStatus status);
 
     Optional<Course> findBySlugAndStatus(String slug, CourseStatus status);
+
+    @Query("SELECT c FROM Course c LEFT JOIN FETCH c.category LEFT JOIN FETCH c.lecturer WHERE c.status = :status")
+    java.util.List<Course> findByStatus(@Param("status") CourseStatus status);
 }

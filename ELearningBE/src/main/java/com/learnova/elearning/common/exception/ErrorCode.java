@@ -117,7 +117,7 @@ public enum ErrorCode {
     AI_CONTENT_UNAVAILABLE(1333, "Lesson content is not available for AI analysis", HttpStatus.UNPROCESSABLE_ENTITY),
     AI_RESPONSE_INVALID(1334, "AI returned an invalid response", HttpStatus.BAD_GATEWAY),
     AI_QUOTA_EXCEEDED(1335, "AI free-tier quota has been reached", HttpStatus.TOO_MANY_REQUESTS),
-    AI_OUTCOMES_REQUIRED(1336, "Create at least two learning outcomes before using AI authoring", HttpStatus.UNPROCESSABLE_ENTITY);
+    AI_OUTCOMES_REQUIRED(1336, "Create at least two learning outcomes before using AI authoring", HttpStatus.UNPROCESSABLE_ENTITY),
     QA_CONTENT_VIOLATION(1324, "Nội dung câu hỏi hoặc câu trả lời chứa từ ngữ không phù hợp hoặc vi phạm tiêu chuẩn cộng đồng. Vui lòng chỉnh sửa lại.", HttpStatus.BAD_REQUEST),
 
     // Course Review Domain (1331 - 1336)

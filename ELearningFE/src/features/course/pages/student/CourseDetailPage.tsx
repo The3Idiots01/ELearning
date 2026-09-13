@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import type { CourseDetail, Curriculum, Lesson } from '../../../../types/course';
 import { LevelBadge } from '../../../../components/common/Badge';
 import { formatCurrencyVND } from '../../../../lib/formatters';
@@ -6,6 +7,7 @@ import { DocumentViewer } from '../../components/DocumentViewer';
 import { playbackApi } from '../../api/playbackApi';
 import { ApiError } from '../../../../lib/apiClient';
 import { CourseReviewsSection } from '../../components/reviews/CourseReviewsSection';
+import { RelatedCoursesSection } from '../../../recommendation/components/RelatedCoursesSection';
 
 interface CourseDetailPageProps {
   course: CourseDetail | null;
@@ -28,6 +30,7 @@ export const CourseDetailPage: React.FC<CourseDetailPageProps> = ({
   onGoToLearning,
   onBack
 }) => {
+  const navigate = useNavigate();
   const [showEnrollConfirm, setShowEnrollConfirm] = useState(false);
   const [previewLesson, setPreviewLesson] = useState<{ lesson: Lesson; sectionTitle: string } | null>(null);
   const [lockedLesson, setLockedLesson] = useState<Lesson | null>(null);
@@ -392,7 +395,7 @@ export const CourseDetailPage: React.FC<CourseDetailPageProps> = ({
               )}
             </div>
 
-            {/* Section Đánh giá & Nhận xét Khóa học (Course Reviews) */}
+            {/* Reviews Section */}
             <CourseReviewsSection
               courseId={course.id}
               courseTitle={course.title}
@@ -403,6 +406,12 @@ export const CourseDetailPage: React.FC<CourseDetailPageProps> = ({
           </div>
 
         </div>
+
+        {/* Khóa học liên quan / Đề xuất từ hệ thống */}
+        <RelatedCoursesSection
+          courseId={course.id}
+          onSelectCourse={(c) => navigate(`/courses/${c.id}`)}
+        />
       </div>
 
       {/* ------------------------------------------------------------------- */}

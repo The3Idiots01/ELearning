@@ -1,7 +1,9 @@
-import React from 'react';
+import React, { useState } from 'react';
 import type { Category } from '../../../../types/category';
 import type { CourseSummary } from '../../../../types/course';
 import { CourseCard } from '../../components/CourseCard';
+import { AiAdvisorBanner } from '../../../recommendation/components/AiAdvisorBanner';
+import { AiAdvisorModal } from '../../../recommendation/components/AiAdvisorModal';
 
 interface StudentCatalogPageProps {
   courses: CourseSummary[];
@@ -29,6 +31,8 @@ export const StudentCatalogPage: React.FC<StudentCatalogPageProps> = ({
   onSelectCourse,
   enrolledCourseIds
 }) => {
+  const [isAdvisorOpen, setIsAdvisorOpen] = useState(false);
+
   return (
     <div className="min-h-screen bg-background pb-20 flex-1">
       {/* Hero Banner Section (Horizon Minimalist Navy Gradient) */}
@@ -53,7 +57,9 @@ export const StudentCatalogPage: React.FC<StudentCatalogPageProps> = ({
 
       {/* Main Filter & Course Grid Container */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-8">
-        
+        {/* AI Advisor Banner */}
+        <AiAdvisorBanner onOpen={() => setIsAdvisorOpen(true)} />
+
         {/* Filter Toolbar Card */}
         <div className="bg-surface-container-lowest rounded-2xl p-4 shadow-sm border border-outline-variant/70 mb-8 flex flex-col md:flex-row items-center justify-between gap-4">
           
@@ -150,6 +156,13 @@ export const StudentCatalogPage: React.FC<StudentCatalogPageProps> = ({
             ))}
           </div>
         )}
+
+        {/* AI Advisor Modal */}
+        <AiAdvisorModal
+          isOpen={isAdvisorOpen}
+          onClose={() => setIsAdvisorOpen(false)}
+          onSelectCourse={onSelectCourse}
+        />
 
       </div>
     </div>
