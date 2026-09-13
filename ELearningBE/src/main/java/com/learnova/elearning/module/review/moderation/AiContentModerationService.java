@@ -26,7 +26,7 @@ public class AiContentModerationService {
     @Value("${gemini.api-key:${GEMINI_API_KEY:}}")
     private String geminiApiKey;
 
-    @Value("${gemini.model:gemini-3.6-flash}")
+    @Value("${gemini.model:${GEMINI_MODEL:gemini-3.5-flash-lite}}")
     private String geminiModel;
 
     private final Environment environment;
@@ -86,7 +86,7 @@ public class AiContentModerationService {
                     )
             );
 
-            String activeModel = (geminiModel != null && !geminiModel.isBlank()) ? geminiModel.trim() : "gemini-3.6-flash";
+            String activeModel = (geminiModel != null && !geminiModel.isBlank()) ? geminiModel.trim() : "gemini-3.5-flash-lite";
             String url = "https://generativelanguage.googleapis.com/v1beta/models/" + activeModel + ":generateContent?key=" + apiKey;
 
             log.info("Sending review text to Gemini AI moderation (model: {}): \"{}\"", activeModel, text);
