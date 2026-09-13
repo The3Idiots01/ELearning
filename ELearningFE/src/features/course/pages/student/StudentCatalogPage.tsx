@@ -4,6 +4,7 @@ import type { CourseSummary } from '../../../../types/course';
 import { CourseCard } from '../../components/CourseCard';
 import { AiAdvisorBanner } from '../../../recommendation/components/AiAdvisorBanner';
 import { AiAdvisorModal } from '../../../recommendation/components/AiAdvisorModal';
+import { RecommendedForYouSection } from '../../../recommendation/components/RecommendedForYouSection';
 
 interface StudentCatalogPageProps {
   courses: CourseSummary[];
@@ -59,6 +60,12 @@ export const StudentCatalogPage: React.FC<StudentCatalogPageProps> = ({
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-8">
         {/* AI Advisor Banner */}
         <AiAdvisorBanner onOpen={() => setIsAdvisorOpen(true)} />
+
+        {/* Top 5 Personalized Recommendations for Logged-in Users */}
+        <RecommendedForYouSection
+          onSelectCourse={onSelectCourse}
+          selectedCategoryId={selectedCategoryId}
+        />
 
         {/* Filter Toolbar Card */}
         <div className="bg-surface-container-lowest rounded-2xl p-4 shadow-sm border border-outline-variant/70 mb-8 flex flex-col md:flex-row items-center justify-between gap-4">
