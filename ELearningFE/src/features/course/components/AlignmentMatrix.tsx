@@ -45,7 +45,7 @@ export const AlignmentMatrix: React.FC<AlignmentMatrixProps> = ({
       <div>
         <h2 className="text-base sm:text-lg font-extrabold text-slate-900 m-0 font-display flex items-center gap-2">
           <span className="material-symbols-outlined text-primary text-[24px]">grid_on</span>
-          <span>Ma trận liên kết chuẩn đầu ra (Alignment Matrix)</span>
+          <span>Ma trận liên kết đầu ra</span>
         </h2>
         <p className="text-xs text-slate-500 mt-1 m-0">
           Kiểm tra độ bao phủ: mỗi chuẩn đầu ra cần được giảng dạy qua bài học và kiểm tra qua quiz.

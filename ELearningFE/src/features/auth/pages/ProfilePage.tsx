@@ -445,64 +445,7 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({
               )}
             </div>
 
-            {/* 2. Account Security & Metadata Widget */}
-            <div className="bg-surface-container-lowest p-6 rounded-3xl border border-outline-variant/70 shadow-xs space-y-4">
-              <h3 className="text-xs font-extrabold uppercase tracking-wider text-slate-900 m-0 flex items-center gap-1.5 font-display">
-                <span className="material-symbols-outlined text-primary text-[18px]">shield</span>
-                <span>Thông tin tài khoản & Bảo mật</span>
-              </h3>
-
-              <div className="space-y-3.5 text-xs">
-                <div>
-                  <span className="text-slate-500 block text-[11px] font-medium">Mã định danh hệ thống (User ID)</span>
-                  <div className="flex items-center justify-between bg-surface-container-low p-2 rounded-xl mt-1 border border-outline-variant/60">
-                    <span className="font-mono font-bold text-slate-800">#{profile?.id || '—'}</span>
-                    {profile?.id && (
-                      <button
-                        type="button"
-                        onClick={() => handleCopyUserId(profile.id)}
-                        className="text-slate-500 hover:text-primary p-1 rounded transition-colors cursor-pointer flex items-center gap-1 text-[11px] font-bold"
-                        title="Sao chép ID"
-                      >
-                        <span className="material-symbols-outlined text-[14px]">
-                          {copiedId ? 'done' : 'content_copy'}
-                        </span>
-                        <span>{copiedId ? 'Đã chép' : 'Sao chép'}</span>
-                      </button>
-                    )}
-                  </div>
-                </div>
-
-                <div>
-                  <span className="text-slate-500 block text-[11px] font-medium">Nguồn xác thực (Provider)</span>
-                  <span className="font-bold text-slate-800 flex items-center gap-1.5 mt-0.5">
-                    <span className="material-symbols-outlined text-[16px] text-primary">verified_user</span>
-                    <span>{profile?.authProvider || 'LOCAL'} Account</span>
-                  </span>
-                </div>
-
-                <div>
-                  <span className="text-slate-500 block text-[11px] font-medium">Trạng thái kích hoạt</span>
-                  <span className="inline-flex items-center gap-1.5 font-bold text-emerald-700 bg-emerald-50 px-2.5 py-1 rounded-lg text-[11px] border border-emerald-200 mt-0.5">
-                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-                    Đang hoạt động bình thường
-                  </span>
-                </div>
-
-                {profile?.createdAt && (
-                  <div>
-                    <span className="text-slate-500 block text-[11px] font-medium">Ngày khởi tạo tài khoản</span>
-                    <span className="font-semibold text-slate-800 mt-0.5 block">
-                      {new Date(profile.createdAt).toLocaleDateString('vi-VN', {
-                        year: 'numeric',
-                        month: 'long',
-                        day: 'numeric'
-                      })}
-                    </span>
-                  </div>
-                )}
-              </div>
-            </div>
+            
           </div>
 
           {/* Right Column: View Mode OR Edit Form (8 cols) */}
@@ -811,25 +754,9 @@ export const ProfilePage: React.FC<ProfilePageProps> = ({
                       </p>
                     </div>
 
-                    <div className="bg-surface-container-low p-4 rounded-2xl border border-outline-variant/60">
-                      <span className="text-[11px] font-bold uppercase tracking-wider text-slate-500 block mb-1">
-                        Vai trò hệ thống
-                      </span>
-                      <p className="text-xs font-bold text-slate-800 m-0 flex items-center gap-1.5">
-                        <span className="material-symbols-outlined text-[16px] text-primary">school</span>
-                        <span>{roleLabel[profile?.role || 'USER']}</span>
-                      </p>
-                    </div>
+                    
 
-                    <div className="bg-surface-container-low p-4 rounded-2xl border border-outline-variant/60">
-                      <span className="text-[11px] font-bold uppercase tracking-wider text-slate-500 block mb-1">
-                        Cổng đăng nhập
-                      </span>
-                      <p className="text-xs font-bold text-slate-800 m-0 flex items-center gap-1.5">
-                        <span className="material-symbols-outlined text-[16px] text-primary">login</span>
-                        <span>{profile?.authProvider || 'LOCAL'} Authenticator</span>
-                      </p>
-                    </div>
+                    
                   </div>
                 </div>
 

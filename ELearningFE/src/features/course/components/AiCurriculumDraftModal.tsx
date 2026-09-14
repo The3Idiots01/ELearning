@@ -110,7 +110,7 @@ export const AiCurriculumDraftModal: React.FC<Props> = ({
       isOpen={isOpen}
       onClose={onClose}
       title="AI tạo cấu trúc khóa học"
-      subtitle="Gemini dựa trên thông tin khóa học và learning outcomes; bạn là người quyết định kết quả cuối."
+      subtitle="Gemini dựa trên thông tin khóa học, learning outcomes và các quiz đã có câu hỏi; bạn là người quyết định kết quả cuối."
       icon="auto_awesome"
       maxWidth="4xl"
     >

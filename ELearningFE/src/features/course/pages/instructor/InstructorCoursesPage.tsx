@@ -382,7 +382,7 @@ export const InstructorCoursesPage: React.FC<InstructorCoursesPageProps> = ({
         <Modal
           isOpen={showCreateModal}
           onClose={() => setShowCreateModal(false)}
-          title="Tạo khóa học mới (DRAFT)"
+          title="Tạo khóa học mới"
           subtitle="Khởi tạo bản nháp khóa học để bắt đầu thiết lập thông tin và giáo trình."
           maxWidth="md"
           icon="add_circle"
@@ -436,7 +436,7 @@ export const InstructorCoursesPage: React.FC<InstructorCoursesPageProps> = ({
                 {isCreating && (
                   <span className="inline-block animate-spin w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full" />
                 )}
-                <span>Tạo bản nháp DRAFT</span>
+                <span>Tạo bản nháp </span>
               </button>
             </div>
           </form>
