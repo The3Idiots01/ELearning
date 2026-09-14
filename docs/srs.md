@@ -2,16 +2,17 @@
 
 | | |
 |---|---|
-| **Project** | Learnova — Online Course Marketplace |
-| **Version / Sprint** | 0.2 — Sprint 2 |
-| **Last updated** | 27-08-2026 |
+| **Project** | Learnova — Nền tảng học trực tuyến và quản lý khóa học |
+| **Version / Baseline** | 0.3 — Đối chiếu với code hiện tại |
+| **Last updated** | 14-09-2026 |
 
 **Record of Changes**
 
-| Date | Ver | Sprint | A/M/D | In charge | Change |
-|------|-----|--------|-------|-----------|--------|
-| 20-08-2026 | 0.1 | 1 | A | TienPQ9 | Khởi tạo SRS, đặc tả Content Authoring |
-| 27-08-2026 | 0.2 | 2 | M | TienPQ9 | Đồng bộ SRS với backlog US-01..US-22: bỏ Certificate và Admin module khỏi scope; bỏ wishlist, AI tóm tắt/flashcard; bổ sung Profile, Quiz, Instructor Management, Review, Q&A; chỉnh FR/BR cho khớp phần đã code ở Sprint 1–2 |
+| Date | Ver | Baseline | A/M/D | In charge | Change |
+|------|-----|----------|-------|-----------|--------|
+| 20-08-2026 | 0.1 | Sprint 1 | A | TienPQ9 | Khởi tạo SRS, đặc tả Content Authoring |
+| 27-08-2026 | 0.2 | Sprint 2 | M | TienPQ9 | Cập nhật theo backlog và phạm vi Sprint 1–2 |
+| 11-09-2026 | 0.3 | Code hiện tại | M | TienPQ9 | Đối chiếu lại yêu cầu với backend Spring Boot và frontend React; cập nhật PayOS, backward design, AI authoring, publication changes, moderation và loại bỏ luồng chưa có trong code |
 
 ---
 
@@ -19,68 +20,54 @@
 
 ### 1.1 Scope
 
+Tài liệu này mô tả hành vi của phiên bản Learnova hiện có trong repository, dựa trên API backend, các màn hình frontend và cấu hình ứng dụng. Các trạng thái hoặc tích hợp chỉ được khai báo trong schema/config nhưng chưa có luồng sử dụng hoàn chỉnh không được xem là chức năng đã triển khai.
+
 **In scope:**
-- **Auth & Profile** (US-01..US-04): đăng ký tài khoản có xác thực email, đăng nhập
-  JWT và phân quyền theo vai trò, đăng nhập Google, xem/sửa hồ sơ và đổi mật khẩu.
-- **Course Authoring** (US-05, US-06): giảng viên tạo/sửa khóa học ở trạng thái draft,
-  đặt giá, soạn ba khối mô tả landing page, dựng cây section–lesson, upload video/file
-  qua presigned URL, và publish khi đủ điều kiện.
-- **Quiz** (US-07, US-20): giảng viên soạn quiz gắn vào lesson; học viên làm bài và
-  được server chấm điểm tự động.
-- **Instructor Management** (US-08, US-09): danh sách khóa học của mình kèm trạng thái
-  và số học viên, gỡ/đăng lại khóa học, xem doanh thu từ đơn hàng đã thanh toán.
-- **Course Discovery** (US-10, US-11): tìm kiếm theo từ khóa, lọc theo danh mục/trình
-  độ/giá, phân trang; trang chi tiết khóa học kèm curriculum và lesson preview miễn phí.
-- **Payment** (US-13, US-14): tạo đơn hàng và chuyển sang cổng nội địa (MoMo/VNPay),
-  xác nhận giao dịch bằng IPN server-to-server, cấp enrollment sau khi thanh toán thành công.
-- **Content Delivery** (US-15): phát nội dung bài học qua signed URL có thời hạn ngắn,
-  hỗ trợ HTTP Range để tua, chặn truy cập khi chưa ghi danh.
-- **Learning & Progress** (US-16, US-17, US-19): trình phát bài học cho học viên đã ghi
-  danh, danh sách khóa học đã mua kèm điểm tiếp tục, ghi nhận vị trí xem và phần thời
-  lượng thực sự đã xem, tính % hoàn thành.
-- **Review** (US-18): học viên đã ghi danh đánh giá sao và viết nhận xét cho khóa học.
-- **Q&A** (US-21): học viên hỏi trên lesson, giảng viên trả lời.
-- **AI** (US-22): gợi ý khóa học tương tự dựa trên hồ sơ / lịch sử học.
+- **Auth & Profile:** đăng ký bằng email/mật khẩu, kích hoạt tài khoản qua email, đăng nhập/đăng xuất, làm mới phiên bằng JWT và xem/cập nhật hồ sơ cá nhân.
+- **Course Authoring:** giảng viên tạo và cập nhật khóa học, quản lý giá, ảnh bìa, mô tả, chuẩn đầu ra, section, lesson, nội dung bài học, tài liệu bổ trợ và lesson preview.
+- **Backward Design:** giảng viên tạo chuẩn đầu ra, tạo và gắn đánh giá quiz vào section, gắn lesson/assessment với chuẩn đầu ra, xem ma trận căn chỉnh và kiểm tra điều kiện xuất bản.
+- **AI Authoring:** yêu cầu AI gợi ý chuẩn đầu ra, tạo bản nháp curriculum và tạo bản nháp quiz; giảng viên xem/chỉnh sửa và chủ động áp dụng nội dung được sinh.
+- **Quiz & Assessment:** giảng viên soạn quiz trắc nghiệm thủ công hoặc từ tài liệu; học viên làm quiz, xem điểm, giải thích và lịch sử lượt làm.
+- **Instructor Management:** xem và quản lý khóa học của mình, xuất bản/gỡ khóa học, xuất bản thay đổi của khóa học đang hoạt động, xem lịch sử trạng thái, Q&A, đánh giá và doanh thu.
+- **Course Discovery:** duyệt danh mục, tìm kiếm/lọc khóa học đã xuất bản, xem chi tiết, chuẩn đầu ra, curriculum, đánh giá và lesson preview.
+- **Payment & Enrollment:** tạo checkout PayOS cho khóa học trả phí, nhận webhook/xác minh trạng thái thanh toán để ghi danh; khóa học miễn phí được ghi danh trực tiếp.
+- **Content Delivery & Learning:** xem nội dung khóa học đã ghi danh, phát video theo HTTP Range, tải/xem tài liệu được cấp quyền, theo dõi tiến độ và tiếp tục học.
+- **Review & Q&A:** học viên đủ điều kiện gửi đánh giá, người dùng có quyền tham gia hỏi đáp theo khóa học; nội dung được kiểm duyệt trước khi lưu.
+- **Recommendation:** hiển thị gợi ý khóa học liên tục và gợi ý do Gemini tạo cho người dùng đã đăng nhập.
 
 **Out of scope:**
-- **Chứng chỉ (certificate)** — đã loại khỏi scope ở Sprint 2 Review; không cấp chứng chỉ
-  khi hoàn thành khóa học.
-- **Module quản trị (Admin)** — đã loại khỏi scope ở Sprint 2 Review: không có màn hình
-  admin khóa tài khoản hay gỡ khóa học vi phạm. Vai trò `ADMIN` và trạng thái course
-  `SUSPENDED` vẫn tồn tại trong schema như chỗ giữ sẵn nhưng không có chức năng đi kèm.
-- **Wishlist / giỏ hàng** — mỗi lần mua đúng một khóa học.
-- **AI tóm tắt bài học và sinh flashcard** — chỉ giữ lại gợi ý khóa học (US-22).
-- **Học theo lịch cố định**: điểm danh, xếp lớp, lớp học trực tuyến theo giờ.
-- **Ứng dụng mobile** (chỉ web responsive).
-- **Chia doanh thu / chi trả cho giảng viên qua cổng thanh toán** — hệ thống chỉ ghi nhận
-  và hiển thị doanh thu, việc chi trả xử lý thủ công ngoài hệ thống.
-- **Hoàn tiền (refund)** và xử lý khiếu nại giao dịch.
-- **Kiểm duyệt chất lượng khóa học trước khi đăng bán** — giảng viên tự publish.
+- Đăng nhập Google/OAuth, quên hoặc đặt lại mật khẩu, khóa tài khoản tự động sau nhiều lần đăng nhập sai.
+- Cổng thanh toán MoMo/VNPay, hoàn tiền, xử lý tranh chấp, giỏ hàng và mua nhiều khóa học trong một đơn.
+- Quy trình đăng ký/nâng cấp tài khoản thành giảng viên qua giao diện; vai trò giảng viên được cấp sẵn ngoài luồng đăng ký thông thường.
+- Giao diện quản trị tổng quát để kiểm duyệt khóa học, quản lý người dùng hoặc gỡ nội dung. Một số vai trò/trạng thái và endpoint bảo trì nội bộ có trong backend nhưng không tạo thành module quản trị cho người dùng.
+- Cấp chứng chỉ, lớp học trực tuyến theo lịch, điểm danh, ứng dụng di động native, chia/chi trả doanh thu cho giảng viên và AI tóm tắt/flashcard.
 
 **Assumptions:**
-- Dữ liệu khóa học dùng để test do nhóm tự tạo (seed data), không cần dữ liệu thật quy mô lớn.
-- Sử dụng gói miễn phí/dùng thử của LLM API cho phần AI.
-- Vai trò `LECTURER` được gán ở tầng dữ liệu (seed/demo), chưa có luồng đăng ký làm giảng
-  viên trên UI (xem BR-03).
+- Ứng dụng chạy dưới dạng web SPA React và REST API Spring Boot; dữ liệu nghiệp vụ lưu trong PostgreSQL.
+- Cấu hình kết nối DB, email, PayOS, Gemini và storage phụ thuộc biến môi trường. Các tích hợp có thể không hoạt động đầy đủ nếu thiếu thông tin cấu hình hợp lệ.
+- Người dùng, khóa học mẫu và dữ liệu demo được tạo để phục vụ phát triển/kiểm thử; hệ thống chưa đặt yêu cầu tải thực tế hoặc SLA production trong tài liệu này.
+- Storage hỗ trợ chế độ local cho phát triển và S3-compatible (ví dụ Cloudflare R2) khi được cấu hình.
 
 ### 1.2 Glossary
 
 | Term | Definition |
 |------|-----------|
-| Course | Đơn vị bán hàng, thuộc một giảng viên, gồm nhiều Section |
-| Section | Chương của Course, gồm nhiều Lesson |
-| Lesson | Đơn vị nội dung nhỏ nhất trong curriculum: `VIDEO` / `ARTICLE` / `FILE` / `QUIZ` |
-| Bullet | Dòng mô tả trên landing page, thuộc một trong ba nhóm: mục tiêu học, yêu cầu tiên quyết, đối tượng hướng tới |
-| Publish check | Bộ điều kiện server kiểm tra trước khi cho phép publish (BR-12) |
-| storage_key | Khóa định danh object trên storage; hệ thống lưu key chứ không lưu URL công khai |
-| Presigned URL | URL có chữ ký, thời hạn ngắn, để client **upload** trực tiếp lên storage |
-| Signed URL | URL có chữ ký, thời hạn ngắn, để client **tải / phát** nội dung đã mua |
-| Order | Bản ghi giao dịch mua, trạng thái `PENDING` / `PAID` / `EXPIRED` / `CANCELLED` |
-| order_code | Mã đơn hàng do hệ thống sinh, độc lập với transaction_id của cổng thanh toán |
-| IPN | Thông báo thanh toán server-to-server do cổng thanh toán gửi về |
-| Enrollment | Quyền truy cập course của Learner, trạng thái `ACTIVE` / `COMPLETED` / `CANCELLED` |
-| Current position | Vị trí phát hiện tại của video, dùng để tiếp tục xem |
-| Watched coverage | Tỉ lệ thời lượng video **thực sự được phát**; khác current position |
+| Learner | Người học có tài khoản và có thể ghi danh vào khóa học |
+| Instructor / Lecturer | Người dùng có quyền tạo, quản lý khóa học của mình |
+| Course | Khóa học thuộc một giảng viên, có trang giới thiệu, chuẩn đầu ra và curriculum |
+| Section | Chương trong khóa học; chứa lesson và assessment được sắp xếp |
+| Lesson | Bài học thuộc section; nội dung có thể là video, bài viết hoặc file |
+| Learning outcome | Chuẩn đầu ra mô tả năng lực người học dự kiến đạt được |
+| Assessment | Thành phần đánh giá được gắn vào section và căn chỉnh với learning outcome; hiện hỗ trợ loại quiz |
+| Quiz attempt | Một lượt làm bài quiz của learner, gồm câu trả lời và kết quả chấm |
+| Lesson resource | Tài liệu bổ trợ gắn với lesson |
+| Presigned URL | URL có chữ ký và TTL để client tải tệp lên storage |
+| Signed playback ticket / URL | Thông tin truy cập có chữ ký và thời hạn dùng để phát hoặc tải nội dung được bảo vệ |
+| Enrollment | Bản ghi quyền học của learner đối với một course |
+| PayOS order | Yêu cầu thanh toán cho một course, có mã order và trạng thái riêng |
+| Webhook | Thông báo từ PayOS gửi về backend để cập nhật kết quả thanh toán |
+| Publication status | Trạng thái nội dung curriculum; thay đổi nháp có thể chờ được áp dụng vào bản đang xuất bản |
+| Watched coverage | Các khoảng nội dung video đã được ghi nhận là xem thực tế; dùng để tính tiến độ |
 
 ---
 
@@ -88,137 +75,129 @@
 
 | # | Actor | Description |
 |---|-------|-------------|
-| 1 | Guest | Chưa đăng nhập; duyệt catalog, tìm kiếm, xem trang chi tiết và lesson preview |
-| 2 | Learner | Mua course, học, theo dõi tiến độ, làm quiz, đánh giá, đặt câu hỏi |
-| 3 | Instructor (`LECTURER`) | Tạo và quản lý course của mình, soạn quiz, trả lời Q&A, xem doanh thu |
-| 4 | Payment Gateway | Hệ thống ngoài; nhận thanh toán và gửi IPN xác nhận giao dịch |
-| 5 | LLM Provider | Hệ thống ngoài; sinh gợi ý khóa học |
-
-> Vai trò `ADMIN` tồn tại trong schema và trong cấu hình bảo mật (`/api/v1/admin/**`)
-> nhưng module quản trị đã bị loại khỏi scope — không có FR nào trong tài liệu này.
+| 1 | Guest | Chưa đăng nhập; xem danh mục, tìm kiếm, xem chi tiết khóa học và lesson được đánh dấu preview |
+| 2 | Learner | Đăng ký/đăng nhập, ghi danh, học, làm quiz, theo dõi tiến độ, gửi review và tham gia Q&A trong khóa học có quyền truy cập |
+| 3 | Instructor (`LECTURER`) | Quản lý khóa học của mình, chuẩn đầu ra, curriculum, quiz/assessment; trả lời Q&A và xem review/doanh thu |
+| 4 | Administrator / Operations | Vai trò backend dùng cho một số thao tác đặc quyền và bảo trì; không có giao diện quản trị tổng quát trong frontend hiện tại |
+| 5 | Payment Gateway (PayOS) | Tạo link thanh toán và gửi webhook kết quả giao dịch |
+| 6 | Email Service (SendGrid) | Gửi email xác thực tài khoản |
+| 7 | AI Provider (Google Gemini) | Hỗ trợ sinh nội dung authoring, gợi ý khóa học và kiểm duyệt nội dung |
+| 8 | Object Storage | Lưu video, ảnh và tài liệu; có thể là local storage hoặc S3-compatible storage |
 
 ---
 
 ## 3. Functional Requirements
 
-> Quy ước ID `FR-<MODULE>-<số>`. Module: `AUTH`, `PROF` (Profile), `CA` (Course Authoring),
-> `QZ` (Quiz), `INS` (Instructor Management), `CD` (Course Discovery), `PAY`, `DL`
-> (Content Delivery), `LRN` (Learning), `KT` (Knowledge Tracking), `RV` (Review),
-> `QA` (Q&A), `AI`.
->
-> Cột **US** trỏ về user story trong backlog. Cột **Sprint** là sprint được lên kế hoạch;
-> ✅ đánh dấu phần đã hoàn thành và đã demo.
+> Quy ước ID `FR-<MODULE>-<số>`. Các yêu cầu dưới đây mô tả chức năng có trong code hiện tại. Cột **US** giữ liên kết backlog khi có; cột **Baseline** thể hiện trạng thái triển khai của yêu cầu trong phiên bản được rà soát.
 
-### 3.1 Authentication (support)
+### 3.1 Authentication
 
-| ID | Requirement | Acceptance criteria | Pri | US | Sprint | BR |
-|----|-------------|---------------------|-----|----|--------|----|
-| FR-AUTH-01 | Đăng ký tài khoản bằng họ tên, email và mật khẩu | Email đã tồn tại bị từ chối; mật khẩu ≥ 6 ký tự; hệ thống gửi email kích hoạt và chưa tạo user | Must | US-01 | 1 ✅ | BR-01, BR-02 |
-| FR-AUTH-02 | Kích hoạt tài khoản bằng link trong email | Link còn hạn → tạo user và cho phép đăng nhập; link hết hạn hoặc đã dùng → báo lỗi, không tạo user | Must | US-01 | 1 ✅ | BR-02 |
-| FR-AUTH-03 | Đăng nhập, cấp access token + refresh token, phân quyền theo vai trò | Sai thông tin → từ chối; access token hết hạn theo cấu hình và làm mới được bằng refresh token; nhóm endpoint `/lecturer/**` chỉ mở cho `LECTURER` | Must | US-02 | 3 | BR-03, BR-05 |
-| FR-AUTH-04 | Khóa tạm thời khi đăng nhập sai nhiều lần | Sai 5 lần trong 15 phút → khóa 30 phút; nhập đúng mật khẩu vẫn không vào được cho tới khi hết khóa | Must | US-02 | 3 | BR-04 |
-| FR-AUTH-05 | Đăng xuất và thu hồi phiên | Sau khi đăng xuất, refresh token cũ không dùng lại được | Must | US-02 | 3 | |
-| FR-AUTH-06 | Đăng nhập bằng Google | Lần đầu tạo tài khoản hoặc liên kết với email sẵn có; lần sau vào thẳng trạng thái đã đăng nhập | Should | US-03 | 4 | BR-06 |
+| ID | Requirement | Acceptance criteria | Pri | US | Baseline | BR |
+|----|-------------|---------------------|-----|----|----------|----|
+| FR-AUTH-01 | Đăng ký tài khoản bằng họ tên, email và mật khẩu | Email được kiểm tra theo quy tắc duy nhất; hệ thống tạo đăng ký chờ xác thực và gửi email kích hoạt; tài khoản chưa kích hoạt không đăng nhập được | Must | US-01 | Đã triển khai | BR-01, BR-02 |
+| FR-AUTH-02 | Kích hoạt tài khoản qua link trong email | Link hợp lệ và còn hạn kích hoạt tài khoản; link không hợp lệ, hết hạn hoặc đã dùng không tạo tài khoản mới | Must | US-01 | Đã triển khai | BR-02 |
+| FR-AUTH-03 | Đăng nhập bằng email và mật khẩu | Thông tin không hợp lệ hoặc tài khoản chưa hoạt động bị từ chối; đăng nhập thành công cấp phiên JWT và thông tin người dùng | Must | US-02 | Đã triển khai | BR-03 |
+| FR-AUTH-04 | Làm mới phiên và đăng xuất | Client có thể yêu cầu làm mới access token bằng refresh token; đăng xuất xóa/thu hồi thông tin phiên phía client/server theo cơ chế hiện có | Must | US-02 | Đã triển khai | BR-04 |
+| FR-AUTH-05 | Lấy thông tin người dùng hiện tại | Request đã xác thực trả về thông tin tài khoản và vai trò hiện tại | Must | US-02 | Đã triển khai | BR-03 |
 
-### 3.2 Profile (support)
+### 3.2 Profile
 
-| ID | Requirement | Acceptance criteria | Pri | US | Sprint | BR |
-|----|-------------|---------------------|-----|----|--------|----|
-| FR-PROF-01 | Người dùng xem và sửa hồ sơ: họ tên, ảnh đại diện, giới thiệu, lĩnh vực, sở thích | Thay đổi lưu lại và hiển thị ngay; ảnh đại diện upload qua presigned URL | Should | US-04 | 2 ✅ | BR-10 |
-| FR-PROF-02 | Người dùng đổi mật khẩu | Bắt buộc nhập đúng mật khẩu hiện tại; sai → từ chối | Should | US-04 | 2 ✅ | |
-| FR-PROF-03 | Giảng viên hoàn thiện hồ sơ trước khi tạo khóa học | Thiếu thông tin bắt buộc của giảng viên → điều hướng về trang hồ sơ | Should | US-04 | 2 ✅ | |
+| ID | Requirement | Acceptance criteria | Pri | US | Baseline | BR |
+|----|-------------|---------------------|-----|----|----------|----|
+| FR-PROF-01 | Người dùng xem và cập nhật hồ sơ cá nhân | Thông tin hồ sơ được lưu và trả về sau cập nhật; frontend có luồng xem/sửa hồ sơ | Should | US-04 | Đã triển khai | BR-05 |
+| FR-PROF-02 | Hoàn thiện hồ sơ và cập nhật ảnh đại diện | Người dùng có thể gửi thông tin hoàn thiện hồ sơ; ảnh đại diện được tải lên storage theo cơ chế presigned URL và lưu tham chiếu trong hồ sơ | Should | US-04 | Đã triển khai | BR-06 |
 
-### 3.3 Course Authoring (core)
+### 3.3 Course Authoring
 
-| ID | Requirement | Acceptance criteria | Pri | US | Sprint | BR |
-|----|-------------|---------------------|-----|----|--------|----|
-| FR-CA-01 | Instructor tạo và sửa course: title, subtitle, mô tả, danh mục, trình độ, ngôn ngữ, giá, ảnh bìa, video giới thiệu | Course tạo ra ở trạng thái `DRAFT`, chưa xuất hiện ở catalog; slug sinh tự động và duy nhất | Must | US-05 | 2 ✅ | BR-07, BR-08 |
-| FR-CA-02 | Instructor soạn ba khối mô tả landing page: học viên sẽ học được gì, yêu cầu tiên quyết, đối tượng hướng tới | Mỗi nhóm tối đa 20 dòng, mỗi dòng tối đa 500 ký tự | Must | US-05 | 2 ✅ | BR-09 |
-| FR-CA-03 | Chỉ chủ sở hữu được sửa course | Instructor khác gọi API sửa → 403 | Must | US-05 | 2 ✅ | BR-08 |
-| FR-CA-04 | Instructor thêm, sửa, xóa và sắp xếp Section / Lesson | Thứ tự lưu theo `position` và phản ánh đúng phía Learner; xóa là soft delete | Must | US-06 | 2 ✅ | |
-| FR-CA-05 | Instructor gắn nội dung cho lesson: video, bài viết, hoặc file tài liệu | Video/file upload trực tiếp lên storage qua presigned URL; hệ thống lưu `storage_key`, không lưu URL công khai; trạng thái upload hiển thị (`PENDING` → `READY` / `FAILED`) | Must | US-06 | 2 ✅ | BR-10, BR-11 |
-| FR-CA-06 | Instructor đính kèm tài liệu bổ trợ cho lesson | Thêm / xóa được từng tài liệu | Should | US-06 | 2 ✅ | BR-10 |
-| FR-CA-07 | Instructor đánh dấu lesson là preview miễn phí | Lesson preview xem được khi chưa mua | Should | US-11 | 2 ✅ | BR-24 |
-| FR-CA-08 | Instructor kiểm tra điều kiện publish và publish course | Checklist hiển thị đúng các mục còn thiếu; publish bị từ chối khi còn thiếu điều kiện, course giữ ở `DRAFT`; mọi lần đổi trạng thái đều ghi log | Must | US-05 | 2 ✅ | BR-12, BR-13 |
-| FR-CA-09 | Sửa course đã publish không ảnh hưởng learner đang học | Đổi tên hoặc đổi thứ tự lesson không xóa tiến trình đã ghi nhận của learner | Should | US-05 | 3 | BR-14 |
+| ID | Requirement | Acceptance criteria | Pri | US | Baseline | BR |
+|----|-------------|---------------------|-----|----|----------|----|
+| FR-CA-01 | Instructor tạo và cập nhật thông tin course | Course mới ở trạng thái `DRAFT`; có thể cập nhật title, subtitle, description, category, level, language và các trường course được hỗ trợ | Must | US-05 | Đã triển khai | BR-07, BR-08 |
+| FR-CA-02 | Instructor quản lý giá và ảnh bìa course | Giá được kiểm tra phía server; ảnh bìa upload qua storage, chỉ chấp nhận storage key hợp lệ thuộc course tương ứng | Must | US-05 | Đã triển khai | BR-07, BR-09 |
+| FR-CA-03 | Instructor quản lý phần giới thiệu và chuẩn đầu ra | Có thể tạo, sửa, xóa hoặc sắp xếp các learning outcome; quản lý các mục yêu cầu tiên quyết và đối tượng phù hợp trên landing page | Must | US-05 | Đã triển khai | BR-10 |
+| FR-CA-04 | Instructor tạo và tổ chức curriculum | Có thể tạo/sửa/sắp xếp section, tạo/sửa lesson và di chuyển lesson giữa các section; thứ tự hiển thị được lưu ở backend | Must | US-06 | Đã triển khai | BR-08, BR-11 |
+| FR-CA-05 | Instructor gắn nội dung chính và tài liệu bổ trợ cho lesson | Lesson hỗ trợ nội dung video, bài viết hoặc file; instructor có thể thêm/xóa tài liệu bổ trợ; file được lưu qua storage thay vì URL công khai cố định | Must | US-06 | Đã triển khai | BR-09, BR-12 |
+| FR-CA-06 | Instructor đánh dấu lesson preview | Lesson được đánh dấu preview có thể được xem từ trang course mà không cần enrollment; nội dung khác vẫn qua kiểm tra quyền | Should | US-11 | Đã triển khai | BR-13 |
+| FR-CA-07 | Instructor xem checklist và xuất bản course | Backend trả về các lỗi/điều kiện còn thiếu; publish bị từ chối nếu không đạt điều kiện; trạng thái và lịch sử chuyển trạng thái được ghi nhận | Must | US-05 | Đã triển khai | BR-14, BR-15 |
+| FR-CA-08 | Instructor cập nhật nội dung course đã xuất bản qua bản nháp thay đổi | Thay đổi curriculum/nội dung có trạng thái chờ; instructor có thể xem publish check và áp dụng thay đổi; learner tiếp tục thấy bản nội dung đang xuất bản cho tới khi thay đổi được áp dụng | Must | US-05, US-06 | Đã triển khai | BR-16 |
+| FR-CA-09 | Instructor xem lịch sử trạng thái course | Nhật ký thể hiện trạng thái trước/sau, người thực hiện, thời điểm và lý do nếu có | Could | US-08 | Đã triển khai | BR-15 |
 
-### 3.4 Quiz (core)
+### 3.4 Backward Design, Assessment & Quiz
 
-| ID | Requirement | Acceptance criteria | Pri | US | Sprint | BR |
-|----|-------------|---------------------|-----|----|--------|----|
-| FR-QZ-01 | Instructor soạn quiz cho một lesson: câu hỏi, các lựa chọn, đáp án đúng | Quiz gắn 1–1 với lesson kiểu `QUIZ`; lesson `QUIZ` chưa có câu hỏi bị coi là chưa hoàn chỉnh khi publish | Should | US-07 | 3 | BR-12, BR-15 |
-| FR-QZ-02 | Learner làm quiz và được chấm điểm tự động | Chấm điểm ở server; hiển thị tổng điểm và kết quả từng câu; mỗi lần làm được ghi lại thành một attempt | Should | US-20 | 3 | BR-15, BR-16 |
+| ID | Requirement | Acceptance criteria | Pri | US | Baseline | BR |
+|----|-------------|---------------------|-----|----|----------|----|
+| FR-QZ-01 | Instructor tạo và chỉnh sửa assessment quiz | Quiz được liên kết với course/section, có câu hỏi, lựa chọn, đáp án đúng và thiết lập như điểm đạt/lượt làm theo dữ liệu quiz hiện có | Must | US-07 | Đã triển khai | BR-17 |
+| FR-QZ-02 | Instructor căn chỉnh lesson và assessment với learning outcome | Có thể gắn outcome vào lesson/assessment, xem ma trận căn chỉnh và nhận cảnh báo khi mapping thiếu trước khi publish | Must | US-05, US-07 | Đã triển khai | BR-14, BR-18 |
+| FR-QZ-03 | Instructor tạo nháp quiz bằng AI từ tài liệu | Có thể tải tài liệu được hỗ trợ để AI trích xuất/gợi ý câu hỏi; kết quả là bản nháp và chỉ lưu vào quiz khi instructor chủ động áp dụng | Should | US-07 | Đã triển khai | BR-19 |
+| FR-QZ-04 | Learner xem và làm quiz | Quiz trả về nội dung cần thiết để làm bài nhưng không gửi đáp án đúng trước khi nộp; server chấm bài và trả điểm/kết quả cùng giải thích được cấu hình | Must | US-20 | Đã triển khai | BR-17, BR-20 |
+| FR-QZ-05 | Learner xem lịch sử attempt | Các lượt làm đã lưu có thể được truy vấn trong giao diện học tập; mỗi lần nộp hợp lệ được ghi thành một attempt riêng | Should | US-20 | Đã triển khai | BR-20 |
 
-### 3.5 Instructor Management (support)
+### 3.5 Instructor Management & Revenue
 
-| ID | Requirement | Acceptance criteria | Pri | US | Sprint | BR |
-|----|-------------|---------------------|-----|----|--------|----|
-| FR-INS-01 | Instructor xem danh sách khóa học của mình kèm trạng thái và số học viên | Chỉ hiện course của chính mình, gồm cả `DRAFT` và `UNPUBLISHED` | Should | US-08 | 2 ✅ | BR-08 |
-| FR-INS-02 | Instructor gỡ (unpublish) và đăng lại (republish) khóa học | Course `UNPUBLISHED` biến mất khỏi catalog/tìm kiếm; learner đã mua vẫn học được | Should | US-08 | 2 ✅ | BR-13, BR-17 |
-| FR-INS-03 | Instructor xem lịch sử đổi trạng thái của khóa học | Mỗi bản ghi có trạng thái trước/sau, người thực hiện, thời điểm và lý do (nếu có) | Could | US-08 | 2 ✅ | BR-13 |
-| FR-INS-04 | Instructor xem doanh thu theo từng khóa học và tổng doanh thu | Chỉ tính từ order ở trạng thái `PAID` | Could | US-09 | 4 | BR-18 |
+| ID | Requirement | Acceptance criteria | Pri | US | Baseline | BR |
+|----|-------------|---------------------|-----|----|----------|----|
+| FR-INS-01 | Instructor xem danh sách và chi tiết course của mình | Chỉ course thuộc instructor hiện tại được trả về khu vực quản lý; có thể lọc theo trạng thái/từ khóa theo API | Should | US-08 | Đã triển khai | BR-08 |
+| FR-INS-02 | Instructor publish, unpublish và republish course | Chuyển trạng thái tuân theo state machine; unpublish loại course khỏi catalog công khai nhưng enrollment hiện tại vẫn có thể học | Must | US-08 | Đã triển khai | BR-15, BR-21 |
+| FR-INS-03 | Instructor xem review của course | Màn hình giảng viên hiển thị các review của khóa học mình sở hữu và thông tin tóm tắt | Could | US-18 | Đã triển khai | BR-22 |
+| FR-INS-04 | Instructor xem doanh thu | Báo cáo hiển thị giao dịch/đơn hàng đã thanh toán và tổng hợp doanh thu liên quan đến course của instructor | Could | US-09 | Đã triển khai | BR-23 |
+| FR-INS-05 | Instructor theo dõi và trả lời câu hỏi của learner | Có thể xem câu hỏi theo course, lọc theo trạng thái đã/chưa có phản hồi của giảng viên và gửi trả lời | Should | US-21 | Đã triển khai | BR-24 |
 
-### 3.6 Course Discovery (core)
+### 3.6 Course Discovery
 
-| ID | Requirement | Acceptance criteria | Pri | US | Sprint | BR |
-|----|-------------|---------------------|-----|----|--------|----|
-| FR-CD-01 | Tìm course theo keyword và lọc theo danh mục, trình độ, khoảng giá; kết quả phân trang | Chỉ trả về course `PUBLISHED`; nhiều filter kết hợp được | Should | US-10 | 2 ✅ | BR-17 |
-| FR-CD-02 | Guest / Learner xem trang chi tiết course: mô tả, ba khối bullet, curriculum, giá, rating, thông tin giảng viên | Truy cập được bằng id hoặc slug; course chưa `PUBLISHED` trả về 404 | Must | US-11 | 2 ✅ | BR-17 |
-| FR-CD-03 | Guest / Learner chưa mua xem được lesson đánh dấu preview | Lesson không phải preview bị khóa trên curriculum công khai | Must | US-11 | 2 ✅ | BR-24 |
+| ID | Requirement | Acceptance criteria | Pri | US | Baseline | BR |
+|----|-------------|---------------------|-----|----|----------|----|
+| FR-CD-01 | Guest/Learner duyệt và tìm kiếm course | Catalog hỗ trợ truy vấn khóa học và danh mục theo bộ lọc được backend cung cấp; kết quả công khai chỉ gồm course đã xuất bản | Should | US-10 | Đã triển khai | BR-21 |
+| FR-CD-02 | Guest/Learner xem chi tiết course và curriculum công khai | Trang chi tiết hiển thị thông tin course, learning outcomes, thông tin giảng viên, rating và curriculum; có thể truy cập course bằng định danh được hỗ trợ | Must | US-11 | Đã triển khai | BR-21 |
+| FR-CD-03 | Guest/Learner xem nội dung preview | Lesson được đánh dấu preview có thể mở công khai; API vẫn kiểm tra quyền cho nội dung không phải preview | Must | US-11 | Đã triển khai | BR-13 |
+| FR-CD-04 | Guest/Learner xem danh mục course liên quan và review | Trang chi tiết cung cấp review/tóm tắt rating; giao diện có các khu vực gợi ý course khi API trả về dữ liệu | Should | US-11, US-22 | Đã triển khai | BR-22, BR-25 |
 
-### 3.7 Payment (support)
+### 3.7 Payment & Enrollment
 
-| ID | Requirement | Acceptance criteria | Pri | US | Sprint | BR |
-|----|-------------|---------------------|-----|----|--------|----|
-| FR-PAY-01 | Learner tạo order cho một course và được chuyển sang MoMo / VNPay | Order sinh `order_code` duy nhất và giữ trạng thái `PENDING` cho tới khi có IPN | Must | US-13 | 3 | BR-19 |
-| FR-PAY-02 | Hệ thống xác nhận thanh toán bằng IPN có verify chữ ký và số tiền, rồi tạo enrollment | Chữ ký sai hoặc số tiền lệch → từ chối, ghi log, order giữ `PENDING`, không tạo enrollment | Must | US-14 | 3 | BR-20 |
-| FR-PAY-03 | Xử lý IPN trùng lặp | Nhận IPN nhiều lần cho cùng giao dịch chỉ tạo đúng 1 enrollment | Must | US-14 | 3 | BR-21 |
-| FR-PAY-04 | Order không nhận được IPN sau thời gian chờ | Chuyển `EXPIRED`, learner được thông báo và có thể tạo order mới | Must | US-13 | 3 | BR-22 |
-| FR-PAY-05 | Không cấp quyền truy cập dựa trên redirect phía client | Tự gõ lại URL success không tạo được enrollment | Must | US-14 | 3 | BR-20 |
-| FR-PAY-06 | Không cho mua lại course đã sở hữu | Nút "Mua" đổi thành "Vào học" | Must | US-13 | 3 | BR-23 |
+| ID | Requirement | Acceptance criteria | Pri | US | Baseline | BR |
+|----|-------------|---------------------|-----|----|----------|----|
+| FR-PAY-01 | Learner checkout một course trả phí qua PayOS | Backend tạo order code và link checkout PayOS; order được lưu ở trạng thái chờ thanh toán | Must | US-13 | Đã triển khai | BR-26 |
+| FR-PAY-02 | Hệ thống cập nhật thanh toán từ PayOS webhook | Backend xác minh webhook bằng cơ chế PayOS trước khi cập nhật order và tạo enrollment; webhook lặp không tạo enrollment trùng | Must | US-14 | Đã triển khai | BR-27, BR-28 |
+| FR-PAY-03 | Learner tra cứu trạng thái order | Trang kết quả dùng order code để tra cứu; khi order còn chờ, backend có thể đồng bộ trạng thái từ PayOS; redirect của trình duyệt tự nó không chứng minh thanh toán thành công | Must | US-14 | Đã triển khai | BR-27 |
+| FR-PAY-04 | Ghi danh vào course miễn phí hoặc course đã thanh toán | Course miễn phí có thể ghi danh trực tiếp; course trả phí được mở sau xác nhận thanh toán; learner đã ghi danh không bị ghi danh lặp | Must | US-13, US-14 | Đã triển khai | BR-28, BR-29 |
 
-### 3.8 Content Delivery (core)
+### 3.8 Content Delivery
 
-| ID | Requirement | Acceptance criteria | Pri | US | Sprint | BR |
-|----|-------------|---------------------|-----|----|--------|----|
-| FR-DL-01 | Chỉ learner đã ghi danh xem được nội dung đầy đủ | Request không có quyền trả về 403 | Must | US-15 | 3 | BR-24 |
-| FR-DL-02 | Nội dung phát qua signed URL có thời hạn ngắn | URL hết hạn sau TTL cấu hình; chia sẻ lại sau khi hết hạn không dùng được | Must | US-15 | 3 | BR-11, BR-25 |
-| FR-DL-03 | Learner tua tới vị trí bất kỳ trong video | Hỗ trợ HTTP Range; seek không cần tải lại toàn bộ file | Must | US-15 | 3 | |
-| FR-DL-04 | Signed URL hết hạn giữa lúc đang xem thì được cấp lại mà không gián đoạn | Learner không bị dừng video hoặc mất vị trí đang xem | Must | US-15 | 3 | BR-26 |
+| ID | Requirement | Acceptance criteria | Pri | US | Baseline | BR |
+|----|-------------|---------------------|-----|----|----------|----|
+| FR-DL-01 | Kiểm tra quyền trước khi cấp nội dung lesson | Learner có enrollment hợp lệ hoặc lesson là preview mới nhận được quyền xem tương ứng; truy cập không có quyền bị từ chối | Must | US-15 | Đã triển khai | BR-13, BR-30 |
+| FR-DL-02 | Tải video/file lên storage bằng presigned upload | Backend cấp URL upload có thời hạn và xác nhận metadata/object theo quy trình upload hiện có; frontend không lưu URL công khai làm định danh nội dung | Must | US-06 | Đã triển khai | BR-09, BR-31 |
+| FR-DL-03 | Phát nội dung video có hỗ trợ tua | Luồng video hỗ trợ HTTP Range/Partial Content để client yêu cầu các đoạn dữ liệu thay vì tải lại toàn bộ tệp | Must | US-15 | Đã triển khai | BR-30 |
+| FR-DL-04 | Gia hạn quyền phát trong phiên học | Frontend có thể lấy playback ticket/URL mới khi cần; backend kiểm tra lại quyền truy cập trước khi cấp | Should | US-15 | Đã triển khai | BR-30, BR-32 |
 
-### 3.9 Learning (core)
+### 3.9 Learning & Progress
 
-| ID | Requirement | Acceptance criteria | Pri | US | Sprint | BR |
-|----|-------------|---------------------|-----|----|--------|----|
-| FR-LRN-01 | Learner đã ghi danh mở trình học và duyệt cây section / lesson | Learner chưa ghi danh bị chặn khỏi màn hình học | Must | US-16 | 2 ✅ | BR-23, BR-24 |
-| FR-LRN-02 | Learner xem danh sách course đã mua kèm điểm tiếp tục học | Chỉ liệt kê enrollment còn hiệu lực; mỗi dòng có link vào học tiếp | Should | US-19 | 2 ✅ | |
+| ID | Requirement | Acceptance criteria | Pri | US | Baseline | BR |
+|----|-------------|---------------------|-----|----|----------|----|
+| FR-LRN-01 | Learner đã ghi danh mở không gian học tập | Giao diện hiển thị curriculum và nội dung học được phép truy cập; course đã unpublish vẫn phục vụ người đã ghi danh | Must | US-16 | Đã triển khai | BR-29, BR-30 |
+| FR-LRN-02 | Learner xem danh sách khóa học đã ghi danh | Mỗi course có tiến độ/trạng thái và đường dẫn tiếp tục học | Should | US-19 | Đã triển khai | BR-29 |
+| FR-LRN-03 | Hệ thống ghi nhận tiến độ xem bằng heartbeat | Client gửi dữ liệu phiên xem; backend lưu vị trí/coverage theo nội dung và trả snapshot tiến độ | Must | US-17 | Đã triển khai | BR-33 |
+| FR-LRN-04 | Hệ thống tính tiến độ course | Tiến độ tổng hợp từ các đơn vị học được hỗ trợ; nội dung video được đánh dấu hoàn thành theo ngưỡng coverage cấu hình; enrollment được cập nhật theo tiến độ | Must | US-17 | Đã triển khai | BR-33, BR-34 |
 
-### 3.10 Knowledge Tracking (core)
+### 3.10 Review & Content Moderation
 
-| ID | Requirement | Acceptance criteria | Pri | US | Sprint | BR |
-|----|-------------|---------------------|-----|----|--------|----|
-| FR-KT-01 | Lưu vị trí xem hiện tại của mỗi lesson | Learner quay lại tiếp tục đúng vị trí (±5s) | Must | US-17 | 3 | |
-| FR-KT-02 | Ghi nhận phần thời lượng **thực sự đã xem** của mỗi lesson | Tua nhanh tới cuối không làm tăng watched coverage | Must | US-17 | 3 | BR-27 |
-| FR-KT-03 | Cập nhật tiến độ từ nhiều tab / thiết bị không làm mất dữ liệu | Coverage sau khi cập nhật không bao giờ nhỏ hơn trước đó | Must | US-17 | 3 | BR-28 |
-| FR-KT-04 | Đánh dấu lesson hoàn thành và tính % hoàn thành của course | Lesson hoàn thành khi coverage ≥ 90%; % course tính theo số lesson đã hoàn thành; đủ 100% thì enrollment chuyển `COMPLETED` | Must | US-17 | 3 | BR-29, BR-30 |
+| ID | Requirement | Acceptance criteria | Pri | US | Baseline | BR |
+|----|-------------|---------------------|-----|----|----------|----|
+| FR-RV-01 | Learner xem review và phân bố rating | Trang course có danh sách review đã được duyệt và thống kê theo rating | Should | US-18 | Đã triển khai | BR-22 |
+| FR-RV-02 | Learner đủ điều kiện tạo hoặc cập nhật review | Chỉ enrollment đủ điều kiện mới gửi review; learner có thể xem trạng thái quyền review và review của mình; review bị kiểm duyệt trước khi xuất hiện công khai | Should | US-18 | Đã triển khai | BR-22, BR-35 |
+| FR-RV-03 | Hệ thống kiểm duyệt nội dung review và Q&A | Nội dung được kiểm tra bằng bộ lọc từ ngữ và dịch vụ AI nếu được cấu hình; nội dung không đạt quy tắc bị từ chối hoặc không được hiển thị công khai | Should | — | Đã triển khai | BR-36 |
 
-### 3.11 Review (support)
+### 3.11 Q&A
 
-| ID | Requirement | Acceptance criteria | Pri | US | Sprint | BR |
-|----|-------------|---------------------|-----|----|--------|----|
-| FR-RV-01 | Learner đã ghi danh đánh giá sao và viết nhận xét cho course | Mỗi learner chỉ một review trên một course, sửa được; `rating_avg` của course cập nhật lại | Could | US-18 | 4 | BR-31 |
+| ID | Requirement | Acceptance criteria | Pri | US | Baseline | BR |
+|----|-------------|---------------------|-----|----|----------|----|
+| FR-QA-01 | Learner/instructor xem câu hỏi và câu trả lời của lesson/course | Có thể truy vấn câu hỏi theo lesson hoặc course; giao diện hiển thị tác giả, nội dung và các câu trả lời | Should | US-21 | Đã triển khai | BR-24 |
+| FR-QA-02 | Người có quyền tham gia tạo câu hỏi hoặc câu trả lời | Learner đã ghi danh và giảng viên chủ khóa học được tham gia; tác giả, giảng viên hoặc admin có quyền xóa nội dung theo chính sách backend | Should | US-21 | Đã triển khai | BR-24, BR-36 |
 
-### 3.12 Q&A (support)
+### 3.12 AI Assistant & Authoring
 
-| ID | Requirement | Acceptance criteria | Pri | US | Sprint | BR |
-|----|-------------|---------------------|-----|----|--------|----|
-| FR-QA-01 | Learner đặt câu hỏi trên một lesson và instructor trả lời | Thread hiển thị ngay trên lesson; chỉ learner đã ghi danh mới đặt được câu hỏi | Should | US-21 | 4 | BR-32 |
-
-### 3.13 AI Assistant (support)
-
-| ID | Requirement | Acceptance criteria | Pri | US | Sprint | BR |
-|----|-------------|---------------------|-----|----|--------|----|
-| FR-AI-01 | Gợi ý course tương tự dựa trên hồ sơ / lịch sử học | Hiển thị ở trang chi tiết course và trang chủ; lỗi AI không làm hỏng trang | Should | US-22 | 4 | BR-33 |
+| ID | Requirement | Acceptance criteria | Pri | US | Baseline | BR |
+|----|-------------|---------------------|-----|----|----------|----|
+| FR-AI-01 | Hệ thống tạo gợi ý course cho người dùng | Frontend có thể yêu cầu recommendation liên tục hoặc recommendation AI; các course gợi ý đến từ tập dữ liệu mà backend cho phép hiển thị | Should | US-22 | Đã triển khai | BR-25 |
+| FR-AI-02 | Hệ thống hỗ trợ giảng viên soạn course và quiz | AI có thể đề xuất learning outcome, curriculum hoặc câu hỏi quiz; kết quả authoring được trả dưới dạng draft để instructor xem xét trước khi áp dụng | Should | US-07 | Đã triển khai | BR-19, BR-37 |
 
 ---
 
@@ -226,26 +205,26 @@
 
 | ID | Category | Requirement |
 |----|----------|-------------|
-| NFR-01 | Security | Mật khẩu lưu dạng hash (bcrypt), không lưu plaintext |
-| NFR-02 | Security | URL upload và URL phát nội dung đều có chữ ký và hết hạn sau ≤ 15 phút |
-| NFR-03 | Security | Phân quyền và mọi business rule kiểm tra ở server cho mọi endpoint; FE chỉ hiển thị |
-| NFR-04 | Security | Access token hết hạn sau 15 phút, refresh token sau 7 ngày (cấu hình được) |
-| NFR-05 | Reliability | Enrollment chỉ tạo từ xác nhận server-to-server của cổng thanh toán |
-| NFR-06 | Reliability | Lỗi của AI hoặc email không gián đoạn luồng học và luồng thanh toán |
-| NFR-07 | Reliability | Sửa đồng thời cùng một course từ 2 phiên được phát hiện bằng optimistic locking |
-| NFR-08 | Usability | Responsive, hoạt động trên màn hình ≥ 360px |
-| NFR-09 | Compatibility | Chrome, Edge, Firefox, Safari phiên bản mới nhất |
-| NFR-10 | Maintainability | Code theo convention thống nhất, README hướng dẫn chạy local |
+| NFR-01 | Security | Mật khẩu được mã hóa một chiều bằng BCrypt trước khi lưu; mật khẩu dạng rõ không được lưu trong DB |
+| NFR-02 | Security | API dùng xác thực JWT stateless; refresh token được quản lý qua cookie theo cấu hình; cookie phiên phát nội dung được ký và có thời hạn |
+| NFR-03 | Security | Quyền sở hữu course, vai trò, enrollment và quyền truy cập nội dung được kiểm tra ở backend; frontend route guard chỉ bổ sung trải nghiệm giao diện |
+| NFR-04 | Security | URL upload/download của storage có TTL cấu hình; mặc định upload/download là 15 phút; playback ticket/session có TTL riêng theo cấu hình |
+| NFR-05 | Reliability | Enrollment của course trả phí được tạo từ xử lý thanh toán backend (webhook hoặc đồng bộ trạng thái PayOS), không dựa riêng vào query parameter redirect trên trình duyệt |
+| NFR-06 | Reliability | Các tích hợp ngoài như email, storage, PayOS và Gemini phụ thuộc cấu hình; lỗi tích hợp được trả/xử lý theo từng luồng và ghi log bởi backend |
+| NFR-07 | Data integrity | Cập nhật course hỗ trợ kiểm tra version để phát hiện dữ liệu cũ; thao tác xuất bản curriculum áp dụng thay đổi ở backend |
+| NFR-08 | Compatibility | Frontend là SPA React/TypeScript chạy trên trình duyệt hiện đại; layout hỗ trợ kích thước màn hình khác nhau |
+| NFR-09 | Maintainability | Backend chia module nghiệp vụ trong một ứng dụng Spring Boot; database schema được quản lý bằng migration; frontend chia theo feature |
+| NFR-10 | Performance | Video được phân phối theo byte range; danh sách catalog/review hỗ trợ phân trang tại các API tương ứng |
 
 **External interfaces**
 
 | # | Hệ thống ngoài | Mục đích | Yêu cầu khi lỗi |
-|---|----------------|----------|-----------------|
-| 1 | MoMo / VNPay | Thu tiền, xác nhận giao dịch qua IPN | Timeout → Order `EXPIRED` (FR-PAY-04); chữ ký sai → từ chối + ghi log (FR-PAY-02) |
-| 2 | Object Storage / CDN | Lưu và phân phối video, file, ảnh | Lỗi tải → client retry, hiển thị lỗi phát video; upload thất bại → lesson giữ trạng thái `FAILED` |
-| 3 | Google OAuth | Đăng nhập bằng tài khoản Google | Lỗi → quay về form đăng nhập bằng mật khẩu |
-| 4 | LLM Provider (Spring AI) | Gợi ý khóa học tương tự | Lỗi → ẩn khối gợi ý, không chặn trang |
-| 5 | Email service | Kích hoạt tài khoản, thông báo | Đưa vào queue và retry; gửi lỗi không chặn luồng đăng ký |
+|---|-----------------|---------|-----------------|
+| 1 | PayOS | Tạo payment link, nhận webhook và truy vấn trạng thái order | Backend giữ kết quả theo trạng thái đã xác minh; lỗi kết nối được ghi nhận và trạng thái có thể tra cứu lại |
+| 2 | Object Storage (local/S3-compatible) | Lưu và phân phối ảnh, video và tài liệu | Upload/đọc lỗi được trả về cho luồng gọi; nội dung chưa sẵn sàng không được xem là nội dung đã upload thành công |
+| 3 | SendGrid | Gửi email kích hoạt tài khoản | Lỗi gửi email khiến người dùng chưa thể hoàn tất kích hoạt cho tới khi nhận được link hợp lệ hoặc thực hiện lại theo cơ chế hiện có |
+| 4 | Google Gemini | AI authoring, recommendation và moderation | Chức năng dựa trên AI cần cấu hình API; kết quả sinh nội dung ở dạng draft để người dùng kiểm tra |
+| 5 | PostgreSQL | Lưu tài khoản, course, enrollment, giao dịch, tiến độ và nội dung nghiệp vụ | Lỗi DB khiến thao tác phụ thuộc dữ liệu không thể hoàn tất; backend trả lỗi theo xử lý ngoại lệ chung |
 
 ---
 
@@ -253,36 +232,40 @@
 
 | ID | Rule Definition | FR liên quan |
 |----|------------------|---------------|
-| BR-01 | Một email chỉ đăng ký được một tài khoản | FR-AUTH-01 |
-| BR-02 | Đăng ký chỉ tạo bản ghi chờ có TTL 15 phút; tài khoản thật chỉ được tạo khi người dùng bấm link kích hoạt còn hạn. Đăng ký lại cùng email khi chưa kích hoạt sẽ ghi đè bản ghi chờ và làm mới TTL | FR-AUTH-01, FR-AUTH-02 |
-| BR-03 | Mỗi tài khoản chỉ mang **một** vai trò: `LEARNER`, `LECTURER` hoặc `ADMIN`. Tài khoản đăng ký qua form luôn là `LEARNER`; vai trò `LECTURER` được gán ở tầng dữ liệu, chưa có luồng nâng cấp trên UI | FR-AUTH-03 |
-| BR-04 | Đăng nhập sai liên tiếp 5 lần trong vòng 15 phút → tài khoản bị khóa tạm thời 30 phút | FR-AUTH-04 |
-| BR-05 | Tài khoản `is_active = false` không đăng nhập được kể cả khi mật khẩu đúng | FR-AUTH-03 |
-| BR-06 | Đăng nhập Google khớp theo email: email đã có tài khoản `LOCAL` thì liên kết vào tài khoản đó, không tạo tài khoản trùng email | FR-AUTH-06 |
-| BR-07 | Giá course do instructor đặt, trong khoảng 0 – 10.000.000 VND | FR-CA-01 |
-| BR-08 | Chỉ chủ sở hữu (`lecturer_id`) mới đọc/sửa được course ở khu vực quản lý; mọi thao tác quản lý course đều kiểm tra quyền sở hữu ở server | FR-CA-01, FR-CA-03, FR-INS-01 |
-| BR-09 | Mỗi nhóm bullet (mục tiêu học / yêu cầu / đối tượng) tối đa 20 dòng, mỗi dòng tối đa 500 ký tự | FR-CA-02 |
-| BR-10 | Giới hạn upload theo mục đích: ảnh bìa jpeg/png/webp ≤ 5MB; video bài học và video giới thiệu mp4 ≤ 500MB; file bài học pdf/zip/doc(x)/ppt(x) ≤ 200MB; tài liệu bổ trợ mọi định dạng ≤ 100MB. Server kiểm tra lại content-type và dung lượng thật sau khi client upload xong | FR-CA-05, FR-CA-06, FR-PROF-01 |
-| BR-11 | Video và file lưu bằng `storage_key`, không lưu và không phân phối dưới dạng URL tĩnh công khai | FR-CA-05, FR-DL-02 |
-| BR-12 | Course chỉ publish được khi thỏa toàn bộ: có title; mô tả ≥ 200 ký tự; có danh mục; có ảnh bìa; giá hợp lệ (BR-07); ≥ 4 mục tiêu học, ≥ 1 yêu cầu, ≥ 1 đối tượng; ≥ 1 section; ≥ 1 lesson có nội dung; và **mọi** lesson đều đã có nội dung hoàn chỉnh. "Có nội dung" nghĩa là: `VIDEO` / `FILE` đã upload xong (`READY`), `ARTICLE` có nội dung text, `QUIZ` có đủ câu hỏi và đáp án. Các ngưỡng số lượng là cấu hình được | FR-CA-08, FR-QZ-01 |
-| BR-13 | Vòng đời course: `DRAFT` → `PUBLISHED` ⇄ `UNPUBLISHED`. Chỉ publish được từ `DRAFT` hoặc `UNPUBLISHED`, chỉ unpublish được từ `PUBLISHED`. Mọi lần đổi trạng thái đều ghi vào lịch sử trạng thái; `published_at` chỉ set ở lần publish đầu tiên | FR-CA-08, FR-INS-02, FR-INS-03 |
-| BR-14 | Chỉnh sửa course đã publish (đổi tên, đổi thứ tự section/lesson, cập nhật nội dung) không được xóa hoặc reset tiến trình học đã ghi nhận của learner | FR-CA-09 |
-| BR-15 | Quiz gắn 1–1 với một lesson kiểu `QUIZ`; mỗi câu hỏi phải có ít nhất một đáp án được đánh dấu đúng | FR-QZ-01, FR-QZ-02 |
-| BR-16 | Điểm quiz do server chấm dựa trên đáp án lưu trong DB; đáp án đúng không được trả về client trước khi learner nộp bài | FR-QZ-02 |
-| BR-17 | Catalog, kết quả tìm kiếm và trang chi tiết công khai chỉ hiển thị course ở trạng thái `PUBLISHED`; course `DRAFT` hoặc `UNPUBLISHED` không xuất hiện, nhưng learner đã mua trước đó vẫn truy cập được nội dung | FR-CD-01, FR-CD-02, FR-INS-02 |
-| BR-18 | Doanh thu chỉ cộng từ order ở trạng thái `PAID`; order `PENDING` / `EXPIRED` / `CANCELLED` không tính | FR-INS-04 |
-| BR-19 | Mỗi order có một `order_code` duy nhất do hệ thống sinh, độc lập với transaction_id của cổng thanh toán, dùng để đối chiếu giao dịch | FR-PAY-01 |
-| BR-20 | Enrollment chỉ được tạo khi IPN có chữ ký hợp lệ và số tiền khớp với order; redirect phía client không bao giờ là căn cứ cấp quyền | FR-PAY-02, FR-PAY-05 |
-| BR-21 | Xử lý IPN idempotent theo cặp (`payment_method`, `transaction_id`): IPN trùng lặp cho cùng giao dịch chỉ ghi log, không tạo thêm enrollment và không đổi lại trạng thái order đã `PAID` | FR-PAY-03 |
-| BR-22 | Order ở trạng thái `PENDING` quá thời gian chờ cấu hình (đề xuất 15 phút) mà không nhận được IPN hợp lệ sẽ tự động chuyển sang `EXPIRED` | FR-PAY-04 |
-| BR-23 | Một learner chỉ có một enrollment trên một course — không mua lại course đã sở hữu. Course phải đang `PUBLISHED` mới ghi danh được, và instructor không ghi danh vào course của chính mình. Mỗi lần ghi danh thành công làm tăng `total_students` của course | FR-PAY-06, FR-LRN-01 |
-| BR-24 | Quyền xem nội dung đầy đủ của course chỉ cấp cho learner có enrollment còn hiệu lực đối với đúng course đó. Ngoại lệ duy nhất: lesson đánh dấu preview, xem được bởi Guest và learner chưa mua | FR-CA-07, FR-CD-03, FR-DL-01, FR-LRN-01 |
-| BR-25 | Nội dung chỉ truy cập qua signed URL có chữ ký và thời hạn ≤ 15 phút (NFR-02) | FR-DL-02 |
-| BR-26 | Khi signed URL hết hạn trong lúc learner đang phát video, hệ thống cấp lại URL mới mà không làm gián đoạn phiên phát hoặc mất vị trí đang xem, miễn learner vẫn còn quyền truy cập | FR-DL-04 |
-| BR-27 | Watched coverage chỉ tăng theo phần thời lượng được phát thực tế (ghi theo từng khoảng 5 giây); tua qua không tính | FR-KT-02 |
-| BR-28 | Khi ghi nhận watched coverage từ nhiều phiên (tab/thiết bị) cho cùng learner và lesson, hệ thống hợp nhất theo từng đoạn; coverage sau cập nhật không bao giờ nhỏ hơn giá trị đã ghi nhận trước đó | FR-KT-03 |
-| BR-29 | Một lesson `VIDEO` được coi là hoàn thành khi watched coverage ≥ 90%; lesson `ARTICLE` / `FILE` / `QUIZ` hoàn thành theo điều kiện riêng của loại nội dung | FR-KT-04 |
-| BR-30 | % hoàn thành của course = số lesson đã hoàn thành / tổng số lesson. Đạt 100% thì enrollment chuyển sang `COMPLETED` và ghi `completed_at`; nếu sau đó instructor thêm lesson mới, enrollment quay lại `ACTIVE` | FR-KT-04 |
-| BR-31 | Chỉ learner có enrollment mới được review, mỗi learner một review trên một course; `rating_avg` của course tính lại từ toàn bộ review hiện có | FR-RV-01 |
-| BR-32 | Chỉ learner đã ghi danh mới đặt được câu hỏi trên lesson; instructor chủ khóa học trả lời được mọi thread của khóa học đó | FR-QA-01 |
-| BR-33 | Gợi ý khóa học chỉ lấy từ course đang `PUBLISHED` và không gợi ý course learner đã sở hữu | FR-AI-01 |
+| BR-01 | Một email không được tạo nhiều tài khoản đã kích hoạt. Yêu cầu đăng ký chờ xác thực được lưu riêng cho đến khi kích hoạt. | FR-AUTH-01 |
+| BR-02 | Link kích hoạt tài khoản có TTL mặc định 15 phút. Chỉ link hợp lệ và chưa hết hạn mới được kích hoạt tài khoản. | FR-AUTH-01, FR-AUTH-02 |
+| BR-03 | Người đăng ký thông thường được tạo với vai trò learner; quyền instructor/admin được cấp qua dữ liệu/quy trình ngoài luồng đăng ký hiện tại. | FR-AUTH-03, FR-AUTH-05 |
+| BR-04 | Access token có TTL mặc định 24 giờ và refresh token 7 ngày theo cấu hình ứng dụng; thời hạn thực tế có thể được ghi đè bằng biến môi trường. | FR-AUTH-04 |
+| BR-05 | Hồ sơ cá nhân chỉ được đọc/cập nhật bởi người dùng đã xác thực tương ứng, theo quyền backend. | FR-PROF-01 |
+| BR-06 | Ảnh đại diện được tải qua storage; backend lưu thông tin tham chiếu/key theo cấu hình storage. | FR-PROF-02 |
+| BR-07 | Giá course nằm trong khoảng 0 đến 10.000.000 VND; giá 0 hoặc null được xử lý như khóa học miễn phí ở luồng checkout. | FR-CA-02, FR-PAY-04 |
+| BR-08 | Instructor chỉ được quản lý course do mình sở hữu; server kiểm tra quyền sở hữu khi đọc/sửa các tài nguyên quản lý course. | FR-CA-01, FR-CA-04, FR-INS-01 |
+| BR-09 | Tệp nội dung được lưu qua storage và gắn với course/lesson; backend kiểm tra mục đích upload, key và metadata theo API tương ứng. | FR-CA-02, FR-CA-05, FR-DL-02 |
+| BR-10 | Learning outcome được lưu riêng khỏi danh sách requirement/audience. Mặc định cần tối thiểu 2 outcome, 1 requirement và 1 target audience để publish; cấu hình publish có thể thay đổi ngưỡng. | FR-CA-03, FR-QZ-02 |
+| BR-11 | Section và lesson có thứ tự xác định; thao tác reorder/move lưu thứ tự curriculum. | FR-CA-04 |
+| BR-12 | Nội dung lesson chính hỗ trợ video, bài viết hoặc file; lesson có thể có nhiều tài liệu bổ trợ. | FR-CA-05 |
+| BR-13 | Guest chỉ được truy cập nội dung được đánh dấu preview; nội dung còn lại yêu cầu enrollment/quyền hợp lệ. | FR-CA-06, FR-CD-03, FR-DL-01 |
+| BR-14 | Điều kiện publish kiểm tra thông tin course (title, mô tả tối thiểu 200 ký tự, category, thumbnail, giá), outcome/requirement/audience tối thiểu, section và nội dung hoàn chỉnh; lesson và assessment cần đáp ứng quy tắc căn chỉnh outcome. | FR-CA-07, FR-QZ-02 |
+| BR-15 | Vòng đời course đang dùng gồm `DRAFT`, `PUBLISHED` và `UNPUBLISHED`; publish chỉ từ draft/unpublished, unpublish chỉ từ published. Mỗi lần chuyển trạng thái được ghi log. Các enum khác không tạo thành quy trình nghiệp vụ đang hoạt động trong UI hiện tại. | FR-CA-07, FR-CA-09, FR-INS-02 |
+| BR-16 | Với course đã publish, các nội dung curriculum có trạng thái nháp được giữ tách khỏi bản đang công khai cho đến khi instructor áp dụng publish changes; khi áp dụng, hệ thống tính lại tiến độ enrollment đang hoạt động. | FR-CA-08 |
+| BR-17 | Quiz là assessment được gắn vào course/section; quiz cần cấu hình hợp lệ và câu hỏi/đáp án để làm bài; server giữ đáp án đúng để chấm sau khi learner nộp. | FR-QZ-01, FR-QZ-04 |
+| BR-18 | Outcome phải được căn chỉnh với nội dung lesson và assessment theo điều kiện publish; assessment cần được đặt trong section trước khi publish. | FR-QZ-02, FR-CA-07 |
+| BR-19 | Kết quả sinh bởi AI không tự động trở thành nội dung đã publish; giảng viên phải xem xét và áp dụng draft. Tài liệu AI quiz chỉ nhận các loại/giới hạn tệp được API hỗ trợ. | FR-QZ-03, FR-AI-02 |
+| BR-20 | Điểm quiz được tính ở backend. Mỗi lần learner nộp bài được lưu thành attempt để có thể xem kết quả/lịch sử. | FR-QZ-04, FR-QZ-05 |
+| BR-21 | Catalog và trang course công khai chỉ hiển thị course `PUBLISHED`; course đã unpublish không xuất hiện trong discovery. | FR-INS-02, FR-CD-01, FR-CD-02 |
+| BR-22 | Review công khai phải đạt trạng thái được duyệt. Backend lưu rating summary và chỉ tính nội dung phù hợp theo trạng thái duyệt; learner đã bắt đầu học tối thiểu 20% mới đủ điều kiện review nếu chưa có review trước đó. | FR-INS-03, FR-CD-04, FR-RV-01, FR-RV-02 |
+| BR-23 | Doanh thu instructor lấy từ payment order thành công (`PAID`); các trạng thái chưa thanh toán, thất bại hoặc hủy không tính vào doanh thu đã thanh toán. | FR-INS-04 |
+| BR-24 | Chỉ learner đã ghi danh, instructor sở hữu course hoặc admin theo quyền backend được tham gia Q&A; backend phân biệt phản hồi của instructor trong thread. Nội dung hỏi đáp chịu kiểm duyệt. | FR-INS-05, FR-QA-01, FR-QA-02 |
+| BR-25 | Recommendation chỉ hiển thị course được backend lựa chọn theo trạng thái/điều kiện truy vấn; endpoint AI yêu cầu xác thực người dùng. | FR-CD-04, FR-AI-01 |
+| BR-26 | Mỗi PayOS order gắn learner, course, số tiền và order code. Checkout course trả phí tái sử dụng order pending còn checkout URL và chưa quá 15 phút; order pending cũ được đánh dấu `CANCELLED` khi tạo link mới. | FR-PAY-01 |
+| BR-27 | Order chỉ chuyển sang `PAID` khi trạng thái được xác minh qua webhook PayOS hoặc truy vấn trạng thái PayOS từ backend; redirect success/cancel của frontend chỉ điều hướng và tra cứu trạng thái. | FR-PAY-02, FR-PAY-03 |
+| BR-28 | Xử lý một giao dịch lặp không tạo enrollment thứ hai cho cùng learner/course; hệ thống kiểm tra enrollment hiện có trước khi ghi danh. | FR-PAY-02, FR-PAY-04 |
+| BR-29 | Một learner chỉ có một enrollment cho cùng một course. Instructor không thể ghi danh vào course của chính mình. Khóa học miễn phí có thể tạo enrollment mà không cần giao dịch PayOS. | FR-PAY-04, FR-LRN-01, FR-LRN-02 |
+| BR-30 | Nội dung được cấp theo enrollment hoặc quyền preview; course đã unpublish vẫn có thể được người đã ghi danh tiếp tục học. | FR-INS-02, FR-DL-01, FR-DL-04, FR-LRN-01 |
+| BR-31 | Upload/download dùng TTL mặc định 15 phút; playback ticket và cookie phiên có thời hạn riêng theo cấu hình delivery, hiện mặc định 8 giờ. | FR-DL-02, FR-DL-04 |
+| BR-32 | Luồng video hỗ trợ HTTP byte range; quyền truy cập được kiểm tra khi cấp playback ticket/URL và khi phục vụ nội dung theo thiết kế delivery. | FR-DL-03, FR-DL-04 |
+| BR-33 | Heartbeat lưu trạng thái xem và coverage của learner/lesson. Video hoàn thành khi watched coverage đạt ngưỡng cấu hình, mặc định 90%. | FR-LRN-03, FR-LRN-04 |
+| BR-34 | Tiến độ course được tổng hợp từ các đơn vị học và enrollment; khi curriculum đã xuất bản thay đổi, backend tính lại tiến độ enrollment đang hoạt động. | FR-LRN-04, FR-CA-08 |
+| BR-35 | Mỗi learner có thể quản lý review của mình cho course theo API; review mới yêu cầu enrollment và đạt ngưỡng tiến độ, còn review hiện có vẫn có thể được truy cập để cập nhật. | FR-RV-02 |
+| BR-36 | Nội dung review, câu hỏi và câu trả lời được đưa qua bộ kiểm duyệt từ khóa và/hoặc Gemini theo cấu hình. | FR-RV-03, FR-QA-02 |
+| BR-37 | Nội dung AI phụ thuộc Gemini API và cấu hình bật AI; chức năng thủ công của course/quiz không được thay bằng kết quả AI tự động. | FR-QZ-03, FR-AI-01, FR-AI-02 |
